@@ -1,0 +1,44 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# IntelliJ
+.idea/
+*.iml
+out/
+
+# Gradle
+.gradle/
+build/
+*/build/
+
+# Spring Boot
+backend/.gradle/
+backend/build/
+
+# Logs
+*.log
+
+# Environment / secrets
+.env
+*.env
+application-local.yml
+application-local.yaml
+application-secret.yml
+application-secret.yaml
+
+# Node / Vue
+node_modules/
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+frontend/.env.*
+
+# Package manager logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Vite
+frontend/.vite/
