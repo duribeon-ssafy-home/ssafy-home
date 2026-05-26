@@ -13,11 +13,14 @@ spring:
     url: jdbc:mysql://localhost:3306/ssafy_home?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
     username: root
 
-mybatis:
-  mapper-locations: classpath:/mappers/**/*.xml
-  type-aliases-package: com.ssafy.home.domain
-  configuration:
-    map-underscore-to-camel-case: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        format_sql: true
+        default_batch_fetch_size: 100
+    open-in-view: false
 
 springdoc:
   swagger-ui:
