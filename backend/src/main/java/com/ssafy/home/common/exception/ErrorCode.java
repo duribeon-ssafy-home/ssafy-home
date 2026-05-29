@@ -1,0 +1,36 @@
+package com.ssafy.home.common.exception;
+
+import org.springframework.http.HttpStatus;
+
+public enum ErrorCode {
+
+	DUPLICATE_EMAIL(HttpStatus.CONFLICT, "이미 가입된 이메일입니다."),
+	INVALID_CREDENTIALS(HttpStatus.UNAUTHORIZED, "이메일 또는 비밀번호가 올바르지 않습니다."),
+	INVALID_TOKEN(HttpStatus.UNAUTHORIZED, "유효하지 않은 토큰입니다."),
+	EXPIRED_TOKEN(HttpStatus.UNAUTHORIZED, "만료된 토큰입니다."),
+	UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증이 필요합니다."),
+	FORBIDDEN(HttpStatus.FORBIDDEN, "권한이 없습니다."),
+	USER_NOT_FOUND(HttpStatus.NOT_FOUND, "사용자를 찾을 수 없습니다."),
+	INACTIVE_USER(HttpStatus.FORBIDDEN, "비활성화된 계정입니다."),
+	BANNED_USER(HttpStatus.FORBIDDEN, "이용 제한된 계정입니다."),
+	DELETED_USER(HttpStatus.FORBIDDEN, "탈퇴 처리된 계정입니다."),
+	INVALID_ROLE(HttpStatus.BAD_REQUEST, "허용되지 않은 역할입니다."),
+	INVALID_STATUS(HttpStatus.BAD_REQUEST, "허용되지 않은 계정 상태입니다."),
+	PHONE_NUMBER_REQUIRED(HttpStatus.BAD_REQUEST, "전화번호는 필수입니다.");
+
+	private final HttpStatus status;
+	private final String message;
+
+	ErrorCode(HttpStatus status, String message) {
+		this.status = status;
+		this.message = message;
+	}
+
+	public HttpStatus getStatus() {
+		return status;
+	}
+
+	public String getMessage() {
+		return message;
+	}
+}
