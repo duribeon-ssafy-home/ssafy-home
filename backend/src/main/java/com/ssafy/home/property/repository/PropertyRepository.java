@@ -9,4 +9,6 @@ import java.util.List;
 public interface PropertyRepository extends JpaRepository<Property, Long> {
 
     List<Property> findAllByStatusNot(PropertyStatus status);
+
+    List<Property> findAllByOwnerIdAndStatusNot(Long ownerId, PropertyStatus status);
 }

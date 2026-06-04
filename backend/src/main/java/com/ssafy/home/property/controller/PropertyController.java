@@ -10,23 +10,38 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
 @Tag(name = "매물", description = "매물 등록, 조회, 수정, 삭제 API")
 @RequiredArgsConstructor
 @RestController
 @RequestMapping("/api/properties")
 public class PropertyController {
+
     private final PropertyService propertyService;
 
     @Operation(summary = "매물 목록 조회", description = "삭제되지 않은 전체 매물 목록을 반환합니다.")
     @GetMapping
     public ResponseEntity<ApiResponse<List<PropertyResponse>>> getProperties() {
         return ResponseEntity.ok(ApiResponse.success("매물 목록을 조회했습니다.", propertyService.getProperties()));
+    }
+
+    @Operation(summary = "내 매물 목록 조회", description = "현재 로그인한 사용자가 등록한 매물 목록을 반환합니다.")
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<List<PropertyResponse>>> getMyProperties(
+            @Parameter(hidden = true) @CurrentUser Long userId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success("내 매물 목록을 조회했습니다.", propertyService.getMyProperties(userId)));
     }
 
     @Operation(summary = "매물 상세 조회", description = "매물 ID로 단건 상세 정보를 반환합니다.")
@@ -46,13 +61,16 @@ public class PropertyController {
     }
 
     @Operation(summary = "매물 수정", description = "본인 소유 매물 정보를 수정합니다.")
-    @PutMapping("/{id}")
+    @PatchMapping("/{propertyId}")
     public ResponseEntity<ApiResponse<PropertyResponse>> updateProperty(
-            @PathVariable Long id,
+            @PathVariable Long propertyId,
             @Valid @RequestBody PropertyUpdateRequest request,
             @Parameter(hidden = true) @CurrentUser Long userId
     ) {
-        return ResponseEntity.ok(ApiResponse.success("매물이 수정되었습니다.", propertyService.updateProperty(id, request, userId)));
+        return ResponseEntity.ok(ApiResponse.success(
+                "매물이 수정되었습니다.",
+                propertyService.updateProperty(propertyId, request, userId)
+        ));
     }
 
     @Operation(summary = "매물 삭제", description = "본인 소유 매물을 삭제 처리합니다.")
