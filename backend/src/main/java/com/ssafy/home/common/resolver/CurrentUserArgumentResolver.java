@@ -3,6 +3,7 @@ package com.ssafy.home.common.resolver;
 import com.ssafy.home.common.annotation.CurrentUser;
 import com.ssafy.home.common.exception.BusinessException;
 import com.ssafy.home.common.exception.ErrorCode;
+import com.ssafy.home.common.security.CustomUserDetails;
 import org.springframework.core.MethodParameter;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -28,6 +29,9 @@ public class CurrentUserArgumentResolver implements HandlerMethodArgumentResolve
         if (authentication == null || !authentication.isAuthenticated()) {
             throw new BusinessException(ErrorCode.UNAUTHORIZED);
         }
-        return Long.parseLong(authentication.getName());
+        if (!(authentication.getPrincipal() instanceof CustomUserDetails userDetails)) {
+            throw new BusinessException(ErrorCode.UNAUTHORIZED);
+        }
+        return userDetails.getUserId();
     }
 }

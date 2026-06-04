@@ -48,6 +48,13 @@ public class PropertyService {
         return PropertyResponse.from(property);
     }
 
+    public List<PropertyResponse> getMyProperties(Long userId) {
+        return propertyRepository.findAllByOwnerIdAndStatusNot(userId, PropertyStatus.DELETED)
+                .stream()
+                .map(PropertyResponse::from)
+                .toList();
+    }
+
     @Transactional
     public PropertyResponse updateProperty(Long id, PropertyUpdateRequest request, Long userId) {
         Property property = findActiveProperty(id);
