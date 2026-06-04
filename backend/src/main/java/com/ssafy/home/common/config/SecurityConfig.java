@@ -9,6 +9,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -44,9 +45,13 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/signup",
                                 "/api/auth/login",
-                                "/api/auth/refresh",
-                                "/api/properties/**"
+                                "/api/auth/refresh"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/properties/me").hasRole("AGENT")
+                        .requestMatchers(HttpMethod.GET, "/api/properties", "/api/properties/*").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/properties").hasAnyRole("AGENT", "ADMIN")
+                        .requestMatchers(HttpMethod.PATCH, "/api/properties/*").hasAnyRole("AGENT", "ADMIN")
+                        .requestMatchers(HttpMethod.DELETE, "/api/properties/*").hasAnyRole("AGENT", "ADMIN")
                         .anyRequest().authenticated()
                 )
                 .formLogin(form -> form.disable())
