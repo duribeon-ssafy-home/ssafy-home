@@ -19,6 +19,9 @@ backend/build/
 # Logs
 *.log
 
+# Data files
+data/
+
 # Environment / secrets
 .env
 *.env
@@ -26,6 +29,7 @@ application-local.yml
 application-local.yaml
 application-secret.yml
 application-secret.yaml
+scripts/config.py
 
 # Node / Vue
 node_modules/
