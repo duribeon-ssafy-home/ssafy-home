@@ -99,6 +99,13 @@ public class User extends BaseTimeEntity {
 		this.phoneNumber = phoneNumber;
 	}
 
+	public void changeRole(Role role, String phoneNumber) {
+		this.role = role;
+		if (phoneNumber != null) {
+			this.phoneNumber = phoneNumber;
+		}
+	}
+
 	public void recordLogin() {
 		this.lastLoginAt = LocalDateTime.now();
 	}
