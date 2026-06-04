@@ -11,28 +11,27 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionHandler {
 
-	@ExceptionHandler(BusinessException.class)
-	public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException exception) {
-		ErrorCode errorCode = exception.getErrorCode();
-		return ResponseEntity
-				.status(errorCode.getStatus())
-				.body(ApiResponse.fail(errorCode.getMessage(), errorCode.name()));
-	}
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ApiResponse<Void>> handleBusinessException(BusinessException e) {
+        ErrorCode errorCode = e.getErrorCode();
+        return ResponseEntity
+                .status(errorCode.getStatus())
+                .body(ApiResponse.fail(errorCode.getMessage(), errorCode.name()));
+    }
 
-	@ExceptionHandler(MethodArgumentNotValidException.class)
-	public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException exception) {
-		String message = exception.getBindingResult()
-				.getFieldErrors()
-				.stream()
-				.map(this::formatFieldError)
-				.collect(Collectors.joining(", "));
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public ResponseEntity<ApiResponse<Void>> handleValidationException(MethodArgumentNotValidException e) {
+        String message = e.getBindingResult()
+                .getFieldErrors()
+                .stream()
+                .map(this::formatFieldError)
+                .collect(Collectors.joining(", "));
+        return ResponseEntity
+                .badRequest()
+                .body(ApiResponse.fail(message, ErrorCode.INVALID_INPUT.name()));
+    }
 
-		return ResponseEntity
-				.badRequest()
-				.body(ApiResponse.fail(message, "VALIDATION_ERROR"));
-	}
-
-	private String formatFieldError(FieldError fieldError) {
-		return fieldError.getField() + ": " + fieldError.getDefaultMessage();
-	}
+    private String formatFieldError(FieldError fieldError) {
+        return fieldError.getField() + ": " + fieldError.getDefaultMessage();
+    }
 }
