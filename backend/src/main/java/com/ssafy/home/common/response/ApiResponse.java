@@ -1,8 +1,10 @@
 package com.ssafy.home.common.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
 
 @Getter
+@JsonInclude(JsonInclude.Include.NON_NULL)
 public class ApiResponse<T> {
     private final boolean success;
     private final String message;

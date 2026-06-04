@@ -11,16 +11,22 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://localhost:3306/ssafy_home?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
-    username: root
+    username: ssafy
 
   jpa:
     hibernate:
       ddl-auto: update
+    show-sql: true
     properties:
       hibernate:
         format_sql: true
         default_batch_fetch_size: 100
     open-in-view: false
+
+jwt:
+  secret: ssafy-home-local-development-secret-key-change-before-release
+  access-token-expiration-seconds: 3600
+  refresh-token-expiration-seconds: 1209600
 
 springdoc:
   swagger-ui:
