@@ -4,6 +4,7 @@ import com.ssafy.home.common.annotation.CurrentUser;
 import com.ssafy.home.common.response.ApiResponse;
 import com.ssafy.home.property.dto.PropertyCreateRequest;
 import com.ssafy.home.property.dto.PropertyResponse;
+import com.ssafy.home.property.dto.PropertySearchCondition;
 import com.ssafy.home.property.dto.PropertyUpdateRequest;
 import com.ssafy.home.property.service.PropertyService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -11,6 +12,11 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
+import org.springdoc.core.annotations.ParameterObject;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -30,10 +36,13 @@ public class PropertyController {
 
     private final PropertyService propertyService;
 
-    @Operation(summary = "매물 목록 조회", description = "삭제되지 않은 전체 매물 목록을 반환합니다.")
+    @Operation(summary = "매물 목록 조회", description = "삭제되지 않은 전체 매물 목록을 페이지 단위로 반환합니다. 모든 필터는 선택사항입니다.")
     @GetMapping
-    public ResponseEntity<ApiResponse<List<PropertyResponse>>> getProperties() {
-        return ResponseEntity.ok(ApiResponse.success("매물 목록을 조회했습니다.", propertyService.getProperties()));
+    public ResponseEntity<ApiResponse<Page<PropertyResponse>>> getProperties(
+            @ParameterObject PropertySearchCondition condition,
+            @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
+    ) {
+        return ResponseEntity.ok(ApiResponse.success("매물 목록을 조회했습니다.", propertyService.getProperties(condition, pageable)));
     }
 
     @Operation(summary = "내 매물 목록 조회", description = "현재 로그인한 사용자가 등록한 매물 목록을 반환합니다.")

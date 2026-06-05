@@ -4,7 +4,9 @@ import com.ssafy.home.common.exception.BusinessException;
 import com.ssafy.home.common.exception.ErrorCode;
 import com.ssafy.home.property.dto.PropertyCreateRequest;
 import com.ssafy.home.property.dto.PropertyResponse;
+import com.ssafy.home.property.dto.PropertySearchCondition;
 import com.ssafy.home.property.dto.PropertyUpdateRequest;
+import com.ssafy.home.property.repository.PropertySpecification;
 import com.ssafy.home.property.entity.DataSource;
 import com.ssafy.home.property.entity.Property;
 import com.ssafy.home.property.entity.PropertyStatus;
@@ -16,6 +18,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import java.util.List;
 
 @RequiredArgsConstructor
@@ -32,10 +36,22 @@ public class PropertyService {
 
         Property property = Property.builder()
                 .ownerId(userId)
+                .title(request.title())
                 .address(request.address())
+                .roadAddress(request.roadAddress())
                 .sido(request.sido())
                 .gugun(request.gugun())
                 .dong(request.dong())
+                .latitude(request.latitude())
+                .longitude(request.longitude())
+                .rentType(request.rentType())
+                .roomType(request.roomType())
+                .deposit(request.deposit())
+                .monthlyRent(request.monthlyRent())
+                .area(request.area())
+                .floor(request.floor())
+                .buildYear(request.buildYear())
+                .dealDate(request.dealDate())
                 .status(PropertyStatus.PENDING)
                 .dataSource(DataSource.AGENT)
                 .build();
@@ -43,11 +59,9 @@ public class PropertyService {
         propertyRepository.save(property);
     }
 
-    public List<PropertyResponse> getProperties() {
-        return propertyRepository.findAllByStatusNot(PropertyStatus.DELETED)
-                .stream()
-                .map(PropertyResponse::from)
-                .toList();
+    public Page<PropertyResponse> getProperties(PropertySearchCondition condition, Pageable pageable) {
+        return propertyRepository.findAll(PropertySpecification.search(condition), pageable)
+                .map(PropertyResponse::from);
     }
 
     public PropertyResponse getProperty(Long id) {
