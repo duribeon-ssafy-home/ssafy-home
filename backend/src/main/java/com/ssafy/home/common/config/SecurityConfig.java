@@ -47,6 +47,7 @@ public class SecurityConfig {
                                 "/api/auth/login",
                                 "/api/auth/refresh"
                         ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/lifestyle/questions").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/properties/me").hasRole("AGENT")
                         .requestMatchers(HttpMethod.GET, "/api/properties", "/api/properties/*").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/properties").hasAnyRole("AGENT", "ADMIN")

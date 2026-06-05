@@ -102,22 +102,23 @@ CREATE TABLE IF NOT EXISTS favorites (
 
 -- =============================================
 -- 5. LIFESTYLE_RESULTS
--- lifestyle_type: NIGHT_WORKER | CAFE_STUDENT | HOME_LOVER | ACTIVE_LIVER
+-- lifestyle_type: 3개 축 조합으로 분류한 8가지 생활 성향 유형
 -- =============================================
 CREATE TABLE IF NOT EXISTS lifestyle_results (
-    lifestyle_result_id BIGINT      NOT NULL AUTO_INCREMENT,
-    user_id             BIGINT      NOT NULL,
-    lifestyle_type      VARCHAR(20) NOT NULL,
-    cooking_score       INT         NOT NULL DEFAULT 0,
-    quiet_score         INT         NOT NULL DEFAULT 0,
-    station_score       INT         NOT NULL DEFAULT 0,
-    delivery_score      INT         NOT NULL DEFAULT 0,
-    exercise_score      INT         NOT NULL DEFAULT 0,
-    car_score           INT         NOT NULL DEFAULT 0,
-    cafe_score          INT         NOT NULL DEFAULT 0,
-    night_score         INT         NOT NULL DEFAULT 0,
-    created_at          DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at          DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    lifestyle_result_id       BIGINT        NOT NULL AUTO_INCREMENT,
+    user_id                   BIGINT        NOT NULL,
+    lifestyle_type            VARCHAR(50)   NOT NULL,
+    living_convenience_score  INT           NOT NULL DEFAULT 0,
+    cost_sensitivity_score    INT           NOT NULL DEFAULT 0,
+    home_quality_score        INT           NOT NULL DEFAULT 0,
+    facility_score_min        INT           NULL,
+    facility_count_min        INT           NULL,
+    monthly_rent_max          INT           NULL,
+    deposit_max               BIGINT        NULL,
+    area_min                  DECIMAL(6,2)  NULL,
+    build_year_min            INT           NULL,
+    created_at                DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at                DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     PRIMARY KEY (lifestyle_result_id),
     CONSTRAINT fk_lifestyle_results_user
         FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE,
