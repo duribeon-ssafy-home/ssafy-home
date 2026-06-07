@@ -7,6 +7,8 @@ import lombok.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Table(name = "properties")
@@ -63,6 +65,10 @@ public class Property extends BaseTimeEntity {
     @Enumerated(EnumType.STRING)
     @Column(nullable=false)
     private PropertyStatus status;
+
+    @OneToMany(mappedBy = "property", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    private List<PropertyImage> images= new ArrayList<>();
 
     public void update(PropertyUpdateRequest request) {
         this.title = request.title();

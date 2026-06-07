@@ -26,6 +26,13 @@ public enum ErrorCode {
     PROPERTY_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 매물에 대한 권한이 없습니다."),
     PROPERTY_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "이미 삭제된 매물입니다."),
 
+    //Property Image
+    IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "이미지를 찾을 수 없습니다."),
+    IMAGE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 업로드에 실패했습니다."),
+    IMAGE_LIMIT_EXCEEDED(HttpStatus.BAD_REQUEST, "이미지는 최대 10장까지 등록할 수 있습니다."),
+    INVALID_IMAGE_FORMAT(HttpStatus.BAD_REQUEST, "지원하지 않는 이미지 형식입니다."),
+    PUBLIC_PROPERTY_IMAGE_NOT_ALLOWED(HttpStatus.FORBIDDEN, "공공 데이터 매물은 이미지를 등록할 수 없습니다."),
+
     // Favorite
     FAVORITE_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 관심 매물로 등록된 매물입니다."),
     FAVORITE_NOT_FOUND(HttpStatus.NOT_FOUND, "관심 매물 목록에 없는 매물입니다."),

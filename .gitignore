@@ -46,3 +46,7 @@ pnpm-debug.log*
 
 # Vite
 frontend/.vite/
+
+# Uploaded files
+uploads/
+test-uploads/
