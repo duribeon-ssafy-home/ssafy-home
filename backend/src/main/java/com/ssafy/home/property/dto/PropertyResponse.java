@@ -9,6 +9,7 @@ import com.ssafy.home.property.entity.RoomType;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record PropertyResponse(
         Long propertyId,
@@ -32,7 +33,8 @@ public record PropertyResponse(
         LocalDate dealDate,
         PropertyStatus status,
         LocalDateTime createdAt,
-        LocalDateTime updatedAt
+        LocalDateTime updatedAt,
+        List<PropertyImageResponse> images
 ) {
     public static PropertyResponse from(Property property) {
         return new PropertyResponse(
@@ -57,7 +59,8 @@ public record PropertyResponse(
                 property.getDealDate(),
                 property.getStatus(),
                 property.getCreatedAt(),
-                property.getUpdatedAt()
+                property.getUpdatedAt(),
+                property.getImages().stream().map(PropertyImageResponse::from).toList()
         );
     }
 }
