@@ -65,6 +65,9 @@ On Windows, use `gradlew.bat` instead of `./gradlew`.
 - Use DTOs for request and response bodies.
 - Use Bean Validation annotations on request DTOs and `@Valid` in controllers.
 - Do not modify unrelated domains unless the task requires it.
+- When adding or modifying Swagger/OpenAPI documentation, include clear @Tag descriptions and @Operation summaries/descriptions so each API's purpose is easy to understand.
+- When writing test code, use @DisplayName to describe in Korean what each test verifies.
+- When writing Korean text in source code, documentation, or tests, ensure that file encoding is correctly handled, preferably UTF-8, so Korean characters are not broken.
 
 ## API Response Rules
 

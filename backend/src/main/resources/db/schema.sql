@@ -183,6 +183,7 @@ CREATE TABLE IF NOT EXISTS reports (
     content      TEXT        NULL,
     status       VARCHAR(20) NOT NULL DEFAULT 'PENDING',
     created_at   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at   DATETIME    NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     processed_at DATETIME    NULL,
     PRIMARY KEY (report_id),
     UNIQUE KEY uq_reports (user_id, property_id),

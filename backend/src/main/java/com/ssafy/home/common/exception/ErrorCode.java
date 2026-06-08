@@ -26,6 +26,10 @@ public enum ErrorCode {
     PROPERTY_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 매물에 대한 권한이 없습니다."),
     PROPERTY_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "이미 삭제된 매물입니다."),
 
+    // Report
+    REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "신고를 찾을 수 없습니다."),
+    REPORT_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 신고한 매물입니다."),
+
     // Lifestyle
     LIFESTYLE_RESULT_NOT_FOUND(HttpStatus.NOT_FOUND, "생활 성향 결과를 찾을 수 없습니다."),
 
