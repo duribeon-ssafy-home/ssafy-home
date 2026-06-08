@@ -175,6 +175,59 @@ class AdminUserApiTests {
                 .andExpect(jsonPath("$.errorCode").value("PHONE_NUMBER_REQUIRED"));
     }
 
+    @Test
+    void adminCannotGrantAdminRole() throws Exception {
+        User admin = saveUser("admin@example.com", "Admin", "admin", Role.ADMIN, null);
+        User buyer = saveUser("buyer@example.com", "Buyer", "buyer", Role.BUYER, null);
+        String adminToken = tokenFor(admin);
+
+        mockMvc.perform(patch("/api/admin/users/{userId}/role", buyer.getId())
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "role": "ADMIN"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_ROLE"));
+    }
+
+    @Test
+    void adminCannotChangeOwnRole() throws Exception {
+        User admin = saveUser("admin@example.com", "Admin", "admin", Role.ADMIN, null);
+        String adminToken = tokenFor(admin);
+
+        mockMvc.perform(patch("/api/admin/users/{userId}/role", admin.getId())
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "role": "BUYER"
+                                }
+                                """))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+    }
+
+    @Test
+    void adminCannotChangeOtherAdminRole() throws Exception {
+        User admin = saveUser("admin@example.com", "Admin", "admin", Role.ADMIN, null);
+        User otherAdmin = saveUser("other-admin@example.com", "Other Admin", "other-admin", Role.ADMIN, null);
+        String adminToken = tokenFor(admin);
+
+        mockMvc.perform(patch("/api/admin/users/{userId}/role", otherAdmin.getId())
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "role": "BUYER"
+                                }
+                                """))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.errorCode").value("INVALID_ROLE"));
+    }
+
     private User saveUser(String email, String name, String nickname, Role role, String phoneNumber) {
         return userRepository.save(User.builder()
                 .email(email)

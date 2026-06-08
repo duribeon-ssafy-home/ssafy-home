@@ -105,8 +105,9 @@ public class AuthService {
 			throw new BusinessException(ErrorCode.INVALID_TOKEN);
 		}
 
-		refreshToken.revoke();
 		User user = refreshToken.getUser();
+		validateAccountStatus(user);
+		refreshToken.revoke();
 		String newAccessToken = jwtTokenProvider.createAccessToken(user);
 		String newRefreshToken = createRefreshToken(user);
 
@@ -139,6 +140,10 @@ public class AuthService {
 		if (!passwordEncoder.matches(rawPassword, user.getPassword())) {
 			throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
 		}
+		validateAccountStatus(user);
+	}
+
+	private void validateAccountStatus(User user) {
 		if (user.getStatus() == UserStatus.INACTIVE) {
 			throw new BusinessException(ErrorCode.INACTIVE_USER);
 		}

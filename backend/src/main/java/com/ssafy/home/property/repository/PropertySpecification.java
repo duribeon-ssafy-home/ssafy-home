@@ -15,7 +15,7 @@ public class PropertySpecification {
         return (root, query, cb) -> {
             List<Predicate> predicates = new ArrayList<>();
 
-            predicates.add(cb.notEqual(root.get("status"), PropertyStatus.DELETED));
+            predicates.add(cb.equal(root.get("status"), PropertyStatus.APPROVED));
 
             if (condition.sido() != null) {
                 predicates.add(cb.equal(root.get("sido"), condition.sido()));

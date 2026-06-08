@@ -72,6 +72,36 @@ class PropertyAuthorizationApiTests {
     }
 
     @Test
+    void publicUserCanReadApprovedPropertiesOnly() throws Exception {
+        Property approved = saveProperty(null, PropertyStatus.APPROVED);
+        Property pending = saveProperty(null, PropertyStatus.PENDING);
+        Property rejected = saveProperty(null, PropertyStatus.REJECTED);
+        Property hidden = saveProperty(null, PropertyStatus.HIDDEN);
+        Property deleted = saveProperty(null, PropertyStatus.DELETED);
+
+        mockMvc.perform(get("/api/properties"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(1))
+                .andExpect(jsonPath("$.data.content[0].propertyId").value(approved.getPropertyId()));
+
+        mockMvc.perform(get("/api/properties/{propertyId}", pending.getPropertyId()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("PROPERTY_NOT_FOUND"));
+
+        mockMvc.perform(get("/api/properties/{propertyId}", rejected.getPropertyId()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("PROPERTY_NOT_FOUND"));
+
+        mockMvc.perform(get("/api/properties/{propertyId}", hidden.getPropertyId()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("PROPERTY_NOT_FOUND"));
+
+        mockMvc.perform(get("/api/properties/{propertyId}", deleted.getPropertyId()))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("PROPERTY_NOT_FOUND"));
+    }
+
+    @Test
     void buyerCannotCreateUpdateDeleteOrReadMyProperties() throws Exception {
         User buyer = saveUser("buyer@example.com", Role.BUYER);
         User agent = saveUser("agent@example.com", Role.AGENT);
@@ -148,25 +178,33 @@ class PropertyAuthorizationApiTests {
     }
 
     @Test
-    void adminCanUpdateAndDeleteAnyProperty() throws Exception {
+    void adminCannotUseGeneralPropertyManagementApis() throws Exception {
         User admin = saveUser("admin@example.com", Role.ADMIN);
         User agent = saveUser("agent@example.com", Role.AGENT);
         Property property = saveProperty(agent.getId(), PropertyStatus.APPROVED);
         String adminToken = tokenFor(admin);
 
+        mockMvc.perform(post("/api/properties")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(createPropertyJson()))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+
         mockMvc.perform(patch("/api/properties/{propertyId}", property.getPropertyId())
                         .header("Authorization", "Bearer " + adminToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(updatePropertyJson("admin updated address")))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.address").value("admin updated address"));
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
 
         mockMvc.perform(delete("/api/properties/{propertyId}", property.getPropertyId())
                         .header("Authorization", "Bearer " + adminToken))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
 
         assertThat(propertyRepository.findById(property.getPropertyId()).orElseThrow().getStatus())
-                .isEqualTo(PropertyStatus.DELETED);
+                .isEqualTo(PropertyStatus.APPROVED);
     }
 
     private User saveUser(String email, Role role) {

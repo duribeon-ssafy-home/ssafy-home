@@ -26,6 +26,9 @@ public enum ErrorCode {
     PROPERTY_ACCESS_DENIED(HttpStatus.FORBIDDEN, "해당 매물에 대한 권한이 없습니다."),
     PROPERTY_ALREADY_DELETED(HttpStatus.BAD_REQUEST, "이미 삭제된 매물입니다."),
 
+    // Report
+    REPORT_NOT_FOUND(HttpStatus.NOT_FOUND, "신고를 찾을 수 없습니다."),
+    REPORT_ALREADY_EXISTS(HttpStatus.CONFLICT, "이미 신고한 매물입니다."),
     //Property Image
     IMAGE_NOT_FOUND(HttpStatus.NOT_FOUND, "이미지를 찾을 수 없습니다."),
     IMAGE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 업로드에 실패했습니다."),

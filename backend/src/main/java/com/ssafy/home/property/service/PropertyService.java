@@ -93,7 +93,7 @@ public class PropertyService {
     }
 
     public PropertyResponse getProperty(Long id) {
-        Property property = findActiveProperty(id);
+        Property property = findPublicProperty(id);
         AreaFacilityCount area = areaFacilityCountRepository
                 .findBySidoAndGugunAndDong(property.getSido(), property.getGugun(), property.getDong())
                 .orElse(null);
@@ -115,7 +115,7 @@ public class PropertyService {
     @Transactional
     public PropertyResponse updateProperty(Long id, PropertyUpdateRequest request, Long userId) {
         User user = findUser(userId);
-        Property property = findActiveProperty(id);
+        Property property = findNonDeletedProperty(id);
         validateCanModifyProperty(property, user);
         property.update(request);
         return PropertyResponse.from(property);
@@ -124,7 +124,7 @@ public class PropertyService {
     @Transactional
     public void deleteProperty(Long id, Long userId) {
         User user = findUser(userId);
-        Property property = findActiveProperty(id);
+        Property property = findNonDeletedProperty(id);
         validateCanModifyProperty(property, user);
         property.delete();
     }
@@ -134,7 +134,16 @@ public class PropertyService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 
-    private Property findActiveProperty(Long id) {
+    private Property findPublicProperty(Long id) {
+        Property property = propertyRepository.findById(id)
+                .orElseThrow(() -> new BusinessException(ErrorCode.PROPERTY_NOT_FOUND));
+        if (property.getStatus() != PropertyStatus.APPROVED) {
+            throw new BusinessException(ErrorCode.PROPERTY_NOT_FOUND);
+        }
+        return property;
+    }
+
+    private Property findNonDeletedProperty(Long id) {
         Property property = propertyRepository.findById(id)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROPERTY_NOT_FOUND));
         if (property.getStatus() == PropertyStatus.DELETED) {
@@ -144,15 +153,12 @@ public class PropertyService {
     }
 
     private void validateCanCreateProperty(User user) {
-        if (user.getRole() != Role.AGENT && user.getRole() != Role.ADMIN) {
+        if (user.getRole() != Role.AGENT) {
             throw new BusinessException(ErrorCode.FORBIDDEN);
         }
     }
 
     private void validateCanModifyProperty(Property property, User user) {
-        if (user.getRole() == Role.ADMIN) {
-            return;
-        }
         if (user.getRole() == Role.AGENT && user.getId().equals(property.getOwnerId())) {
             return;
         }
