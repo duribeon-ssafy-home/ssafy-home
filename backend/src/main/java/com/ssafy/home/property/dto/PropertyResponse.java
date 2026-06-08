@@ -1,5 +1,7 @@
 package com.ssafy.home.property.dto;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.ssafy.home.property.entity.AreaFacilityCount;
 import com.ssafy.home.property.entity.DataSource;
 import com.ssafy.home.property.entity.Property;
 import com.ssafy.home.property.entity.PropertyStatus;
@@ -34,9 +36,14 @@ public record PropertyResponse(
         PropertyStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt,
-        List<PropertyImageResponse> images
+        List<PropertyImageResponse> images,
+        @JsonInclude(JsonInclude.Include.NON_NULL) FacilityInfo facilityInfo
 ) {
     public static PropertyResponse from(Property property) {
+        return from(property, null);
+    }
+
+    public static PropertyResponse from(Property property, AreaFacilityCount area) {
         return new PropertyResponse(
                 property.getPropertyId(),
                 property.getOwnerId(),
@@ -60,7 +67,8 @@ public record PropertyResponse(
                 property.getStatus(),
                 property.getCreatedAt(),
                 property.getUpdatedAt(),
-                property.getImages().stream().map(PropertyImageResponse::from).toList()
+                property.getImages().stream().map(PropertyImageResponse::from).toList(),
+                FacilityInfo.from(area)
         );
     }
 }
