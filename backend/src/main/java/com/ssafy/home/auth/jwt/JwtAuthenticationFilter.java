@@ -3,6 +3,7 @@ package com.ssafy.home.auth.jwt;
 import com.ssafy.home.common.security.CustomUserDetails;
 import com.ssafy.home.user.entity.User;
 import com.ssafy.home.user.repository.UserRepository;
+import com.ssafy.home.user.type.UserStatus;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -48,7 +49,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	private void authenticate(String token) {
 		JwtAuthentication jwtAuthentication = jwtTokenProvider.parse(token);
 		User user = userRepository.findById(jwtAuthentication.userId()).orElse(null);
-		if (user == null) {
+		if (user == null || user.getStatus() != UserStatus.ACTIVE) {
 			return;
 		}
 
