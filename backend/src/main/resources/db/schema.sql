@@ -150,7 +150,32 @@ CREATE TABLE IF NOT EXISTS property_recommend_scores (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 7. PROPERTY_RISK_SCORES
+-- 7. AREA_FACILITY_COUNTS
+-- 동(dong) 단위 주변 시설 카운트 (카카오 로컬 API 전처리 결과)
+-- center_lat/lng: 해당 동 소속 매물들의 위경도 평균값
+-- 동네 추천 기능에서 동 단위 시설 환경 비교에 사용
+-- =============================================
+CREATE TABLE IF NOT EXISTS area_facility_counts (
+    area_id                BIGINT        NOT NULL AUTO_INCREMENT,
+    sido                   VARCHAR(50)   NOT NULL,
+    gugun                  VARCHAR(50)   NOT NULL,
+    dong                   VARCHAR(50)   NOT NULL,
+    center_lat             DECIMAL(10,7) NOT NULL,
+    center_lng             DECIMAL(10,7) NOT NULL,
+    subway_count_500m      INT           NULL,
+    mart_count_1km         INT           NULL,
+    convenience_count_500m INT           NULL,
+    hospital_count_1km     INT           NULL,
+    pharmacy_count_500m    INT           NULL,
+    cafe_count_500m        INT           NULL,
+    restaurant_count_500m  INT           NULL,
+    calculated_at          DATETIME      NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (area_id),
+    UNIQUE KEY uq_area (sido, gugun, dong)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =============================================
+-- 8. PROPERTY_RISK_SCORES
 -- risk_label: SAFE | CAUTION | DANGER | UNKNOWN
 -- property_id UNIQUE → PROPERTIES 1:1 관계
 -- =============================================

@@ -1,6 +1,7 @@
 package com.ssafy.home.property.repository;
 
 import com.ssafy.home.property.dto.PropertySearchCondition;
+import com.ssafy.home.property.entity.AreaFacilityCount;
 import com.ssafy.home.property.entity.Property;
 import com.ssafy.home.property.entity.PropertyStatus;
 import jakarta.persistence.criteria.Predicate;
@@ -51,6 +52,20 @@ public class PropertySpecification {
             }
 
             return cb.and(predicates.toArray(new Predicate[0]));
+        };
+    }
+
+    public static Specification<Property> inAreas(List<AreaFacilityCount> areas) {
+        return (root, query, cb) -> {
+            if (areas.isEmpty()) return cb.disjunction();
+            List<Predicate> predicates = areas.stream()
+                    .map(a -> cb.and(
+                            cb.equal(root.get("sido"), a.getSido()),
+                            cb.equal(root.get("gugun"), a.getGugun()),
+                            cb.equal(root.get("dong"), a.getDong())
+                    ))
+                    .toList();
+            return cb.or(predicates.toArray(new Predicate[0]));
         };
     }
 }
