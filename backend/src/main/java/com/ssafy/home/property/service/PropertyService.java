@@ -6,27 +6,33 @@ import com.ssafy.home.property.dto.PropertyCreateRequest;
 import com.ssafy.home.property.dto.PropertyResponse;
 import com.ssafy.home.property.dto.PropertySearchCondition;
 import com.ssafy.home.property.dto.PropertyUpdateRequest;
-import com.ssafy.home.property.repository.PropertySpecification;
+import com.ssafy.home.property.entity.AreaFacilityCount;
 import com.ssafy.home.property.entity.DataSource;
 import com.ssafy.home.property.entity.Property;
 import com.ssafy.home.property.entity.PropertyStatus;
+import com.ssafy.home.property.repository.AreaFacilityCountRepository;
 import com.ssafy.home.property.repository.PropertyRepository;
+import com.ssafy.home.property.repository.PropertySpecification;
 import com.ssafy.home.user.entity.User;
 import com.ssafy.home.user.repository.UserRepository;
 import com.ssafy.home.user.type.Role;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
 @Transactional(readOnly = true)
 public class PropertyService {
     private final PropertyRepository propertyRepository;
+    private final AreaFacilityCountRepository areaFacilityCountRepository;
     private final UserRepository userRepository;
 
     @Transactional
@@ -60,13 +66,38 @@ public class PropertyService {
     }
 
     public Page<PropertyResponse> getProperties(PropertySearchCondition condition, Pageable pageable) {
-        return propertyRepository.findAll(PropertySpecification.search(condition), pageable)
-                .map(PropertyResponse::from);
+        Specification<Property> spec = PropertySpecification.search(condition);
+
+        if (condition.facilityCountMin() != null) {
+            List<AreaFacilityCount> qualifyingAreas =
+                    areaFacilityCountRepository.findWithMinTotalCount(condition.facilityCountMin());
+            spec = spec.and(PropertySpecification.inAreas(qualifyingAreas));
+        }
+
+        Page<Property> page = propertyRepository.findAll(spec, pageable);
+
+        if (condition.facilityCountMin() != null) {
+            Map<String, AreaFacilityCount> facilityMap = page.getContent().stream()
+                    .collect(Collectors.toMap(
+                            p -> p.getSido() + "|" + p.getGugun() + "|" + p.getDong(),
+                            p -> areaFacilityCountRepository
+                                    .findBySidoAndGugunAndDong(p.getSido(), p.getGugun(), p.getDong())
+                                    .orElse(null),
+                            (existing, duplicate) -> existing
+                    ));
+            return page.map(p -> PropertyResponse.from(p,
+                    facilityMap.get(p.getSido() + "|" + p.getGugun() + "|" + p.getDong())));
+        }
+
+        return page.map(PropertyResponse::from);
     }
 
     public PropertyResponse getProperty(Long id) {
         Property property = findActiveProperty(id);
-        return PropertyResponse.from(property);
+        AreaFacilityCount area = areaFacilityCountRepository
+                .findBySidoAndGugunAndDong(property.getSido(), property.getGugun(), property.getDong())
+                .orElse(null);
+        return PropertyResponse.from(property, area);
     }
 
     public List<PropertyResponse> getMyProperties(Long userId) {

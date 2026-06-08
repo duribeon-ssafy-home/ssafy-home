@@ -28,12 +28,25 @@ public class AreaFacilityCount {
     private BigDecimal centerLat;
     private BigDecimal centerLng;
 
+    @Column(name = "subway_count_500m")
     private Integer subwayCount500m;
+
+    @Column(name = "mart_count_1km")
     private Integer martCount1km;
+
+    @Column(name = "convenience_count_500m")
     private Integer convenienceCount500m;
+
+    @Column(name = "hospital_count_1km")
     private Integer hospitalCount1km;
+
+    @Column(name = "pharmacy_count_500m")
     private Integer pharmacyCount500m;
+
+    @Column(name = "cafe_count_500m")
     private Integer cafeCount500m;
+
+    @Column(name = "restaurant_count_500m")
     private Integer restaurantCount500m;
 
     private LocalDateTime calculatedAt;
