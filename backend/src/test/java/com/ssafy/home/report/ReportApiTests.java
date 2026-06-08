@@ -98,6 +98,43 @@ class ReportApiTests {
     }
 
     @Test
+    void agentCanReportOtherOwnersApprovedProperty() throws Exception {
+        User owner = saveUser("owner@example.com", Role.AGENT);
+        User reporter = saveUser("reporter@example.com", Role.AGENT);
+        Property property = saveProperty(owner.getId(), PropertyStatus.APPROVED);
+        String reporterToken = tokenFor(reporter);
+
+        mockMvc.perform(post("/api/properties/{propertyId}/reports", property.getPropertyId())
+                        .header("Authorization", "Bearer " + reporterToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(reportJson("PRICE_MISMATCH")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.userId").value(reporter.getId()))
+                .andExpect(jsonPath("$.data.propertyId").value(property.getPropertyId()));
+    }
+
+    @Test
+    void ownerAndAdminCannotCreatePropertyReport() throws Exception {
+        User owner = saveUser("owner@example.com", Role.AGENT);
+        User admin = saveUser("admin@example.com", Role.ADMIN);
+        Property property = saveProperty(owner.getId(), PropertyStatus.APPROVED);
+
+        mockMvc.perform(post("/api/properties/{propertyId}/reports", property.getPropertyId())
+                        .header("Authorization", "Bearer " + tokenFor(owner))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(reportJson("PHOTO_MISMATCH")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+
+        mockMvc.perform(post("/api/properties/{propertyId}/reports", property.getPropertyId())
+                        .header("Authorization", "Bearer " + tokenFor(admin))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(reportJson("PHOTO_MISMATCH")))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.errorCode").value("FORBIDDEN"));
+    }
+
+    @Test
     void duplicatePropertyReportFromSameUserIsRejected() throws Exception {
         User buyer = saveUser("buyer@example.com", Role.BUYER);
         Property property = saveProperty(null, PropertyStatus.APPROVED);
@@ -135,6 +172,36 @@ class ReportApiTests {
         String buyerToken = tokenFor(buyer);
 
         mockMvc.perform(post("/api/properties/{propertyId}/reports", property.getPropertyId())
+                        .header("Authorization", "Bearer " + buyerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(reportJson("FRAUD_SUSPECTED")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("PROPERTY_NOT_FOUND"));
+    }
+
+    @Test
+    void nonApprovedPropertyCannotBeReported() throws Exception {
+        User buyer = saveUser("buyer@example.com", Role.BUYER);
+        String buyerToken = tokenFor(buyer);
+        Property pending = saveProperty(null, PropertyStatus.PENDING);
+        Property rejected = saveProperty(null, PropertyStatus.REJECTED);
+        Property hidden = saveProperty(null, PropertyStatus.HIDDEN);
+
+        mockMvc.perform(post("/api/properties/{propertyId}/reports", pending.getPropertyId())
+                        .header("Authorization", "Bearer " + buyerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(reportJson("FRAUD_SUSPECTED")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("PROPERTY_NOT_FOUND"));
+
+        mockMvc.perform(post("/api/properties/{propertyId}/reports", rejected.getPropertyId())
+                        .header("Authorization", "Bearer " + buyerToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(reportJson("FRAUD_SUSPECTED")))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.errorCode").value("PROPERTY_NOT_FOUND"));
+
+        mockMvc.perform(post("/api/properties/{propertyId}/reports", hidden.getPropertyId())
                         .header("Authorization", "Bearer " + buyerToken)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(reportJson("FRAUD_SUSPECTED")))

@@ -149,6 +149,45 @@ class AuthUserApiTests {
 	}
 
 	@Test
+	void inactiveUserCannotUseIssuedTokens() throws Exception {
+		signupBuyer("inactive@example.com");
+
+		MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "email": "inactive@example.com",
+								  "password": "password123!"
+								}
+								"""))
+				.andExpect(status().isOk())
+				.andReturn();
+
+		JsonNode loginJson = objectMapper.readTree(loginResult.getResponse().getContentAsString());
+		String accessToken = loginJson.at("/data/accessToken").asText();
+		String refreshToken = loginJson.at("/data/refreshToken").asText();
+
+		var user = userRepository.findByEmail("inactive@example.com").orElseThrow();
+		user.changeStatus(UserStatus.INACTIVE);
+		userRepository.saveAndFlush(user);
+
+		mockMvc.perform(get("/api/auth/me")
+						.header("Authorization", "Bearer " + accessToken))
+				.andExpect(status().isUnauthorized())
+				.andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"));
+
+		mockMvc.perform(post("/api/auth/refresh")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "refreshToken": "%s"
+								}
+								""".formatted(refreshToken)))
+				.andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.errorCode").value("INACTIVE_USER"));
+	}
+
+	@Test
 	void userCanReadAndUpdateProfile() throws Exception {
 		String accessToken = signupAndLogin("buyer@example.com");
 

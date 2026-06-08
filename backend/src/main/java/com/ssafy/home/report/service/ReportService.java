@@ -13,6 +13,7 @@ import com.ssafy.home.report.repository.ReportRepository;
 import com.ssafy.home.report.type.ReportStatus;
 import com.ssafy.home.user.entity.User;
 import com.ssafy.home.user.repository.UserRepository;
+import com.ssafy.home.user.type.Role;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -32,6 +33,7 @@ public class ReportService {
     public ReportResponse createReport(Long propertyId, Long userId, ReportCreateRequest request) {
         User user = findUser(userId);
         Property property = findReportableProperty(propertyId);
+        validateCanCreateReport(user, property);
 
         if (reportRepository.existsByUser_IdAndProperty_PropertyId(userId, propertyId)) {
             throw new BusinessException(ErrorCode.REPORT_ALREADY_EXISTS);
@@ -81,11 +83,21 @@ public class ReportService {
         Property property = propertyRepository.findById(propertyId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROPERTY_NOT_FOUND));
 
-        if (property.getStatus() == PropertyStatus.DELETED) {
+        if (property.getStatus() != PropertyStatus.APPROVED) {
             throw new BusinessException(ErrorCode.PROPERTY_NOT_FOUND);
         }
 
         return property;
+    }
+
+    private void validateCanCreateReport(User user, Property property) {
+        if (user.getId().equals(property.getOwnerId())) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+        if (user.getRole() == Role.BUYER || user.getRole() == Role.AGENT) {
+            return;
+        }
+        throw new BusinessException(ErrorCode.FORBIDDEN);
     }
 
     private Report findReport(Long reportId) {

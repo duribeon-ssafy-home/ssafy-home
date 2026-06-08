@@ -1,11 +1,13 @@
 package com.ssafy.home.admin.controller;
 
 import com.ssafy.home.admin.service.AdminUserService;
+import com.ssafy.home.common.annotation.CurrentUser;
 import com.ssafy.home.common.response.ApiResponse;
 import com.ssafy.home.user.dto.request.UserRoleUpdateRequest;
 import com.ssafy.home.user.dto.request.UserStatusUpdateRequest;
 import com.ssafy.home.user.dto.response.UserResponse;
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import java.util.List;
@@ -53,8 +55,9 @@ public class AdminUserController {
     @PatchMapping("/{userId}/role")
     public ApiResponse<UserResponse> updateUserRole(
             @PathVariable Long userId,
-            @Valid @RequestBody UserRoleUpdateRequest request
+            @Valid @RequestBody UserRoleUpdateRequest request,
+            @Parameter(hidden = true) @CurrentUser Long adminUserId
     ) {
-        return ApiResponse.success("회원 역할을 변경했습니다.", adminUserService.updateUserRole(userId, request));
+        return ApiResponse.success("회원 역할을 변경했습니다.", adminUserService.updateUserRole(userId, adminUserId, request));
     }
 }

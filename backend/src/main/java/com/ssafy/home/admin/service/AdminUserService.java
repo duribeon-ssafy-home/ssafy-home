@@ -49,9 +49,9 @@ public class AdminUserService {
     }
 
     @Transactional
-    public UserResponse updateUserRole(Long userId, UserRoleUpdateRequest request) {
+    public UserResponse updateUserRole(Long userId, Long adminUserId, UserRoleUpdateRequest request) {
         User user = findUser(userId);
-        validateRoleUpdate(user, request);
+        validateRoleUpdate(user, adminUserId, request);
         user.changeRole(request.role(), request.phoneNumber());
         return UserResponse.from(user);
     }
@@ -61,7 +61,13 @@ public class AdminUserService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
     }
 
-    private void validateRoleUpdate(User user, UserRoleUpdateRequest request) {
+    private void validateRoleUpdate(User user, Long adminUserId, UserRoleUpdateRequest request) {
+        if (user.getId().equals(adminUserId)) {
+            throw new BusinessException(ErrorCode.FORBIDDEN);
+        }
+        if (user.getRole() == Role.ADMIN || request.role() == Role.ADMIN) {
+            throw new BusinessException(ErrorCode.INVALID_ROLE);
+        }
         if (request.role() == Role.AGENT
                 && !StringUtils.hasText(request.phoneNumber())
                 && !StringUtils.hasText(user.getPhoneNumber())) {
