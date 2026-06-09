@@ -11,7 +11,7 @@ public record RiskResponse(
         int reportCount,
         boolean ownerVerified
 ) {
-    static RiskResponse unknown(Long propertyId, int reportCount, boolean ownerVerified) {
+    public static RiskResponse unknown(Long propertyId, int reportCount, boolean ownerVerified) {
         return new RiskResponse(propertyId, RiskLabel.UNKNOWN, 0, null, null, reportCount, ownerVerified);
     }
 }
