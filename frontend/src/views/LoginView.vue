@@ -1,6 +1,7 @@
 <script setup>
 import { ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
+import PasswordField from '@/components/PasswordField.vue'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
@@ -9,10 +10,34 @@ const authStore = useAuthStore()
 
 const email = ref('')
 const password = ref('')
+const errorMessage = ref('')
+const isSubmitting = ref(false)
 
-function submitLogin() {
-  authStore.setAccessToken('mock-access-token')
-  router.push(route.query.redirect || { name: 'home' })
+async function submitLogin() {
+  errorMessage.value = ''
+  isSubmitting.value = true
+
+  try {
+    await authStore.loginWithPassword({
+      email: email.value,
+      password: password.value,
+    })
+    router.push(resolveRedirect())
+  } catch (error) {
+    errorMessage.value = error.response?.data?.message || '로그인에 실패했습니다.'
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+function resolveRedirect() {
+  const redirect = route.query.redirect
+
+  if (typeof redirect === 'string' && redirect.startsWith('/')) {
+    return redirect
+  }
+
+  return { name: 'home' }
 }
 </script>
 
@@ -31,13 +56,21 @@ function submitLogin() {
         <h2>로그인</h2>
         <label>
           이메일
-          <input v-model="email" type="email" placeholder="you@example.com" />
+          <input
+            v-model="email"
+            autocomplete="email"
+            required
+            type="email"
+            placeholder="you@example.com"
+          />
         </label>
-        <label>
-          비밀번호
-          <input v-model="password" type="password" placeholder="비밀번호" />
-        </label>
-        <button type="submit">로그인</button>
+        <PasswordField id="login-password" v-model="password" required />
+        <p v-if="errorMessage" class="form-message form-message--error" role="alert">
+          {{ errorMessage }}
+        </p>
+        <button type="submit" :disabled="isSubmitting">
+          {{ isSubmitting ? '로그인 중...' : '로그인' }}
+        </button>
         <RouterLink :to="{ name: 'signup' }">회원가입으로 이동</RouterLink>
       </form>
     </section>
@@ -114,6 +147,14 @@ function submitLogin() {
     color: var(--color-heading);
     padding: 0 13px;
     outline: none;
+    transition:
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast);
+
+    &:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 4px rgba(54, 95, 145, 0.12);
+    }
   }
 
   button {
@@ -122,6 +163,10 @@ function submitLogin() {
     background: var(--color-primary);
     color: var(--color-surface);
     font-weight: 900;
+
+    &:disabled {
+      background: var(--color-subtle);
+    }
   }
 
   a {
@@ -129,6 +174,18 @@ function submitLogin() {
     font-size: 14px;
     font-weight: 900;
   }
+}
+
+.form-message {
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 11px 12px;
+}
+
+.form-message--error {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
 }
 
 @media (max-width: 820px) {

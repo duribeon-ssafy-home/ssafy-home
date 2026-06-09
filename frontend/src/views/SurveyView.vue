@@ -36,6 +36,11 @@ onMounted(() => {
 async function loadQuestions() {
   try {
     const data = await getLifestyleQuestions()
+
+    if (!Array.isArray(data) || !data.length) {
+      throw new Error('Lifestyle questions are empty.')
+    }
+
     questions.value = normalizeLifestyleQuestions(data)
   } catch {
     questions.value = normalizeLifestyleQuestions(fallbackLifestyleQuestions)

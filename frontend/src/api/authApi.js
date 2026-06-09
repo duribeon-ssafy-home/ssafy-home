@@ -14,3 +14,13 @@ export async function getMe() {
   const response = await api.get('/auth/me')
   return response.data.data
 }
+
+export async function refreshTokens(payload) {
+  const response = await api.post('/auth/refresh', payload)
+  return response.data.data
+}
+
+export async function logout(payload) {
+  const response = await api.post('/auth/logout', payload)
+  return response.data.data
+}

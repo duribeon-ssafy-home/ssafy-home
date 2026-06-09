@@ -42,11 +42,24 @@ const router = createRouter({
       name: 'signup',
       component: () => import('@/views/SignupView.vue'),
     },
+    {
+      path: '/forbidden',
+      name: 'forbidden',
+      component: () => import('@/views/ForbiddenView.vue'),
+    },
   ],
 })
 
-router.beforeEach((to) => {
+router.beforeEach(async (to) => {
   const authStore = useAuthStore()
+
+  if (!authStore.isInitialized && shouldInitializeAuth(to)) {
+    await authStore.initializeAuth()
+  }
+
+  if ((to.name === 'login' || to.name === 'signup') && authStore.isAuthenticated) {
+    return routeAfterAuth(to.query.redirect)
+  }
 
   if (to.meta.requiresAuth && !authStore.isAuthenticated) {
     return {
@@ -55,7 +68,31 @@ router.beforeEach((to) => {
     }
   }
 
+  const allowedRoles = Array.isArray(to.meta.roles) ? to.meta.roles : []
+
+  if (allowedRoles.length && !authStore.hasRole(allowedRoles)) {
+    return {
+      name: 'forbidden',
+      query: { from: to.fullPath },
+    }
+  }
+
   return true
 })
+
+function routeAfterAuth(redirect) {
+  if (typeof redirect === 'string' && redirect.startsWith('/')) {
+    return redirect
+  }
+
+  return { name: 'home' }
+}
+
+function shouldInitializeAuth(to) {
+  const hasRoleGuard = Array.isArray(to.meta.roles) && to.meta.roles.length > 0
+  const isAuthPage = to.name === 'login' || to.name === 'signup'
+
+  return to.meta.requiresAuth || hasRoleGuard || isAuthPage
+}
 
 export default router
