@@ -50,9 +50,11 @@ public class SecurityConfig {
                         .requestMatchers(
                                 "/api/auth/signup",
                                 "/api/auth/login",
-                                "/api/auth/refresh"
+                                "/api/auth/refresh",
+                                "/api/auth/logout"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/lifestyle/questions").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/lifestyle/results/preview").permitAll()
                         .requestMatchers("/images/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/properties/me").hasRole("AGENT")
                         .requestMatchers(HttpMethod.GET,

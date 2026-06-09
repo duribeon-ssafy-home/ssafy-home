@@ -4,6 +4,7 @@ import com.ssafy.home.common.exception.BusinessException;
 import com.ssafy.home.common.exception.ErrorCode;
 import com.ssafy.home.lifestyle.dto.request.LifestyleAnswerRequest;
 import com.ssafy.home.lifestyle.dto.request.LifestyleResultRequest;
+import com.ssafy.home.lifestyle.dto.response.LifestyleFilterPresetResponse;
 import com.ssafy.home.lifestyle.dto.response.LifestyleQuestionResponse;
 import com.ssafy.home.lifestyle.dto.response.LifestyleResultResponse;
 import com.ssafy.home.lifestyle.entity.LifestyleResult;
@@ -45,9 +46,41 @@ public class LifestyleService {
                 .toList();
     }
 
+    public LifestyleResultResponse previewResult(LifestyleResultRequest request) {
+        LifestyleAnalysis analysis = analyze(request);
+        return toResponse(analysis);
+    }
+
     @Transactional
     public LifestyleResultResponse saveResult(LifestyleResultRequest request, Long userId) {
         validateUserExists(userId);
+        LifestyleAnalysis analysis = analyze(request);
+
+        LifestyleResult result = lifestyleResultRepository.save(LifestyleResult.builder()
+                .userId(userId)
+                .lifestyleType(analysis.lifestyleType())
+                .livingConvenienceScore(analysis.livingConvenienceScore())
+                .costSensitivityScore(analysis.costSensitivityScore())
+                .homeQualityScore(analysis.homeQualityScore())
+                .facilityScoreMin(analysis.facilityScoreMin())
+                .facilityCountMin(analysis.facilityCountMin())
+                .monthlyRentMax(analysis.monthlyRentMax())
+                .depositMax(analysis.depositMax())
+                .areaMin(analysis.areaMin())
+                .buildYearMin(analysis.buildYearMin())
+                .build());
+
+        return LifestyleResultResponse.from(result);
+    }
+
+    public LifestyleResultResponse getMyLatestResult(Long userId) {
+        validateUserExists(userId);
+        LifestyleResult result = lifestyleResultRepository.findTopByUserIdOrderByCreatedAtDescIdDesc(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.LIFESTYLE_RESULT_NOT_FOUND));
+        return LifestyleResultResponse.from(result);
+    }
+
+    private LifestyleAnalysis analyze(LifestyleResultRequest request) {
         Map<Integer, String> answers = validateAnswers(request.answers());
 
         int livingConvenienceScore = calculateScore(answers, LifestyleCategory.LIVING_CONVENIENCE);
@@ -60,28 +93,33 @@ public class LifestyleService {
                 homeQualityScore > 0
         );
 
-        LifestyleResult result = lifestyleResultRepository.save(LifestyleResult.builder()
-                .userId(userId)
-                .lifestyleType(lifestyleType)
-                .livingConvenienceScore(livingConvenienceScore)
-                .costSensitivityScore(costSensitivityScore)
-                .homeQualityScore(homeQualityScore)
-                .facilityScoreMin(createFacilityScoreMin(answers))
-                .facilityCountMin(createFacilityCountMin(answers))
-                .monthlyRentMax(isSelectedA(answers, LifestyleQuestion.MONTHLY_RENT) ? MONTHLY_RENT_MAX : null)
-                .depositMax(isSelectedA(answers, LifestyleQuestion.DEPOSIT) ? DEPOSIT_MAX : null)
-                .areaMin(isSelectedA(answers, LifestyleQuestion.AREA) ? AREA_MIN : null)
-                .buildYearMin(isSelectedA(answers, LifestyleQuestion.BUILD_YEAR) ? BUILD_YEAR_MIN : null)
-                .build());
-
-        return LifestyleResultResponse.from(result);
+        return new LifestyleAnalysis(
+                lifestyleType,
+                livingConvenienceScore,
+                costSensitivityScore,
+                homeQualityScore,
+                createFacilityScoreMin(answers),
+                createFacilityCountMin(answers),
+                isSelectedA(answers, LifestyleQuestion.MONTHLY_RENT) ? MONTHLY_RENT_MAX : null,
+                isSelectedA(answers, LifestyleQuestion.DEPOSIT) ? DEPOSIT_MAX : null,
+                isSelectedA(answers, LifestyleQuestion.AREA) ? AREA_MIN : null,
+                isSelectedA(answers, LifestyleQuestion.BUILD_YEAR) ? BUILD_YEAR_MIN : null
+        );
     }
 
-    public LifestyleResultResponse getMyLatestResult(Long userId) {
-        validateUserExists(userId);
-        LifestyleResult result = lifestyleResultRepository.findTopByUserIdOrderByCreatedAtDescIdDesc(userId)
-                .orElseThrow(() -> new BusinessException(ErrorCode.LIFESTYLE_RESULT_NOT_FOUND));
-        return LifestyleResultResponse.from(result);
+    private LifestyleResultResponse toResponse(LifestyleAnalysis analysis) {
+        return new LifestyleResultResponse(
+                analysis.lifestyleType(),
+                analysis.lifestyleType().getTypeName(),
+                new LifestyleFilterPresetResponse(
+                        analysis.facilityScoreMin(),
+                        analysis.facilityCountMin(),
+                        analysis.monthlyRentMax(),
+                        analysis.depositMax(),
+                        analysis.areaMin(),
+                        analysis.buildYearMin()
+                )
+        );
     }
 
     private void validateUserExists(Long userId) {
@@ -138,5 +176,19 @@ public class LifestyleService {
 
     private boolean isSelectedA(Map<Integer, String> answers, LifestyleQuestion question) {
         return OPTION_A.equals(answers.get(question.getQuestionId()));
+    }
+
+    private record LifestyleAnalysis(
+            LifestyleType lifestyleType,
+            int livingConvenienceScore,
+            int costSensitivityScore,
+            int homeQualityScore,
+            Integer facilityScoreMin,
+            Integer facilityCountMin,
+            Integer monthlyRentMax,
+            Long depositMax,
+            BigDecimal areaMin,
+            Integer buildYearMin
+    ) {
     }
 }

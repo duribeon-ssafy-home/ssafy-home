@@ -33,6 +33,12 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/my-page',
+      name: 'my-page',
+      component: () => import('@/views/MyPageView.vue'),
+      meta: { requiresAuth: true },
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('@/views/LoginView.vue'),
@@ -53,7 +59,7 @@ const router = createRouter({
 router.beforeEach(async (to) => {
   const authStore = useAuthStore()
 
-  if (!authStore.isInitialized && shouldInitializeAuth(to)) {
+  if (!authStore.isInitialized && (shouldInitializeAuth(to) || authStore.accessToken)) {
     await authStore.initializeAuth()
   }
 

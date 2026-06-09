@@ -33,6 +33,7 @@ async function handleAuthAction() {
         <RouterLink :to="{ name: 'home' }">매물 찾기</RouterLink>
         <RouterLink :to="{ name: 'survey' }">라이프스타일 추천</RouterLink>
         <RouterLink :to="{ name: 'favorites' }">찜 목록</RouterLink>
+        <RouterLink :to="{ name: 'my-page' }">마이페이지</RouterLink>
       </nav>
 
       <div class="actions" aria-label="사용자 메뉴">
@@ -44,13 +45,13 @@ async function handleAuthAction() {
             </p>
             <span class="role-badge">{{ roleLabel }}</span>
           </div>
-          <button class="auth-button" type="button" @click="handleAuthAction">
-            로그아웃
-          </button>
+          <button class="auth-button" type="button" @click="handleAuthAction">로그아웃</button>
         </div>
 
         <div v-else class="auth-links">
-          <RouterLink class="auth-button auth-button--ghost" :to="{ name: 'login' }">로그인</RouterLink>
+          <RouterLink class="auth-button auth-button--ghost" :to="{ name: 'login' }"
+            >로그인</RouterLink
+          >
           <RouterLink class="auth-button auth-button--primary" :to="{ name: 'signup' }">
             회원가입
           </RouterLink>

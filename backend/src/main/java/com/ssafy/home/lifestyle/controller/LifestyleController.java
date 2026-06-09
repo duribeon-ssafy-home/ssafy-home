@@ -33,6 +33,14 @@ public class LifestyleController {
         return ResponseEntity.ok(ApiResponse.success("생활 성향 질문을 조회했습니다.", lifestyleService.getQuestions()));
     }
 
+    @Operation(summary = "생활 성향 결과 미리보기", description = "로그인 없이 설문 답변을 분석하고 성향 유형과 매물 필터 프리셋을 반환합니다. 결과는 저장하지 않습니다.")
+    @PostMapping("/results/preview")
+    public ResponseEntity<ApiResponse<LifestyleResultResponse>> previewResult(
+            @Valid @RequestBody LifestyleResultRequest request
+    ) {
+        return ResponseEntity.ok(ApiResponse.success("생활 성향 결과를 분석했습니다.", lifestyleService.previewResult(request)));
+    }
+
     @Operation(summary = "생활 성향 결과 저장", description = "사용자의 답변을 저장하고 성향 유형과 매물 필터 프리셋을 반환합니다.")
     @PostMapping("/results")
     public ResponseEntity<ApiResponse<LifestyleResultResponse>> saveResult(
