@@ -12,4 +12,6 @@ public interface ReportRepository extends JpaRepository<Report, Long> {
     List<Report> findAllByOrderByCreatedAtDescIdDesc();
 
     List<Report> findAllByStatusOrderByCreatedAtDescIdDesc(ReportStatus status);
+
+    List<Report> findAllByProperty_PropertyId(Long propertyId);
 }

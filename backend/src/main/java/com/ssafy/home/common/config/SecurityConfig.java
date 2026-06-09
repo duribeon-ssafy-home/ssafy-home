@@ -55,7 +55,10 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET, "/api/lifestyle/questions").permitAll()
                         .requestMatchers("/images/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/properties/me").hasRole("AGENT")
-                        .requestMatchers(HttpMethod.GET, "/api/properties", "/api/properties/*").permitAll()
+                        .requestMatchers(HttpMethod.GET,
+                                "/api/properties",
+                                "/api/properties/*",
+                                "/api/properties/*/risk").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/properties").hasRole("AGENT")
                         .requestMatchers(HttpMethod.PATCH, "/api/properties/*").hasRole("AGENT")
                         .requestMatchers(HttpMethod.DELETE, "/api/properties/*").hasRole("AGENT")
