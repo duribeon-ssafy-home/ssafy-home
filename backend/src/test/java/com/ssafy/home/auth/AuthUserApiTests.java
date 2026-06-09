@@ -149,6 +149,37 @@ class AuthUserApiTests {
 	}
 
 	@Test
+	void logoutRevokesRefreshTokenWithoutAccessToken() throws Exception {
+		signupBuyer("buyer@example.com");
+
+		MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "email": "buyer@example.com",
+								  "password": "password123!"
+								}
+								"""))
+				.andExpect(status().isOk())
+				.andReturn();
+
+		JsonNode loginJson = objectMapper.readTree(loginResult.getResponse().getContentAsString());
+		String refreshToken = loginJson.at("/data/refreshToken").asText();
+
+		mockMvc.perform(post("/api/auth/logout")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "refreshToken": "%s"
+								}
+								""".formatted(refreshToken)))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true));
+
+		assertThat(refreshTokenRepository.findByToken(refreshToken).orElseThrow().isValid()).isFalse();
+	}
+
+	@Test
 	void inactiveUserCannotUseIssuedTokens() throws Exception {
 		signupBuyer("inactive@example.com");
 

@@ -1,14 +1,21 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import { getLifestyleQuestions } from '@/api/lifestyleApi'
 import {
-  buildLifestyleResult,
-  fallbackLifestyleQuestions,
-  normalizeLifestyleQuestions,
-} from '@/data/lifestyle'
+  getLifestyleQuestions,
+  previewLifestyleResult,
+  saveLifestyleResult,
+} from '@/api/lifestyleApi'
+import { fallbackLifestyleQuestions, normalizeLifestyleQuestions } from '@/data/lifestyle'
+import { useAuthStore } from '@/stores/auth'
+import {
+  createLifestyleAnswerPayload,
+  createLifestyleResultSnapshot,
+  writeLifestyleResultSnapshot,
+} from '@/utils/lifestyleResultSession'
 
 const router = useRouter()
+const authStore = useAuthStore()
 
 const questions = ref([])
 const currentIndex = ref(0)
@@ -16,7 +23,9 @@ const answerMap = ref({})
 const selectedAnswer = ref('')
 const isLoading = ref(true)
 const isAdvancing = ref(false)
+const isSubmittingResult = ref(false)
 const noticeMessage = ref('')
+const errorMessage = ref('')
 
 const currentQuestion = computed(() => questions.value[currentIndex.value])
 const progress = computed(() => {
@@ -51,10 +60,11 @@ async function loadQuestions() {
 }
 
 function selectOption(option) {
-  if (!currentQuestion.value || isAdvancing.value) {
+  if (!currentQuestion.value || isAdvancing.value || isSubmittingResult.value) {
     return
   }
 
+  errorMessage.value = ''
   selectedAnswer.value = option
   answerMap.value = {
     ...answerMap.value,
@@ -83,11 +93,37 @@ function goPrevious() {
   selectedAnswer.value = answerMap.value[currentQuestion.value.questionId] || ''
 }
 
-function finishSurvey() {
-  const result = buildLifestyleResult(questions.value, answerMap.value)
-  sessionStorage.setItem('lifestyleResult', JSON.stringify(result))
-  isAdvancing.value = false
-  router.push({ name: 'result' })
+async function finishSurvey() {
+  isSubmittingResult.value = true
+  errorMessage.value = ''
+
+  try {
+    await initializeAuthIfPossible()
+
+    const payload = createLifestyleAnswerPayload(questions.value, answerMap.value)
+    const result = authStore.isAuthenticated
+      ? await saveLifestyleResult(payload)
+      : await previewLifestyleResult(payload)
+    const snapshot = createLifestyleResultSnapshot(result, payload.answers, {
+      saved: authStore.isAuthenticated,
+    })
+
+    writeLifestyleResultSnapshot(snapshot)
+    await router.push({ name: 'result' })
+  } catch (error) {
+    errorMessage.value =
+      error.response?.data?.message ||
+      '설문 결과를 분석하지 못했습니다. 잠시 후 다시 시도해 주세요.'
+  } finally {
+    isSubmittingResult.value = false
+    isAdvancing.value = false
+  }
+}
+
+async function initializeAuthIfPossible() {
+  if (authStore.accessToken && !authStore.isInitialized) {
+    await authStore.initializeAuth()
+  }
 }
 </script>
 
@@ -110,10 +146,13 @@ function finishSurvey() {
       </div>
 
       <p v-if="noticeMessage" class="notice">{{ noticeMessage }}</p>
+      <p v-if="errorMessage" class="notice notice--error" role="alert">{{ errorMessage }}</p>
 
-      <div v-if="isLoading" class="loading-panel">
+      <div v-if="isLoading || isSubmittingResult" class="loading-panel">
         <span></span>
-        <p>질문을 불러오는 중입니다.</p>
+        <p>
+          {{ isSubmittingResult ? '설문 결과를 분석하는 중입니다.' : '질문을 불러오는 중입니다.' }}
+        </p>
       </div>
 
       <Transition v-else name="question-slide" mode="out-in">
@@ -132,6 +171,7 @@ function finishSurvey() {
                 'option-card--dimmed': selectedAnswer && selectedAnswer !== 'A',
               }"
               type="button"
+              :disabled="isSubmittingResult"
               @click="selectOption('A')"
             >
               <span>A</span>
@@ -145,6 +185,7 @@ function finishSurvey() {
                 'option-card--dimmed': selectedAnswer && selectedAnswer !== 'B',
               }"
               type="button"
+              :disabled="isSubmittingResult"
               @click="selectOption('B')"
             >
               <span>B</span>
@@ -237,6 +278,12 @@ function finishSurvey() {
   font-size: 13px;
   font-weight: 800;
   padding: 12px 14px;
+}
+
+.notice--error {
+  border-color: rgba(185, 28, 28, 0.2);
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
 }
 
 .loading-panel,

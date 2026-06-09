@@ -1,81 +1,150 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { RouterLink } from 'vue-router'
-import PropertyCard from '@/components/PropertyCard.vue'
-import { lifestyleTypeMeta } from '@/data/lifestyle'
-import { mockProperties } from '@/data/mockProperties'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import { getMyLatestLifestyleResult, saveLifestyleResult } from '@/api/lifestyleApi'
+import { createLifestylePresetChips, lifestyleTypeMeta } from '@/data/lifestyle'
+import { useAuthStore } from '@/stores/auth'
+import {
+  createLifestyleResultSnapshot,
+  readLifestyleResultSnapshot,
+  writeLifestyleResultSnapshot,
+} from '@/utils/lifestyleResultSession'
+
+const route = useRoute()
+const router = useRouter()
+const authStore = useAuthStore()
 
 const result = ref(null)
+const isLoading = ref(true)
+const isSaving = ref(false)
+const noticeMessage = ref('')
+const errorMessage = ref('')
 
-const defaultResult = {
-  lifestyleType: 'LIVING_COST_COMPACT',
-  typeName: lifestyleTypeMeta.LIVING_COST_COMPACT.typeName,
-  filterPreset: {
-    facilityScoreMin: 70,
-    facilityCountMin: 20,
-    monthlyRentMax: 50,
-    depositMax: 1000,
-    areaMin: null,
-    buildYearMin: null,
-  },
+const hasResult = computed(() => Boolean(result.value?.lifestyleType))
+const meta = computed(() =>
+  hasResult.value ? lifestyleTypeMeta[result.value.lifestyleType] : null,
+)
+const isSaved = computed(() => result.value?.saved === true)
+const hasAnswers = computed(
+  () => Array.isArray(result.value?.answers) && result.value.answers.length > 0,
+)
+const presetChips = computed(() =>
+  createLifestylePresetChips(result.value?.filterPreset, meta.value?.chips || []),
+)
+
+onMounted(loadResult)
+
+async function loadResult() {
+  isLoading.value = true
+  errorMessage.value = ''
+
+  try {
+    await initializeAuthIfPossible()
+
+    const cachedResult = readLifestyleResultSnapshot()
+
+    if (cachedResult) {
+      result.value = cachedResult
+
+      if (
+        route.query.saveLifestyle === '1' &&
+        !cachedResult.saved &&
+        cachedResult.answers?.length
+      ) {
+        await saveCurrentResult({ replaceQuery: true })
+      }
+
+      return
+    }
+
+    if (authStore.isAuthenticated) {
+      await loadSavedResult()
+    }
+  } finally {
+    isLoading.value = false
+  }
 }
 
-const displayResult = computed(() => result.value || defaultResult)
-const meta = computed(() => lifestyleTypeMeta[displayResult.value.lifestyleType])
-const presetChips = computed(() => createPresetChips(displayResult.value.filterPreset))
-const recommendedProperties = computed(() => {
-  const roomTypes = meta.value.recommendedRoomTypes
-  return mockProperties.filter((property) => roomTypes.includes(property.roomType)).slice(0, 3)
-})
+async function loadSavedResult() {
+  try {
+    const savedResult = await getMyLatestLifestyleResult()
+    const snapshot = createLifestyleResultSnapshot(savedResult, [], { saved: true })
+    result.value = snapshot
+    writeLifestyleResultSnapshot(snapshot)
+  } catch (error) {
+    if (error.response?.data?.errorCode !== 'LIFESTYLE_RESULT_NOT_FOUND') {
+      errorMessage.value =
+        error.response?.data?.message || '저장된 선호 유형을 불러오지 못했습니다.'
+    }
+  }
+}
 
-onMounted(() => {
-  const savedResult = sessionStorage.getItem('lifestyleResult')
+async function saveCurrentResult(options = {}) {
+  const { replaceQuery = false } = options
 
-  if (!savedResult) {
+  if (!hasAnswers.value) {
+    errorMessage.value = '저장할 설문 답변이 없습니다. 설문을 다시 진행해 주세요.'
     return
   }
 
+  if (!authStore.isAuthenticated) {
+    await router.push({
+      name: 'login',
+      query: {
+        redirect: router.resolve({ name: 'result', query: { saveLifestyle: '1' } }).fullPath,
+      },
+    })
+    return
+  }
+
+  isSaving.value = true
+  noticeMessage.value = ''
+  errorMessage.value = ''
+
   try {
-    result.value = JSON.parse(savedResult)
-  } catch {
-    result.value = null
+    const savedResult = await saveLifestyleResult({ answers: result.value.answers })
+    const snapshot = createLifestyleResultSnapshot(savedResult, result.value.answers, {
+      saved: true,
+    })
+
+    result.value = snapshot
+    writeLifestyleResultSnapshot(snapshot)
+    noticeMessage.value = '설문 결과가 내 선호 유형으로 저장되었습니다.'
+
+    if (replaceQuery && route.query.saveLifestyle) {
+      await router.replace({ name: 'result' })
+    }
+  } catch (error) {
+    errorMessage.value = error.response?.data?.message || '설문 결과를 저장하지 못했습니다.'
+  } finally {
+    isSaving.value = false
   }
-})
+}
 
-function createPresetChips(filterPreset = {}) {
-  const chips = []
-
-  if (filterPreset.facilityScoreMin) {
-    chips.push(`생활 편의 점수 ${filterPreset.facilityScoreMin}+`)
+async function initializeAuthIfPossible() {
+  if (authStore.accessToken && !authStore.isInitialized) {
+    await authStore.initializeAuth()
   }
-
-  if (filterPreset.facilityCountMin) {
-    chips.push(`편의시설 ${filterPreset.facilityCountMin}개 이상`)
-  }
-
-  if (filterPreset.monthlyRentMax) {
-    chips.push(`월세 ${filterPreset.monthlyRentMax}만 이하`)
-  }
-
-  if (filterPreset.depositMax) {
-    chips.push(`보증금 ${Number(filterPreset.depositMax).toLocaleString('ko-KR')}만 이하`)
-  }
-
-  if (filterPreset.areaMin) {
-    chips.push(`${filterPreset.areaMin}m2 이상`)
-  }
-
-  if (filterPreset.buildYearMin) {
-    chips.push(`${filterPreset.buildYearMin}년 이후`)
-  }
-
-  return chips.length ? chips : meta.value.chips
 }
 </script>
 
 <template>
   <main class="page result-page">
-    <section class="result-hero">
+    <section v-if="isLoading" class="section-container result-loading">
+      <span></span>
+      <p>결과를 불러오는 중입니다.</p>
+    </section>
+
+    <section v-else-if="!hasResult" class="section-container empty-state">
+      <p class="eyebrow">Lifestyle Result</p>
+      <h1>아직 분석된 설문 결과가 없습니다</h1>
+      <p>
+        라이프스타일 설문을 완료하면 나에게 맞는 주거 유형과 추천 조건을 바로 확인할 수 있습니다.
+      </p>
+      <RouterLink class="primary-link" :to="{ name: 'survey' }">설문 시작하기</RouterLink>
+    </section>
+
+    <section v-else class="result-hero">
       <div class="section-container result-hero__inner">
         <div class="result-copy">
           <p class="eyebrow">Lifestyle Result</p>
@@ -100,26 +169,46 @@ function createPresetChips(filterPreset = {}) {
       </div>
     </section>
 
-    <section class="recommend-section">
-      <div class="section-container">
-        <div class="section-heading">
-          <div>
-            <p class="eyebrow">Matched Homes</p>
-            <h2 class="section-title">이 타입에 맞는 추천 매물</h2>
-          </div>
-          <div class="result-actions">
-            <RouterLink class="secondary-link" :to="{ name: 'survey' }">다시 설문하기</RouterLink>
-            <RouterLink class="primary-link" :to="{ name: 'home' }">메인으로 이동</RouterLink>
-          </div>
+    <section v-if="hasResult" class="result-status-section">
+      <div class="section-container status-panel" :class="{ 'status-panel--saved': isSaved }">
+        <div>
+          <p class="eyebrow">{{ isSaved ? 'Saved Preference' : 'Temporary Preference' }}</p>
+          <h2>{{ isSaved ? '저장된 선호 유형입니다' : '현재 결과는 임시 저장 중입니다' }}</h2>
+          <p>
+            {{
+              isSaved
+                ? '마이페이지에서 언제든 다시 확인할 수 있습니다.'
+                : '로그인하면 이 결과를 내 선호 유형으로 저장하고 나중에 다시 볼 수 있습니다.'
+            }}
+          </p>
         </div>
 
-        <div class="property-grid">
-          <PropertyCard
-            v-for="property in recommendedProperties"
-            :key="property.propertyId"
-            :property="property"
-          />
+        <div class="result-actions">
+          <button
+            v-if="!isSaved"
+            class="primary-link"
+            type="button"
+            :disabled="isSaving"
+            @click="saveCurrentResult()"
+          >
+            {{
+              isSaving
+                ? '저장 중...'
+                : authStore.isAuthenticated
+                  ? '이 결과 저장하기'
+                  : '로그인하고 결과 저장하기'
+            }}
+          </button>
+          <RouterLink class="secondary-link" :to="{ name: 'survey' }">다시 설문하기</RouterLink>
+          <RouterLink v-if="isSaved" class="secondary-link" :to="{ name: 'my-page' }">
+            마이페이지에서 보기
+          </RouterLink>
         </div>
+
+        <p v-if="noticeMessage" class="form-message form-message--success">{{ noticeMessage }}</p>
+        <p v-if="errorMessage" class="form-message form-message--error" role="alert">
+          {{ errorMessage }}
+        </p>
       </div>
     </section>
   </main>
@@ -131,6 +220,49 @@ function createPresetChips(filterPreset = {}) {
   background:
     linear-gradient(180deg, rgba(238, 244, 255, 0.9) 0%, rgba(246, 247, 249, 0) 420px),
     var(--color-bg);
+}
+
+.result-loading,
+.empty-state {
+  min-height: 460px;
+  display: grid;
+  align-content: center;
+  justify-items: start;
+  gap: 16px;
+  padding-top: 72px;
+}
+
+.result-loading {
+  justify-items: center;
+  color: var(--color-muted);
+  font-weight: 800;
+
+  span {
+    width: 42px;
+    height: 42px;
+    border: 4px solid var(--color-primary-soft);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 800ms linear infinite;
+  }
+}
+
+.empty-state {
+  h1 {
+    color: var(--color-heading);
+    font-size: 42px;
+    font-weight: 900;
+    letter-spacing: 0;
+    line-height: 1.18;
+  }
+
+  p:not(.eyebrow) {
+    max-width: 620px;
+    color: var(--color-muted);
+    font-size: 17px;
+    font-weight: 700;
+    line-height: 1.7;
+  }
 }
 
 .result-hero {
@@ -223,21 +355,44 @@ function createPresetChips(filterPreset = {}) {
   }
 }
 
-.recommend-section {
-  padding-top: 24px;
+.result-status-section {
+  padding-top: 6px;
 }
 
-.section-heading {
-  display: flex;
-  align-items: end;
-  justify-content: space-between;
-  gap: 24px;
-  margin-bottom: 24px;
+.status-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 20px;
+  align-items: center;
+  border: 1px solid rgba(208, 213, 221, 0.9);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: var(--shadow-panel);
+  padding: 24px;
+
+  h2 {
+    margin-top: 6px;
+    color: var(--color-heading);
+    font-size: 22px;
+    font-weight: 900;
+  }
+
+  p:not(.eyebrow):not(.form-message) {
+    margin-top: 8px;
+    color: var(--color-muted);
+    font-weight: 700;
+    line-height: 1.6;
+  }
+}
+
+.status-panel--saved {
+  border-color: rgba(54, 95, 145, 0.24);
 }
 
 .result-actions {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 10px;
 }
 
@@ -251,6 +406,7 @@ function createPresetChips(filterPreset = {}) {
   font-size: 14px;
   font-weight: 900;
   padding: 0 16px;
+  white-space: nowrap;
   transition:
     background-color var(--transition-fast),
     border-color var(--transition-fast),
@@ -263,10 +419,14 @@ function createPresetChips(filterPreset = {}) {
   background: var(--color-primary);
   color: var(--color-surface);
 
-  &:hover {
+  &:hover:not(:disabled) {
     background: var(--color-primary-dark);
     box-shadow: 0 12px 24px rgba(54, 95, 145, 0.2);
     transform: translateY(-1px);
+  }
+
+  &:disabled {
+    background: var(--color-subtle);
   }
 }
 
@@ -281,10 +441,28 @@ function createPresetChips(filterPreset = {}) {
   }
 }
 
-.property-grid {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 20px;
+.form-message {
+  grid-column: 1 / -1;
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 11px 12px;
+}
+
+.form-message--success {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
+.form-message--error {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes fadeUp {
@@ -313,17 +491,20 @@ function createPresetChips(filterPreset = {}) {
 
 @media (max-width: 940px) {
   .result-hero__inner,
-  .property-grid {
+  .status-panel {
     grid-template-columns: 1fr;
   }
 
-  .section-heading {
-    align-items: flex-start;
-    flex-direction: column;
+  .result-actions {
+    justify-content: flex-start;
   }
 
   .result-copy h1 {
     font-size: 38px;
+  }
+
+  .empty-state h1 {
+    font-size: 34px;
   }
 }
 </style>

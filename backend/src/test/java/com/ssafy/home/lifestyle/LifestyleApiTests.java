@@ -16,6 +16,7 @@ import com.ssafy.home.user.repository.UserRepository;
 import com.ssafy.home.user.type.Role;
 import com.ssafy.home.user.type.UserStatus;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -65,6 +66,37 @@ class LifestyleApiTests {
                 .andExpect(jsonPath("$.data[0].category").value("LIVING_CONVENIENCE"))
                 .andExpect(jsonPath("$.data[0].mapping").value("facilityScore"))
                 .andExpect(jsonPath("$.data[1].mapping").value("facilityCount, facilityScore"));
+    }
+
+    @Test
+    @DisplayName("비로그인 사용자는 생활 성향 결과를 저장 없이 미리보기할 수 있다")
+    void publicUserCanPreviewLifestyleResultWithoutSaving() throws Exception {
+        mockMvc.perform(post("/api/lifestyle/results/preview")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(answersJson("A", "B", "A", "B", "A", "B")))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.lifestyleType").value("LIVING_COST_HOME_BALANCED"))
+                .andExpect(jsonPath("$.data.typeName").value("생활권 꼼꼼 실속형"))
+                .andExpect(jsonPath("$.data.filterPreset.facilityScoreMin").value(70))
+                .andExpect(jsonPath("$.data.filterPreset.monthlyRentMax").value(50))
+                .andExpect(jsonPath("$.data.filterPreset.areaMin").value(25))
+                .andExpect(jsonPath("$.data.filterPreset.facilityCountMin").doesNotExist())
+                .andExpect(jsonPath("$.data.filterPreset.depositMax").doesNotExist())
+                .andExpect(jsonPath("$.data.filterPreset.buildYearMin").doesNotExist());
+
+        assertThat(lifestyleResultRepository.findAll()).isEmpty();
+    }
+
+    @Test
+    @DisplayName("비로그인 사용자는 생활 성향 결과를 저장할 수 없다")
+    void publicUserCannotSaveLifestyleResult() throws Exception {
+        mockMvc.perform(post("/api/lifestyle/results")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(answersJson("A", "B", "A", "B", "A", "B")))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.success").value(false))
+                .andExpect(jsonPath("$.errorCode").value("UNAUTHORIZED"));
     }
 
     @Test

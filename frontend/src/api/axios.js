@@ -5,6 +5,7 @@ const ACCESS_TOKEN_KEY = 'accessToken'
 const REFRESH_TOKEN_KEY = 'refreshToken'
 const AUTH_RECOVERY_SKIP_PATHS = ['/auth/login', '/auth/signup', '/auth/refresh', '/auth/logout']
 const PUBLIC_GET_PATHS = ['/lifestyle/questions', '/properties']
+const PUBLIC_POST_PATHS = ['/lifestyle/results/preview']
 
 const api = axios.create({
   baseURL: API_BASE_URL,
@@ -79,7 +80,7 @@ function isPublicRequest(config) {
   const method = (config.method || 'get').toLowerCase()
 
   if (method !== 'get') {
-    return false
+    return method === 'post' && PUBLIC_POST_PATHS.includes(requestPath)
   }
 
   return PUBLIC_GET_PATHS.includes(requestPath) || /^\/properties\/[^/]+$/.test(requestPath)
