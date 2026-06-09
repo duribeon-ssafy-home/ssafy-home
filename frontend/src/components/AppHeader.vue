@@ -6,16 +6,18 @@ import { useAuthStore } from '@/stores/auth'
 const router = useRouter()
 const authStore = useAuthStore()
 
-const authLabel = computed(() => (authStore.isAuthenticated ? '로그아웃' : '로그인'))
+const roleLabels = {
+  BUYER: '일반 사용자',
+  AGENT: '중개인',
+  ADMIN: '관리자',
+}
 
-function handleAuthAction() {
-  if (!authStore.isAuthenticated) {
-    router.push({ name: 'login' })
-    return
-  }
+const displayName = computed(() => authStore.user?.nickname || authStore.user?.email || '사용자')
+const roleLabel = computed(() => roleLabels[authStore.role] || authStore.role || '사용자')
 
-  authStore.logout()
-  router.push({ name: 'home' })
+async function handleAuthAction() {
+  await authStore.logout()
+  await router.push({ name: 'home' })
 }
 </script>
 
@@ -33,10 +35,26 @@ function handleAuthAction() {
         <RouterLink :to="{ name: 'favorites' }">찜 목록</RouterLink>
       </nav>
 
-      <div class="actions">
-        <button class="auth-button" type="button" @click="handleAuthAction">
-          {{ authLabel }}
-        </button>
+      <div class="actions" aria-label="사용자 메뉴">
+        <div v-if="authStore.isAuthenticated" class="user-menu">
+          <div class="user-summary">
+            <p>
+              <strong>{{ displayName }}</strong>
+              <span> 님 환영합니다!</span>
+            </p>
+            <span class="role-badge">{{ roleLabel }}</span>
+          </div>
+          <button class="auth-button" type="button" @click="handleAuthAction">
+            로그아웃
+          </button>
+        </div>
+
+        <div v-else class="auth-links">
+          <RouterLink class="auth-button auth-button--ghost" :to="{ name: 'login' }">로그인</RouterLink>
+          <RouterLink class="auth-button auth-button--primary" :to="{ name: 'signup' }">
+            회원가입
+          </RouterLink>
+        </div>
       </div>
     </div>
   </header>
@@ -112,11 +130,63 @@ function handleAuthAction() {
 .actions {
   display: flex;
   align-items: center;
+  justify-content: flex-end;
+  min-width: 190px;
+}
+
+.auth-links,
+.user-menu {
+  display: flex;
+  align-items: center;
+}
+
+.auth-links {
+  gap: 8px;
+}
+
+.user-menu {
+  gap: 14px;
+}
+
+.user-summary {
+  display: grid;
+  justify-items: end;
+  gap: 3px;
+  min-width: 142px;
+
+  p {
+    max-width: 190px;
+    overflow: hidden;
+    color: var(--color-muted);
+    font-size: 13px;
+    font-weight: 800;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  strong {
+    color: var(--color-heading);
+    font-size: 14px;
+    font-weight: 900;
+  }
+
+  .role-badge {
+    width: fit-content;
+    border-radius: var(--radius-xs);
+    background: var(--color-primary-soft);
+    color: var(--color-primary-dark);
+    font-size: 11px;
+    font-weight: 900;
+    padding: 2px 7px;
+  }
 }
 
 .auth-button {
-  min-width: 76px;
+  min-width: 74px;
   height: 40px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
@@ -133,6 +203,16 @@ function handleAuthAction() {
     box-shadow: 0 8px 18px rgba(54, 95, 145, 0.14);
     transform: translateY(-1px);
   }
+}
+
+.auth-button--primary {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-surface);
+}
+
+.auth-button--ghost {
+  background: var(--color-surface);
 }
 
 @media (max-width: 760px) {
@@ -154,6 +234,19 @@ function handleAuthAction() {
     justify-content: flex-start;
     overflow-x: auto;
     padding-bottom: 2px;
+  }
+
+  .actions {
+    min-width: 0;
+  }
+
+  .user-summary {
+    min-width: 0;
+    justify-items: start;
+
+    p {
+      max-width: 120px;
+    }
   }
 }
 </style>

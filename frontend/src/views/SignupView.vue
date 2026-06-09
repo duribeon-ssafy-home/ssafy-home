@@ -1,5 +1,54 @@
 <script setup>
-import { RouterLink } from 'vue-router'
+import { computed, ref } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
+import PasswordField from '@/components/PasswordField.vue'
+import { useAuthStore } from '@/stores/auth'
+
+const router = useRouter()
+const route = useRoute()
+const authStore = useAuthStore()
+
+const name = ref('')
+const nickname = ref('')
+const email = ref('')
+const password = ref('')
+const phoneNumber = ref('')
+const role = ref('BUYER')
+const errorMessage = ref('')
+const isSubmitting = ref(false)
+
+const isAgent = computed(() => role.value === 'AGENT')
+
+async function submitSignup() {
+  errorMessage.value = ''
+  isSubmitting.value = true
+
+  try {
+    await authStore.signupAndLogin({
+      name: name.value,
+      nickname: nickname.value,
+      email: email.value,
+      password: password.value,
+      phoneNumber: phoneNumber.value || null,
+      role: role.value,
+    })
+    router.push(resolveRedirect())
+  } catch (error) {
+    errorMessage.value = error.response?.data?.message || '회원가입에 실패했습니다.'
+  } finally {
+    isSubmitting.value = false
+  }
+}
+
+function resolveRedirect() {
+  const redirect = route.query.redirect
+
+  if (typeof redirect === 'string' && redirect.startsWith('/')) {
+    return redirect
+  }
+
+  return { name: 'home' }
+}
 </script>
 
 <template>
@@ -12,29 +61,59 @@ import { RouterLink } from 'vue-router'
         </div>
       </div>
 
-      <form class="auth-form">
+      <form class="auth-form" @submit.prevent="submitSignup">
         <p class="eyebrow">Create Account</p>
         <h2>회원가입</h2>
         <label>
           이름
-          <input type="text" placeholder="이름" />
+          <input v-model="name" autocomplete="name" required type="text" placeholder="이름" />
+        </label>
+        <label>
+          닉네임
+          <input v-model="nickname" required type="text" placeholder="닉네임" />
         </label>
         <label>
           이메일
-          <input type="email" placeholder="you@example.com" />
+          <input
+            v-model="email"
+            autocomplete="email"
+            required
+            type="email"
+            placeholder="you@example.com"
+          />
         </label>
-        <label>
-          비밀번호
-          <input type="password" placeholder="비밀번호" />
-        </label>
+        <PasswordField
+          id="signup-password"
+          v-model="password"
+          autocomplete="new-password"
+          required
+        />
         <label>
           역할
-          <select>
-            <option>일반 사용자</option>
-            <option>중개인</option>
+          <select v-model="role">
+            <option value="BUYER">일반 사용자</option>
+            <option value="AGENT">중개인</option>
           </select>
         </label>
-        <button type="button">회원가입</button>
+        <label>
+          전화번호
+          <input
+            v-model="phoneNumber"
+            autocomplete="tel"
+            :required="isAgent"
+            type="tel"
+            placeholder="010-0000-0000"
+          />
+        </label>
+        <p class="form-note">
+          중개인으로 가입하면 전화번호가 필수입니다.
+        </p>
+        <p v-if="errorMessage" class="form-message form-message--error" role="alert">
+          {{ errorMessage }}
+        </p>
+        <button type="submit" :disabled="isSubmitting">
+          {{ isSubmitting ? '가입 및 로그인 중...' : '회원가입' }}
+        </button>
         <RouterLink :to="{ name: 'login' }">로그인으로 이동</RouterLink>
       </form>
     </section>
@@ -52,6 +131,7 @@ import { RouterLink } from 'vue-router'
   width: min(100%, 980px);
   display: grid;
   grid-template-columns: 1fr 0.86fr;
+  align-items: start;
   overflow: hidden;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -60,7 +140,9 @@ import { RouterLink } from 'vue-router'
 }
 
 .auth-visual {
-  min-height: 620px;
+  width: 100%;
+  height: 780px;
+  min-height: 780px;
   display: grid;
   align-items: end;
   background:
@@ -112,6 +194,14 @@ import { RouterLink } from 'vue-router'
     color: var(--color-heading);
     padding: 0 13px;
     outline: none;
+    transition:
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast);
+
+    &:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 4px rgba(54, 95, 145, 0.12);
+    }
   }
 
   button {
@@ -120,6 +210,10 @@ import { RouterLink } from 'vue-router'
     background: var(--color-primary);
     color: var(--color-surface);
     font-weight: 900;
+
+    &:disabled {
+      background: var(--color-subtle);
+    }
   }
 
   a {
@@ -129,12 +223,32 @@ import { RouterLink } from 'vue-router'
   }
 }
 
+.form-note {
+  margin-top: -4px;
+  color: var(--color-subtle);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.form-message {
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 800;
+  padding: 11px 12px;
+}
+
+.form-message--error {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
 @media (max-width: 820px) {
   .auth-shell {
     grid-template-columns: 1fr;
   }
 
   .auth-visual {
+    height: 280px;
     min-height: 280px;
   }
 }
