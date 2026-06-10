@@ -22,6 +22,8 @@ This project must use JavaScript only. Do not introduce TypeScript unless explic
 - Build: `pnpm build`
 - Lint: `pnpm lint` if configured
 - Format: `pnpm format` if configured
+- Run tests: pnpm test if configured
+
 
 ## Dependency Rules
 
@@ -41,6 +43,14 @@ This project must use JavaScript only. Do not introduce TypeScript unless explic
 - Use Vue Router for routing.
 - Use SCSS with `<style lang="scss" scoped>`.
 - Do not modify unrelated files.
+- 
+## Test Rules
+- Use Vitest for frontend unit tests.
+- Use Vue Test Utils when testing Vue components.
+- Put test files next to the target file, under `src/__tests__`, or under feature-level `src/**/__tests__` directories.
+- Use *.spec.js or *.test.js as the test file naming convention.
+- Run tests with pnpm test if configured.
+- Do not introduce E2E tools such as Cypress or Playwright unless explicitly requested.
 
 ## Router Rules
 
