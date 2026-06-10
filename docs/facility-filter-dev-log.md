@@ -166,7 +166,7 @@ public Page<PropertyResponse> getProperties(PropertySearchCondition condition, P
 
 ```java
 public PropertyResponse getProperty(Long id) {
-    Property property = findActiveProperty(id);
+    Property property = findPublicProperty(id);
     AreaFacilityCount area = areaFacilityCountRepository
             .findBySidoAndGugunAndDong(property.getSido(), property.getGugun(), property.getDong())
             .orElse(null);

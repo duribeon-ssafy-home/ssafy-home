@@ -7,7 +7,7 @@
 ## 전체 흐름 한눈에 보기
 
 ```
-사용자가 GET /api/recommendations 호출
+[추천 API]  사용자가 GET /api/recommendations 호출
   │
   ▼
 [RecommendationController]
@@ -26,6 +26,19 @@
   ▼
 [PropertyResponse + FacilityInfo]
   JSON으로 변환 → 응답 반환
+
+[일반 검색 API]  사용자가 GET /api/properties?facilityCountMin=20 호출
+  │
+  ▼
+[PropertyController → PropertyService]
+  1. PropertySearchCondition에서 facilityCountMin 꺼내기
+  2. facilityCountMin 있으면 → 동일한 방식으로 동 목록 조회
+  3. properties 테이블에서 필터 적용한 매물 조회
+  4. facilityCountMin 있을 때만 facilityInfo 붙이기
+  (facilityCountMin 없으면 facilityInfo = null → JSON에서 키 자체 제외)
+
+[상세 조회]  GET /api/properties/{id}
+  → PropertyService.getProperty()가 항상 facilityInfo를 포함해서 반환
 ```
 
 ---
@@ -225,7 +238,7 @@ public static PropertyResponse from(Property property, AreaFacilityCount area) {
 
 ---
 
-## STEP 5. PropertySpecification.inAreas()
+## STEP 5. PropertySpecification
 
 **파일**: `property/repository/PropertySpecification.java`
 
@@ -233,6 +246,30 @@ public static PropertyResponse from(Property property, AreaFacilityCount area) {
 
 JPA에서 **동적 WHERE 조건**을 만드는 방법.  
 "이 조건, 저 조건을 AND/OR로 조합해서 쿼리를 만들어줘"라고 선언적으로 작성할 수 있습니다.
+
+이 클래스는 두 개의 static 메서드를 갖습니다.
+
+---
+
+### 메서드 1: search() — 일반 검색 조건
+
+```java
+public static Specification<Property> search(PropertySearchCondition condition) {
+    return (root, query, cb) -> {
+        List<Predicate> predicates = new ArrayList<>();
+        predicates.add(cb.equal(root.get("status"), PropertyStatus.APPROVED));
+        // sido, gugun, dong, rentType, roomType, 가격 범위, 면적 범위 등 조건 추가
+        return cb.and(predicates.toArray(new Predicate[0]));
+    };
+}
+```
+
+> `GET /api/properties`의 일반 검색에서 사용합니다.  
+> 조건이 null이면 해당 WHERE 절은 추가하지 않습니다 (동적 쿼리).
+
+---
+
+### 메서드 2: inAreas() — 동(dong) 범위 필터
 
 ```java
 public static Specification<Property> inAreas(List<AreaFacilityCount> areas) {
@@ -262,6 +299,8 @@ public static Specification<Property> inAreas(List<AreaFacilityCount> areas) {
 >
 > **`cb.disjunction()`** → 항상 false인 조건. areas가 비어있으면 매물을 하나도 반환하지 않습니다.  
 > (시설 조건을 만족하는 동이 없다면 추천 결과도 없어야 하므로)
+>
+> 추천 API(`RecommendationService`)와 일반 검색(`PropertyService`) 두 곳에서 모두 사용합니다.
 
 ---
 
@@ -423,6 +462,7 @@ Authorization: Bearer {JWT토큰}
           "martCount1km": 1,
           "convenienceCount500m": 4,
           "hospitalCount1km": 3,
+          "pharmacyCount500m": 2,
           "cafeCount500m": 7,
           "restaurantCount500m": 15
         }
@@ -436,14 +476,16 @@ Authorization: Bearer {JWT토큰}
 }
 ```
 
-> 일반 매물 조회(`GET /api/properties`)에는 `facilityInfo`가 없고,  
-> 추천 API에서만 `facilityInfo`가 붙어서 나옵니다.
+> - `GET /api/properties` 일반 목록 조회: `facilityCountMin` 파라미터가 **없으면** facilityInfo 키 자체가 JSON에 나오지 않음, **있으면** facilityInfo 포함
+> - `GET /api/properties/{id}` 상세 조회: **항상** facilityInfo 포함
+> - `GET /api/recommendations` 추천 API: **항상** facilityInfo 포함
 
 ---
 
 ## 파일 간 의존 관계 요약
 
 ```
+[추천 API]
 RecommendationController
   └── RecommendationService
         ├── LifestyleResultRepository   (A담당 코드 그대로 사용)
@@ -453,4 +495,16 @@ RecommendationController
         │     └── AreaFacilityCount     (신규 엔티티)
         └── PropertyResponse.from(property, area)  (오버로드 추가)
               └── FacilityInfo          (신규 DTO)
+
+[일반 검색 API — facilityCountMin 지원]
+PropertyController
+  └── PropertyService
+        ├── PropertyRepository
+        │     ├── PropertySpecification.search()    (기존 조건 처리)
+        │     └── PropertySpecification.inAreas()   (facilityCountMin 있을 때)
+        └── AreaFacilityCountRepository             (facilityCountMin 있을 때)
+
+[상세 조회 — 항상 facilityInfo 포함]
+PropertyService.getProperty()
+  └── AreaFacilityCountRepository.findBySidoAndGugunAndDong()
 ```
