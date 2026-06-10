@@ -1,13 +1,140 @@
 <script setup>
+import { computed, onMounted, ref } from 'vue'
+import { getAdminUsers } from '@/api/adminUserApi'
+
 const tableHeaders = ['회원', '이메일', '역할', '상태', '가입일', '관리']
 
 const featureAreas = [
-  '회원 목록',
-  '회원 검색',
-  '회원 상세',
-  '상태 변경',
-  '역할 변경',
+  { label: '회원 목록', status: '연동 완료' },
+  { label: '회원 검색', status: '연동 완료' },
+  { label: '회원 상세', status: '다음 작업' },
+  { label: '상태 변경', status: '다음 작업' },
+  { label: '역할 변경', status: '다음 작업' },
 ]
+
+const roleLabels = {
+  BUYER: '일반 사용자',
+  AGENT: '중개인',
+  ADMIN: '관리자',
+}
+
+const statusLabels = {
+  ACTIVE: '활성',
+  INACTIVE: '비활성',
+  BANNED: '정지',
+  DELETED: '탈퇴',
+}
+
+const statusToneClass = {
+  ACTIVE: 'user-status--active',
+  INACTIVE: 'user-status--inactive',
+  BANNED: 'user-status--danger',
+  DELETED: 'user-status--danger',
+}
+
+const users = ref([])
+const searchKeyword = ref('')
+const appliedKeyword = ref('')
+const isLoading = ref(false)
+const errorMessage = ref('')
+const hasLoaded = ref(false)
+
+const statusChipLabel = computed(() => {
+  if (isLoading.value) {
+    return '조회 중'
+  }
+
+  if (errorMessage.value) {
+    return '조회 실패'
+  }
+
+  if (!hasLoaded.value) {
+    return '조회 대기'
+  }
+
+  return `총 ${users.value.length.toLocaleString('ko-KR')}명`
+})
+
+const emptyTitle = computed(() =>
+  appliedKeyword.value ? '검색 조건에 맞는 회원이 없습니다.' : '표시할 회원 데이터가 없습니다.',
+)
+
+const emptyDescription = computed(() =>
+  appliedKeyword.value
+    ? '이름, 이메일, 닉네임을 다른 키워드로 다시 검색해보세요.'
+    : '회원이 가입하면 이 표에서 계정 상태와 역할을 확인할 수 있습니다.',
+)
+
+const hasUsers = computed(() => users.value.length > 0)
+
+onMounted(() => {
+  loadUsers()
+})
+
+async function loadUsers(keyword = appliedKeyword.value) {
+  const normalizedKeyword = keyword.trim()
+
+  isLoading.value = true
+  errorMessage.value = ''
+
+  try {
+    users.value = await getAdminUsers(normalizedKeyword ? { keyword: normalizedKeyword } : {})
+    appliedKeyword.value = normalizedKeyword
+  } catch (error) {
+    errorMessage.value = getApiErrorMessage(error)
+    users.value = []
+  } finally {
+    hasLoaded.value = true
+    isLoading.value = false
+  }
+}
+
+function submitSearch() {
+  loadUsers(searchKeyword.value)
+}
+
+function clearSearch() {
+  searchKeyword.value = ''
+  loadUsers('')
+}
+
+function getDisplayName(user) {
+  return user.nickname || user.name || '이름 없음'
+}
+
+function getRoleLabel(role) {
+  return roleLabels[role] || role || '-'
+}
+
+function getStatusLabel(status) {
+  return statusLabels[status] || status || '-'
+}
+
+function getStatusClass(status) {
+  return statusToneClass[status] || ''
+}
+
+function formatDate(value) {
+  if (!value) {
+    return '-'
+  }
+
+  const date = new Date(value)
+
+  if (Number.isNaN(date.getTime())) {
+    return '-'
+  }
+
+  return new Intl.DateTimeFormat('ko-KR', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+  }).format(date)
+}
+
+function getApiErrorMessage(error) {
+  return error.response?.data?.message || '회원 목록을 불러오지 못했습니다.'
+}
 </script>
 
 <template>
@@ -22,13 +149,30 @@ const featureAreas = [
         <RouterLink class="back-link" :to="{ name: 'admin-dashboard' }">대시보드로 이동</RouterLink>
       </div>
 
-      <section class="toolbar-panel" aria-label="회원 검색 준비 영역">
+      <form class="toolbar-panel" aria-label="회원 검색" @submit.prevent="submitSearch">
         <label>
           회원 검색
-          <input type="search" placeholder="이름, 이메일, 닉네임" disabled />
+          <input
+            v-model="searchKeyword"
+            type="search"
+            placeholder="이름, 이메일, 닉네임"
+            :disabled="isLoading"
+          />
         </label>
-        <button type="button" disabled>검색 준비 중</button>
-      </section>
+        <div class="toolbar-actions">
+          <button class="search-button" type="submit" :disabled="isLoading">
+            {{ isLoading ? '조회 중' : '검색' }}
+          </button>
+          <button
+            class="reset-button"
+            type="button"
+            :disabled="isLoading || (!searchKeyword && !appliedKeyword)"
+            @click="clearSearch"
+          >
+            초기화
+          </button>
+        </div>
+      </form>
 
       <section class="list-layout">
         <div class="table-panel">
@@ -37,10 +181,20 @@ const featureAreas = [
               <p class="eyebrow">Users</p>
               <h2>회원 목록</h2>
             </div>
-            <span class="status-chip">API 연동 대기</span>
+            <span class="status-chip" :class="{ 'status-chip--error': errorMessage }">
+              {{ statusChipLabel }}
+            </span>
           </div>
 
-          <div class="table-wrap" role="status">
+          <p v-if="appliedKeyword && !isLoading" class="result-note">
+            <strong>{{ appliedKeyword }}</strong> 검색 결과
+          </p>
+
+          <p v-if="errorMessage" class="form-message form-message--error" role="alert">
+            {{ errorMessage }}
+          </p>
+
+          <div class="table-wrap" :aria-busy="isLoading" role="status">
             <table>
               <thead>
                 <tr>
@@ -50,14 +204,57 @@ const featureAreas = [
                 </tr>
               </thead>
               <tbody>
-                <tr>
+                <tr v-if="isLoading">
                   <td :colspan="tableHeaders.length">
-                    <div class="empty-state">
-                      <strong>표시할 회원 데이터가 아직 없습니다.</strong>
-                      <p>관리자 회원 API를 연결하면 검색 결과와 페이지네이션이 이 표에 표시됩니다.</p>
+                    <div class="loading-state">
+                      <span aria-hidden="true"></span>
+                      <p>회원 목록을 불러오는 중입니다.</p>
                     </div>
                   </td>
                 </tr>
+
+                <tr v-else-if="errorMessage">
+                  <td :colspan="tableHeaders.length">
+                    <div class="empty-state">
+                      <strong>회원 목록 조회에 실패했습니다.</strong>
+                      <p>잠시 후 다시 시도하거나 로그인 상태를 확인해주세요.</p>
+                      <button type="button" @click="loadUsers()">다시 조회</button>
+                    </div>
+                  </td>
+                </tr>
+
+                <tr v-else-if="!hasUsers">
+                  <td :colspan="tableHeaders.length">
+                    <div class="empty-state">
+                      <strong>{{ emptyTitle }}</strong>
+                      <p>{{ emptyDescription }}</p>
+                    </div>
+                  </td>
+                </tr>
+
+                <template v-else>
+                  <tr v-for="user in users" :key="user.id">
+                    <td>
+                      <div class="member-cell">
+                        <strong>{{ getDisplayName(user) }}</strong>
+                        <span>ID {{ user.id }}</span>
+                      </div>
+                    </td>
+                    <td>{{ user.email || '-' }}</td>
+                    <td>
+                      <span class="role-badge">{{ getRoleLabel(user.role) }}</span>
+                    </td>
+                    <td>
+                      <span class="user-status" :class="getStatusClass(user.status)">
+                        {{ getStatusLabel(user.status) }}
+                      </span>
+                    </td>
+                    <td>{{ formatDate(user.createdAt) }}</td>
+                    <td>
+                      <button class="manage-button" type="button" disabled>상세 준비 중</button>
+                    </td>
+                  </tr>
+                </template>
               </tbody>
             </table>
           </div>
@@ -70,9 +267,12 @@ const featureAreas = [
           </div>
 
           <ul>
-            <li v-for="area in featureAreas" :key="area">
+            <li v-for="area in featureAreas" :key="area.label">
               <span aria-hidden="true"></span>
-              {{ area }}
+              <div>
+                <strong>{{ area.label }}</strong>
+                <small>{{ area.status }}</small>
+              </div>
             </li>
           </ul>
         </aside>
@@ -170,20 +370,70 @@ const featureAreas = [
     height: 44px;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    background: var(--color-surface-muted);
-    color: var(--color-muted);
+    background: var(--color-surface);
+    color: var(--color-heading);
     padding: 0 13px;
-  }
+    outline: none;
+    transition:
+      border-color var(--transition-fast),
+      box-shadow var(--transition-fast);
 
-  button {
-    min-height: 44px;
-    border: 0;
-    border-radius: var(--radius-sm);
-    background: var(--color-subtle);
-    color: var(--color-surface);
-    font-weight: 900;
-    padding: 0 15px;
+    &:focus {
+      border-color: var(--color-primary);
+      box-shadow: 0 0 0 4px rgba(54, 95, 145, 0.12);
+    }
   }
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.search-button,
+.reset-button,
+.manage-button,
+.empty-state button {
+  min-height: 44px;
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 900;
+  padding: 0 15px;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
+}
+
+.search-button {
+  background: var(--color-primary);
+  color: var(--color-surface);
+
+  &:hover:not(:disabled) {
+    background: var(--color-primary-dark);
+    transform: translateY(-1px);
+  }
+}
+
+.reset-button,
+.manage-button,
+.empty-state button {
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  color: var(--color-heading);
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    transform: translateY(-1px);
+  }
+}
+
+.search-button:disabled,
+.reset-button:disabled,
+.manage-button:disabled {
+  background: var(--color-surface-muted);
+  color: var(--color-subtle);
 }
 
 .list-layout {
@@ -216,11 +466,40 @@ const featureAreas = [
 .status-chip {
   flex: 0 0 auto;
   border-radius: var(--radius-xs);
-  background: var(--color-accent-soft);
-  color: #6f5f45;
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
   font-size: 12px;
   font-weight: 900;
   padding: 7px 9px;
+}
+
+.status-chip--error {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.result-note {
+  margin: -6px 0 14px;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 800;
+
+  strong {
+    color: var(--color-heading);
+  }
+}
+
+.form-message {
+  border-radius: var(--radius-sm);
+  font-size: 13px;
+  font-weight: 800;
+  margin-bottom: 14px;
+  padding: 11px 12px;
+}
+
+.form-message--error {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
 }
 
 .table-wrap {
@@ -228,7 +507,7 @@ const featureAreas = [
 
   table {
     width: 100%;
-    min-width: 720px;
+    min-width: 780px;
     border-collapse: collapse;
   }
 
@@ -242,10 +521,16 @@ const featureAreas = [
   }
 
   td {
-    padding: 0;
+    border-bottom: 1px solid rgba(229, 231, 235, 0.76);
+    color: var(--color-heading);
+    font-size: 14px;
+    font-weight: 700;
+    padding: 14px 12px;
+    vertical-align: middle;
   }
 }
 
+.loading-state,
 .empty-state {
   min-height: 240px;
   display: grid;
@@ -268,6 +553,79 @@ const featureAreas = [
   }
 }
 
+.loading-state {
+  span {
+    width: 38px;
+    height: 38px;
+    border: 4px solid var(--color-primary-soft);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 800ms linear infinite;
+  }
+}
+
+.member-cell {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+
+  strong {
+    color: var(--color-heading);
+    font-size: 15px;
+    font-weight: 900;
+    overflow-wrap: anywhere;
+  }
+
+  span {
+    color: var(--color-muted);
+    font-size: 12px;
+    font-weight: 800;
+  }
+}
+
+.role-badge,
+.user-status {
+  width: fit-content;
+  display: inline-flex;
+  align-items: center;
+  border-radius: var(--radius-xs);
+  font-size: 12px;
+  font-weight: 900;
+  padding: 7px 9px;
+  white-space: nowrap;
+}
+
+.role-badge {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
+.user-status {
+  background: var(--color-surface-muted);
+  color: var(--color-muted);
+}
+
+.user-status--active {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.user-status--inactive {
+  background: var(--color-accent-soft);
+  color: #7a5f31;
+}
+
+.user-status--danger {
+  background: var(--color-danger-soft);
+  color: var(--color-danger);
+}
+
+.manage-button {
+  min-height: 36px;
+  font-size: 12px;
+  padding: 0 11px;
+}
+
 .scope-panel {
   position: sticky;
   top: calc(var(--header-height) + 18px);
@@ -284,20 +642,41 @@ const featureAreas = [
     display: grid;
     grid-template-columns: 10px minmax(0, 1fr);
     gap: 10px;
-    align-items: center;
+    align-items: start;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     background: var(--color-surface-muted);
-    color: var(--color-heading);
-    font-weight: 900;
     padding: 13px;
   }
 
   span {
     width: 10px;
     height: 10px;
+    margin-top: 5px;
     border-radius: 50%;
     background: var(--color-primary);
+  }
+
+  div {
+    display: grid;
+    gap: 3px;
+  }
+
+  strong {
+    color: var(--color-heading);
+    font-weight: 900;
+  }
+
+  small {
+    color: var(--color-muted);
+    font-size: 12px;
+    font-weight: 800;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -317,6 +696,12 @@ const featureAreas = [
   .toolbar-panel {
     align-items: flex-start;
     grid-template-columns: 1fr;
+  }
+
+  .toolbar-actions {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 
   .page-heading {
