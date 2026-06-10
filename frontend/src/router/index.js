@@ -39,6 +39,30 @@ const router = createRouter({
       meta: { requiresAuth: true },
     },
     {
+      path: '/agent/properties',
+      name: 'agent-properties',
+      component: () => import('@/views/AgentPropertiesView.vue'),
+      meta: { requiresAuth: true, roles: ['AGENT'] },
+    },
+    {
+      path: '/admin',
+      name: 'admin-dashboard',
+      component: () => import('@/views/AdminDashboardView.vue'),
+      meta: { requiresAuth: true, roles: ['ADMIN'] },
+    },
+    {
+      path: '/admin/users',
+      name: 'admin-users',
+      component: () => import('@/views/AdminUsersView.vue'),
+      meta: { requiresAuth: true, roles: ['ADMIN'] },
+    },
+    {
+      path: '/admin/reports',
+      name: 'admin-reports',
+      component: () => import('@/views/AdminReportsView.vue'),
+      meta: { requiresAuth: true, roles: ['ADMIN'] },
+    },
+    {
       path: '/login',
       name: 'login',
       component: () => import('@/views/LoginView.vue'),
