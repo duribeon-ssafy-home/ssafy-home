@@ -1,44 +1,36 @@
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import FilterBar from '@/components/FilterBar.vue'
 import PropertyCard from '@/components/PropertyCard.vue'
-import { mockProperties } from '@/data/mockProperties'
+import { getProperties } from '@/api/propertyApi'
 
-const activeFilters = ref({
-  location: '',
-  deposit: '',
-  monthlyRent: '',
-  roomType: 'ALL',
-})
+const properties = ref([])
+const isLoading = ref(false)
 
-const filteredProperties = computed(() => {
-  return mockProperties.filter((property) => {
-    const locationKeyword = activeFilters.value.location.trim().toLowerCase()
-    const matchesLocation =
-      !locationKeyword ||
-      [property.sido, property.gugun, property.dong, property.address, property.title]
-        .join(' ')
-        .toLowerCase()
-        .includes(locationKeyword)
-    const matchesDeposit =
-      !activeFilters.value.deposit || property.deposit <= Number(activeFilters.value.deposit)
-    const matchesMonthlyRent =
-      !activeFilters.value.monthlyRent ||
-      property.rentType === 'JEONSE' ||
-      property.monthlyRent <= Number(activeFilters.value.monthlyRent)
-    const matchesRoomType =
-      activeFilters.value.roomType === 'ALL' || property.roomType === activeFilters.value.roomType
+const featuredProperties = computed(() => properties.value.slice(0, 6))
 
-    return matchesLocation && matchesDeposit && matchesMonthlyRent && matchesRoomType
-  })
-})
-
-const featuredProperties = computed(() => filteredProperties.value.slice(0, 6))
+async function fetchProperties(params = {}) {
+  isLoading.value = true
+  try {
+    properties.value = await getProperties(params)
+  } catch {
+    properties.value = []
+  } finally {
+    isLoading.value = false
+  }
+}
 
 function handleSearch(filters) {
-  activeFilters.value = filters
+  const params = {}
+  if (filters.location.trim()) params.dong = filters.location.trim()
+  if (filters.roomType !== 'ALL') params.roomType = filters.roomType
+  if (filters.deposit) params.maxDeposit = Number(filters.deposit)
+  if (filters.monthlyRent) params.maxMonthlyRent = Number(filters.monthlyRent)
+  fetchProperties(params)
 }
+
+onMounted(() => fetchProperties())
 </script>
 
 <template>
@@ -90,7 +82,11 @@ function handleSearch(filters) {
           </p>
         </div>
 
-        <div v-if="featuredProperties.length" class="property-grid">
+        <div v-if="isLoading" class="empty-result">
+          <strong>매물을 불러오는 중입니다...</strong>
+        </div>
+
+        <div v-else-if="featuredProperties.length" class="property-grid">
           <PropertyCard
             v-for="property in featuredProperties"
             :key="property.propertyId"

@@ -2,7 +2,7 @@ import api from '@/api/axios'
 
 export async function getProperties(params = {}) {
   const response = await api.get('/properties', { params })
-  return response.data.data
+  return response.data.data.content
 }
 
 export async function getProperty(propertyId) {
