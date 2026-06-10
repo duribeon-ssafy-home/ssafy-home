@@ -14,6 +14,7 @@ import com.ssafy.home.user.repository.UserRepository;
 import com.ssafy.home.user.type.Role;
 import com.ssafy.home.user.type.UserStatus;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -265,6 +266,26 @@ class AuthUserApiTests {
 	}
 
 	@Test
+	@DisplayName("BUYER는 전화번호 없이 AGENT로 전환할 수 없다")
+	void buyerCannotChangeRoleToAgentWithoutPhoneNumber() throws Exception {
+		String accessToken = signupAndLogin("buyer@example.com");
+
+		mockMvc.perform(patch("/api/users/me/role")
+						.header("Authorization", "Bearer " + accessToken)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "role": "AGENT"
+								}
+								"""))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.success").value(false))
+				.andExpect(jsonPath("$.errorCode").value("PHONE_NUMBER_REQUIRED"));
+
+		assertThat(userRepository.findByEmail("buyer@example.com").orElseThrow().getRole()).isEqualTo(Role.BUYER);
+	}
+
+	@Test
 	void userCanChangeStatusToInactive() throws Exception {
 		String accessToken = signupAndLogin("buyer@example.com");
 
@@ -280,6 +301,26 @@ class AuthUserApiTests {
 				.andExpect(jsonPath("$.data.status").value("INACTIVE"));
 
 		assertThat(userRepository.findByEmail("buyer@example.com").orElseThrow().getStatus()).isEqualTo(UserStatus.INACTIVE);
+	}
+
+	@Test
+	@DisplayName("사용자는 본인 계정을 탈퇴 상태로 변경할 수 있다")
+	void userCanChangeStatusToDeleted() throws Exception {
+		String accessToken = signupAndLogin("buyer@example.com");
+
+		mockMvc.perform(patch("/api/users/me/status")
+						.header("Authorization", "Bearer " + accessToken)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "status": "DELETED"
+								}
+								"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true))
+				.andExpect(jsonPath("$.data.status").value("DELETED"));
+
+		assertThat(userRepository.findByEmail("buyer@example.com").orElseThrow().getStatus()).isEqualTo(UserStatus.DELETED);
 	}
 
 	private void signupBuyer(String email) throws Exception {
