@@ -18,7 +18,6 @@ const isChangingRole = ref(false)
 const isChangingStatus = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
-const actionNotice = ref('')
 
 const profileForm = reactive({
   name: '',
@@ -219,11 +218,6 @@ async function requestAccountStatusChange(status) {
   }
 }
 
-function showPreparationNotice(label) {
-  clearFeedback()
-  actionNotice.value = `${label} 기능은 준비 중입니다. 담당 화면이 연결되면 바로 이동할 수 있습니다.`
-}
-
 function resetProfileForm() {
   profileForm.name = displayProfile.value.name || ''
   profileForm.nickname = displayProfile.value.nickname || ''
@@ -241,7 +235,6 @@ function syncProfile(nextProfile) {
 function clearFeedback() {
   errorMessage.value = ''
   successMessage.value = ''
-  actionNotice.value = ''
 }
 
 function normalizeOptionalValue(value) {
@@ -298,22 +291,20 @@ function getApiErrorMessage(error, fallbackMessage) {
           </div>
 
           <div class="quick-actions">
-            <button
+            <RouterLink
               v-if="isAgent"
-              type="button"
+              :to="{ name: 'agent-properties' }"
               data-testid="agent-entry-button"
-              @click="showPreparationNotice('내 매물 관리')"
             >
               내 매물 관리
-            </button>
-            <button
+            </RouterLink>
+            <RouterLink
               v-if="isAdmin"
-              type="button"
+              :to="{ name: 'admin-dashboard' }"
               data-testid="admin-entry-button"
-              @click="showPreparationNotice('관리자 페이지')"
             >
               관리자 페이지
-            </button>
+            </RouterLink>
             <RouterLink :to="{ name: 'favorites' }">찜 목록 보기</RouterLink>
           </div>
         </aside>
@@ -325,10 +316,6 @@ function getApiErrorMessage(error, fallbackMessage) {
           <p v-if="errorMessage" class="form-message form-message--error" role="alert">
             {{ errorMessage }}
           </p>
-          <p v-if="actionNotice" class="form-message form-message--notice" role="status">
-            {{ actionNotice }}
-          </p>
-
           <section class="profile-panel">
             <div class="panel-heading panel-heading--inline">
               <div>

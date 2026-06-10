@@ -15,7 +15,12 @@ vi.mock('vue-router', () => ({
   RouterLink: {
     name: 'RouterLink',
     props: ['to'],
-    template: '<a href="#"><slot /></a>',
+    computed: {
+      routeName() {
+        return typeof this.to === 'object' && this.to !== null ? this.to.name : this.to
+      },
+    },
+    template: '<a href="#" :data-route-name="routeName"><slot /></a>',
   },
   useRouter: () => ({
     push: routerPush,
@@ -41,6 +46,16 @@ const buyerProfile = {
   phoneNumber: '',
   role: 'BUYER',
   status: 'ACTIVE',
+}
+
+const adminProfile = {
+  ...buyerProfile,
+  id: 9,
+  email: 'admin@example.com',
+  name: '관리자',
+  nickname: '운영자',
+  phoneNumber: '01011112222',
+  role: 'ADMIN',
 }
 
 describe('MyPageView', () => {
@@ -104,7 +119,22 @@ describe('MyPageView', () => {
       phoneNumber: '01099998888',
     })
     expect(authStore.user.role).toBe('AGENT')
-    expect(wrapper.find('[data-testid="agent-entry-button"]').exists()).toBe(true)
+    const agentEntry = wrapper.find('[data-testid="agent-entry-button"]')
+
+    expect(agentEntry.exists()).toBe(true)
+    expect(agentEntry.attributes('data-route-name')).toBe('agent-properties')
+  })
+
+  it('ADMIN은 관리자 페이지 버튼이 admin-dashboard 라우트로 연결된다', async () => {
+    getMyProfile.mockResolvedValue({ ...adminProfile })
+    const { wrapper } = mountMyPage(adminProfile)
+    await flushPromises()
+
+    const adminEntry = wrapper.find('[data-testid="admin-entry-button"]')
+
+    expect(adminEntry.exists()).toBe(true)
+    expect(adminEntry.attributes('data-route-name')).toBe('admin-dashboard')
+    expect(wrapper.find('[data-testid="agent-entry-button"]').exists()).toBe(false)
   })
 
   it('계정 비활성화 성공 시 세션을 정리하고 로그인 화면으로 이동한다', async () => {
@@ -132,7 +162,7 @@ describe('MyPageView', () => {
   })
 })
 
-function mountMyPage() {
+function mountMyPage(profile = buyerProfile) {
   const pinia = createPinia()
   setActivePinia(pinia)
   const authStore = useAuthStore()
@@ -140,7 +170,7 @@ function mountMyPage() {
   authStore.setSession({
     accessToken: 'access-token',
     refreshToken: 'refresh-token',
-    user: { ...buyerProfile },
+    user: { ...profile },
   })
 
   const wrapper = mount(MyPageView, {
