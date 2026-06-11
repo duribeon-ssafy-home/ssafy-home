@@ -1,7 +1,8 @@
 <script setup>
-import { computed } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink } from 'vue-router'
-import { mockProperties, roomTypeLabels } from '@/data/mockProperties'
+import { getProperty } from '@/api/propertyApi'
+import { roomTypeLabels } from '@/data/mockProperties'
 
 const props = defineProps({
   id: {
@@ -10,23 +11,32 @@ const props = defineProps({
   },
 })
 
-const property = computed(() =>
-  mockProperties.find((item) => String(item.propertyId) === String(props.id)),
-)
+const property = ref(null)
+const isLoading = ref(false)
+const isError = ref(false)
+
+async function fetchProperty() {
+  isLoading.value = true
+  isError.value = false
+  try {
+    property.value = await getProperty(props.id)
+  } catch {
+    isError.value = true
+  } finally {
+    isLoading.value = false
+  }
+}
+
+onMounted(fetchProperty)
+watch(() => props.id, fetchProperty)
 
 const imageUrl = computed(() => property.value?.images?.[0]?.imageUrl)
 const priceLabel = computed(() => {
-  if (!property.value) {
-    return ''
-  }
-
+  if (!property.value) return ''
   if (property.value.rentType === 'JEONSE') {
     return `전세 ${Number(property.value.deposit).toLocaleString('ko-KR')}`
   }
-
-  return `월세 ${property.value.monthlyRent} / 보증금 ${Number(
-    property.value.deposit,
-  ).toLocaleString('ko-KR')}`
+  return `월세 ${property.value.monthlyRent} / 보증금 ${Number(property.value.deposit).toLocaleString('ko-KR')}`
 })
 </script>
 
@@ -35,7 +45,16 @@ const priceLabel = computed(() => {
     <section class="section-container">
       <RouterLink class="back-link" :to="{ name: 'home' }">매물 찾기로 돌아가기</RouterLink>
 
-      <div v-if="property" class="detail-layout">
+      <div v-if="isLoading" class="placeholder">
+        <strong>매물 정보를 불러오는 중입니다...</strong>
+      </div>
+
+      <div v-else-if="isError" class="placeholder">
+        <strong>매물을 불러올 수 없습니다</strong>
+        <p>잠시 후 다시 시도해 주세요.</p>
+      </div>
+
+      <div v-else-if="property" class="detail-layout">
         <div class="gallery-shell">
           <img :src="imageUrl" :alt="property.title" />
         </div>
@@ -73,7 +92,7 @@ const priceLabel = computed(() => {
       </div>
 
       <div v-else class="placeholder">
-        <strong>매물을 찾을 수 없습니다</strong>
+        <strong>존재하지 않는 매물입니다</strong>
         <p>목록에서 다른 매물을 선택해 주세요.</p>
       </div>
     </section>

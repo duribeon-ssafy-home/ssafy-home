@@ -25,7 +25,8 @@ const priceLabel = computed(() => {
 const specLabel = computed(() => {
   const roomType = roomTypeLabels[props.property.roomType] || props.property.roomType
   const area = Number(props.property.area).toFixed(1)
-  return `${roomType} · ${area}m2 · ${props.property.floor}층 · 관리비 ${props.property.managementFee}만`
+  const mgmt = props.property.managementFee != null ? ` · 관리비 ${props.property.managementFee}만` : ''
+  return `${roomType} · ${area}m2 · ${props.property.floor}층${mgmt}`
 })
 
 function formatMoney(value) {

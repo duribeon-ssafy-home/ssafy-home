@@ -24,7 +24,7 @@ public class PropertySpecification {
                 predicates.add(cb.equal(root.get("gugun"), condition.gugun()));
             }
             if (condition.dong() != null) {
-                predicates.add(cb.equal(root.get("dong"), condition.dong()));
+                predicates.add(cb.like(root.get("dong"), condition.dong() + "%"));
             }
             if (condition.rentType() != null) {
                 predicates.add(cb.equal(root.get("rentType"), condition.rentType()));
