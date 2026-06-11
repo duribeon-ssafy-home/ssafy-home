@@ -15,3 +15,8 @@ export async function getProperty(propertyId) {
   const response = await api.get(`/properties/${propertyId}`)
   return response.data.data
 }
+
+export async function getPropertyRisk(propertyId) {
+  const response = await api.get(`/properties/${propertyId}/risk`)
+  return response.data.data
+}
