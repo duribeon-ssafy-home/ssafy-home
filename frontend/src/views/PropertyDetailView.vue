@@ -1,8 +1,10 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { getProperty } from '@/api/propertyApi'
 import { roomTypeLabels } from '@/data/mockProperties'
+import { useFavorites } from '@/composables/useFavorites'
+import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps({
   id: {
@@ -11,9 +13,16 @@ const props = defineProps({
   },
 })
 
+const router = useRouter()
+const authStore = useAuthStore()
+const { loadFavorites, toggleFavorite: toggle, isFavorited } = useFavorites()
+
 const property = ref(null)
 const isLoading = ref(false)
 const isError = ref(false)
+const isToggling = ref(false)
+
+const isFavorite = computed(() => property.value ? isFavorited(property.value.propertyId) : false)
 
 async function fetchProperty() {
   isLoading.value = true
@@ -27,8 +36,25 @@ async function fetchProperty() {
   }
 }
 
-onMounted(fetchProperty)
+onMounted(() => {
+  fetchProperty()
+  loadFavorites()
+})
 watch(() => props.id, fetchProperty)
+
+async function handleFavorite() {
+  if (!authStore.isAuthenticated) {
+    router.push({ name: 'login', query: { redirect: router.currentRoute.value.fullPath } })
+    return
+  }
+  if (isToggling.value || !property.value) return
+  isToggling.value = true
+  try {
+    await toggle(property.value.propertyId)
+  } finally {
+    isToggling.value = false
+  }
+}
 
 const imageUrl = computed(() => property.value?.images?.[0]?.imageUrl)
 const priceLabel = computed(() => {
@@ -92,7 +118,14 @@ function formatMoneyManwon(value) {
           </dl>
 
           <div class="panel-actions">
-            <button type="button">찜하기</button>
+            <button
+              type="button"
+              :class="{ active: isFavorite }"
+              :disabled="isToggling"
+              @click="handleFavorite"
+            >
+              {{ isFavorite ? '♥ 찜 해제' : '♡ 찜하기' }}
+            </button>
             <button class="ghost" type="button">신고</button>
           </div>
         </aside>
@@ -206,6 +239,10 @@ function formatMoneyManwon(value) {
     border: 1px solid var(--color-border);
     background: var(--color-surface);
     color: var(--color-heading);
+  }
+
+  .active {
+    background: var(--color-danger);
   }
 }
 

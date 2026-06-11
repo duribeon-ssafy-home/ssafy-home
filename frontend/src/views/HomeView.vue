@@ -4,6 +4,9 @@ import { RouterLink } from 'vue-router'
 import FilterBar from '@/components/FilterBar.vue'
 import PropertyCard from '@/components/PropertyCard.vue'
 import { getProperties } from '@/api/propertyApi'
+import { useFavorites } from '@/composables/useFavorites'
+
+const { loadFavorites } = useFavorites()
 
 const properties = ref([])
 const totalPages = ref(0)
@@ -107,7 +110,10 @@ function goToPage(page) {
   document.getElementById('featured-properties')?.scrollIntoView({ behavior: 'smooth' })
 }
 
-onMounted(() => fetchProperties())
+onMounted(() => {
+  fetchProperties()
+  loadFavorites()
+})
 </script>
 
 <template>
