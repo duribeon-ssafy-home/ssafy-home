@@ -6,9 +6,13 @@ import PropertyCard from '@/components/PropertyCard.vue'
 import { getProperties } from '@/api/propertyApi'
 
 const properties = ref([])
+const totalPages = ref(0)
+const totalElements = ref(0)
+const currentPage = ref(0)
+const pageSize = ref(6)
+const sortOrder = ref('createdAt,desc')
 const isLoading = ref(false)
-
-const featuredProperties = computed(() => properties.value.slice(0, 6))
+const activeFilters = ref({})
 
 const SIDO_ALIASES = {
   '서울': '서울특별시', '서울시': '서울특별시',
@@ -40,12 +44,37 @@ function resolveLocationParam(input) {
   return { dong: v }
 }
 
+const visiblePages = computed(() => {
+  if (totalPages.value <= 1) return []
+  const current = currentPage.value + 1
+  const total = totalPages.value
+  const pages = new Set([1, total])
+
+  for (let i = Math.max(2, current - 2); i <= Math.min(total - 1, current + 2); i++) {
+    pages.add(i)
+  }
+
+  const sorted = [...pages].sort((a, b) => a - b)
+  const result = []
+
+  for (let i = 0; i < sorted.length; i++) {
+    if (i > 0 && sorted[i] - sorted[i - 1] > 1) result.push('...')
+    result.push(sorted[i])
+  }
+
+  return result
+})
+
 async function fetchProperties(params = {}) {
   isLoading.value = true
   try {
-    properties.value = await getProperties(params)
+    const result = await getProperties({ ...params, page: currentPage.value, size: pageSize.value, sort: sortOrder.value })
+    properties.value = result.content
+    totalPages.value = result.totalPages
+    totalElements.value = result.totalElements
   } catch {
     properties.value = []
+    totalPages.value = 0
   } finally {
     isLoading.value = false
   }
@@ -57,7 +86,25 @@ function handleSearch(filters) {
   if (filters.roomType !== 'ALL') params.roomType = filters.roomType
   if (filters.deposit) params.maxDeposit = Number(filters.deposit)
   if (filters.monthlyRent) params.maxMonthlyRent = Number(filters.monthlyRent)
+  activeFilters.value = params
+  currentPage.value = 0
   fetchProperties(params)
+}
+
+function handleSortChange() {
+  currentPage.value = 0
+  fetchProperties(activeFilters.value)
+}
+
+function handlePageSizeChange() {
+  currentPage.value = 0
+  fetchProperties(activeFilters.value)
+}
+
+function goToPage(page) {
+  currentPage.value = page
+  fetchProperties(activeFilters.value)
+  document.getElementById('featured-properties')?.scrollIntoView({ behavior: 'smooth' })
 }
 
 onMounted(() => fetchProperties())
@@ -112,17 +159,65 @@ onMounted(() => fetchProperties())
           </p>
         </div>
 
+        <div class="result-controls">
+          <span class="result-count">총 {{ totalElements.toLocaleString() }}개</span>
+          <div class="control-group">
+            <select class="control-select" v-model="sortOrder" @change="handleSortChange">
+              <option value="createdAt,desc">최신순</option>
+              <option value="deposit,asc">가격 낮은순</option>
+              <option value="deposit,desc">가격 높은순</option>
+            </select>
+            <select class="control-select" v-model="pageSize" @change="handlePageSizeChange">
+              <option :value="6">6개씩 보기</option>
+              <option :value="18">18개씩 보기</option>
+              <option :value="30">30개씩 보기</option>
+            </select>
+          </div>
+        </div>
+
         <div v-if="isLoading" class="empty-result">
           <strong>매물을 불러오는 중입니다...</strong>
         </div>
 
-        <div v-else-if="featuredProperties.length" class="property-grid">
-          <PropertyCard
-            v-for="property in featuredProperties"
-            :key="property.propertyId"
-            :property="property"
-          />
-        </div>
+        <template v-else-if="properties.length">
+          <div class="property-grid">
+            <PropertyCard
+              v-for="property in properties"
+              :key="property.propertyId"
+              :property="property"
+            />
+          </div>
+
+          <div v-if="totalPages > 1" class="pagination">
+            <button
+              class="page-button"
+              :disabled="currentPage === 0"
+              @click="goToPage(currentPage - 1)"
+            >
+              이전
+            </button>
+
+            <template v-for="item in visiblePages" :key="item">
+              <span v-if="item === '...'" class="page-ellipsis">...</span>
+              <button
+                v-else
+                class="page-button"
+                :class="{ 'page-button--active': currentPage === item - 1 }"
+                @click="goToPage(item - 1)"
+              >
+                {{ item }}
+              </button>
+            </template>
+
+            <button
+              class="page-button"
+              :disabled="currentPage === totalPages - 1"
+              @click="goToPage(currentPage + 1)"
+            >
+              다음
+            </button>
+          </div>
+        </template>
 
         <div v-else class="empty-result">
           <strong>조건에 맞는 매물이 없습니다</strong>
@@ -297,6 +392,98 @@ onMounted(() => fetchProperties())
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
+}
+
+.result-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.result-count {
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.control-group {
+  display: flex;
+  gap: 8px;
+}
+
+.control-select {
+  height: 34px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-heading);
+  font-size: 13px;
+  font-weight: 700;
+  padding: 0 10px;
+  cursor: pointer;
+  outline: none;
+  transition: border-color var(--transition-fast);
+
+  &:hover,
+  &:focus {
+    border-color: var(--color-primary);
+  }
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 32px;
+}
+
+.page-button {
+  min-width: 40px;
+  height: 40px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-heading);
+  font-size: 14px;
+  font-weight: 800;
+  padding: 0 12px;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+
+  &:hover:not(:disabled) {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+
+  &:disabled {
+    color: var(--color-subtle);
+    cursor: not-allowed;
+  }
+}
+
+.page-ellipsis {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 40px;
+  height: 40px;
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.page-button--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-surface);
+
+  &:hover {
+    border-color: var(--color-primary) !important;
+    color: var(--color-surface) !important;
+  }
 }
 
 .empty-result {
