@@ -34,10 +34,17 @@ const imageUrl = computed(() => property.value?.images?.[0]?.imageUrl)
 const priceLabel = computed(() => {
   if (!property.value) return ''
   if (property.value.rentType === 'JEONSE') {
-    return `전세 ${Number(property.value.deposit).toLocaleString('ko-KR')}`
+    return `전세 ${formatMoneyManwon(property.value.deposit)}`
   }
-  return `월세 ${property.value.monthlyRent} / 보증금 ${Number(property.value.deposit).toLocaleString('ko-KR')}`
+  return `월세 ${formatMoneyManwon(property.value.monthlyRent)} / 보증금 ${formatMoneyManwon(
+    property.value.deposit,
+  )}`
 })
+
+function formatMoneyManwon(value) {
+  const amount = Number(value)
+  return Number.isFinite(amount) ? `${amount.toLocaleString('ko-KR')}만` : '-'
+}
 </script>
 
 <template>
