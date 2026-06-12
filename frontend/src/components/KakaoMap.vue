@@ -61,6 +61,7 @@ function jitteredPos(p) {
 
 function renderMarkers(properties) {
   clearOverlays()
+  const bounds = new kakao.maps.LatLngBounds()
   properties.forEach((p) => {
     if (p.latitude == null || p.longitude == null) return
     const pos = jitteredPos(p)
@@ -68,7 +69,9 @@ function renderMarkers(properties) {
     const overlay = new kakao.maps.CustomOverlay({ position: pos, content: el, yAnchor: 1.2 })
     overlay.setMap(map)
     overlayMap[p.propertyId] = { overlay, el }
+    bounds.extend(pos)
   })
+  if (!bounds.isEmpty()) map.setBounds(bounds, 80)
 }
 
 function applySelectedStyle(id) {
