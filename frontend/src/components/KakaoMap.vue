@@ -49,11 +49,21 @@ function clearOverlays() {
   Object.keys(overlayMap).forEach((k) => delete overlayMap[k])
 }
 
+function jitteredPos(p) {
+  // 같은 동 좌표에 마커가 겹치지 않도록 propertyId 기반으로 분산
+  const angle = ((p.propertyId * 137.508) % 360) * (Math.PI / 180)
+  const radius = 0.0006 + (p.propertyId % 6) * 0.00015 // 약 60~150m 반경
+  return new kakao.maps.LatLng(
+    Number(p.latitude) + Math.sin(angle) * radius,
+    Number(p.longitude) + Math.cos(angle) * radius,
+  )
+}
+
 function renderMarkers(properties) {
   clearOverlays()
   properties.forEach((p) => {
     if (p.latitude == null || p.longitude == null) return
-    const pos = new kakao.maps.LatLng(Number(p.latitude), Number(p.longitude))
+    const pos = jitteredPos(p)
     const el = makeOverlayEl(p)
     const overlay = new kakao.maps.CustomOverlay({ position: pos, content: el, yAnchor: 1.2 })
     overlay.setMap(map)
