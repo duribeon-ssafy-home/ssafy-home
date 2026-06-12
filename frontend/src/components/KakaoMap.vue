@@ -50,9 +50,9 @@ function clearOverlays() {
 }
 
 function jitteredPos(p) {
-  // 같은 동 좌표에 마커가 겹치지 않도록 propertyId 기반으로 분산
+  // 동 단위 중심 좌표가 같은 매물들을 나선형으로 분산 (약 200~700m 반경)
   const angle = ((p.propertyId * 137.508) % 360) * (Math.PI / 180)
-  const radius = 0.0006 + (p.propertyId % 6) * 0.00015 // 약 60~150m 반경
+  const radius = 0.002 + (p.propertyId % 10) * 0.0005
   return new kakao.maps.LatLng(
     Number(p.latitude) + Math.sin(angle) * radius,
     Number(p.longitude) + Math.cos(angle) * radius,
@@ -71,7 +71,11 @@ function renderMarkers(properties) {
     overlayMap[p.propertyId] = { overlay, el }
     bounds.extend(pos)
   })
-  if (!bounds.isEmpty()) map.setBounds(bounds, 80)
+  if (!bounds.isEmpty()) {
+    map.setBounds(bounds, 80)
+    // 너무 가까이 확대되지 않도록 최소 레벨 유지 (레벨 숫자가 클수록 넓게 보임)
+    if (map.getLevel() < 6) map.setLevel(6)
+  }
 }
 
 function applySelectedStyle(id) {
