@@ -78,6 +78,21 @@ function onAreaInput() {
   areaRange.value = [Math.min(min, max), Math.max(min, max)]
 }
 
+function setRentType(value) {
+  rentType.value = rentType.value === value ? null : value
+  handleSearch()
+}
+
+function setRoomType(value) {
+  roomType.value = roomType.value === value ? null : value
+  handleSearch()
+}
+
+function setFacility(value) {
+  facilityMin.value = facilityMin.value === value ? 0 : value
+  handleSearch()
+}
+
 function handleSearch() {
   const params = {}
   Object.assign(params, resolveLocation(location.value))
@@ -106,9 +121,9 @@ function handleSearch() {
       <div class="filter-group">
         <span class="filter-label">거래유형</span>
         <div class="chips">
-          <button type="button" class="chip" :class="{ 'chip--active': rentType === null }" @click="rentType = null">전체</button>
-          <button type="button" class="chip" :class="{ 'chip--active': rentType === 'JEONSE' }" data-testid="rent-JEONSE" @click="rentType = rentType === 'JEONSE' ? null : 'JEONSE'">전세</button>
-          <button type="button" class="chip" :class="{ 'chip--active': rentType === 'MONTHLY' }" data-testid="rent-MONTHLY" @click="rentType = rentType === 'MONTHLY' ? null : 'MONTHLY'">월세</button>
+          <button type="button" class="chip" :class="{ 'chip--active': rentType === null }" @click="rentType = null; handleSearch()">전체</button>
+          <button type="button" class="chip" :class="{ 'chip--active': rentType === 'JEONSE' }" data-testid="rent-JEONSE" @click="setRentType('JEONSE')">전세</button>
+          <button type="button" class="chip" :class="{ 'chip--active': rentType === 'MONTHLY' }" data-testid="rent-MONTHLY" @click="setRentType('MONTHLY')">월세</button>
         </div>
       </div>
 
@@ -127,7 +142,7 @@ function handleSearch() {
             class="chip"
             :class="{ 'chip--active': roomType === rt.value }"
             :data-testid="`room-${rt.value}`"
-            @click="roomType = roomType === rt.value ? null : rt.value"
+            @click="setRoomType(rt.value)"
           >{{ rt.label }}</button>
         </div>
       </div>
@@ -143,7 +158,9 @@ function handleSearch() {
           <span class="range-sep">~</span>
           <input v-model="depositInputs.max" class="range-text" placeholder="최대" data-testid="deposit-max" @input="onDepositInput" />
         </div>
-        <RangeSlider :min="0" :max="DEPOSIT_MAX" :step="100" :model-value="depositRange" @update:model-value="syncDepositSlider" />
+        <div @pointerup="handleSearch" @touchend="handleSearch">
+          <RangeSlider :min="0" :max="DEPOSIT_MAX" :step="100" :model-value="depositRange" @update:model-value="syncDepositSlider" />
+        </div>
       </div>
 
       <div class="filter-group filter-group--range">
@@ -153,7 +170,9 @@ function handleSearch() {
           <span class="range-sep">~</span>
           <input v-model="rentInputs.max" class="range-text" placeholder="최대" @input="onRentInput" />
         </div>
-        <RangeSlider :min="0" :max="RENT_MAX" :step="5" :model-value="rentRange" @update:model-value="syncRentSlider" />
+        <div @pointerup="handleSearch" @touchend="handleSearch">
+          <RangeSlider :min="0" :max="RENT_MAX" :step="5" :model-value="rentRange" @update:model-value="syncRentSlider" />
+        </div>
       </div>
 
       <div class="filter-group filter-group--range">
@@ -163,15 +182,17 @@ function handleSearch() {
           <span class="range-sep">~</span>
           <input v-model="areaInputs.max" class="range-text" placeholder="최대" @input="onAreaInput" />
         </div>
-        <RangeSlider :min="0" :max="AREA_MAX" :step="5" :model-value="areaRange" @update:model-value="syncAreaSlider" />
+        <div @pointerup="handleSearch" @touchend="handleSearch">
+          <RangeSlider :min="0" :max="AREA_MAX" :step="5" :model-value="areaRange" @update:model-value="syncAreaSlider" />
+        </div>
       </div>
 
       <div class="filter-group">
         <span class="filter-label">주변 시설</span>
         <div class="chips">
-          <button type="button" class="chip" :class="{ 'chip--active': facilityMin === 0 }" data-testid="facility-0" @click="facilityMin = 0">제한없음</button>
-          <button type="button" class="chip" :class="{ 'chip--active': facilityMin === 5 }" data-testid="facility-5" @click="facilityMin = facilityMin === 5 ? 0 : 5">5개+</button>
-          <button type="button" class="chip" :class="{ 'chip--active': facilityMin === 10 }" data-testid="facility-10" @click="facilityMin = facilityMin === 10 ? 0 : 10">10개+</button>
+          <button type="button" class="chip" :class="{ 'chip--active': facilityMin === 0 }" data-testid="facility-0" @click="facilityMin = 0; handleSearch()">제한없음</button>
+          <button type="button" class="chip" :class="{ 'chip--active': facilityMin === 5 }" data-testid="facility-5" @click="setFacility(5)">5개+</button>
+          <button type="button" class="chip" :class="{ 'chip--active': facilityMin === 10 }" data-testid="facility-10" @click="setFacility(10)">10개+</button>
         </div>
       </div>
 
