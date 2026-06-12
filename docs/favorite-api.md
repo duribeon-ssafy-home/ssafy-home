@@ -176,8 +176,8 @@ Swagger 우측 상단 **Authorize** 버튼 클릭
         "gugun": "강남구",
         "dong": "역삼동",
         "rentType": "MONTHLY",
-        "deposit": 5000000,
-        "monthlyRent": 700000,
+        "deposit": 500,
+        "monthlyRent": 70,
         "area": 33.5,
         "status": "APPROVED"
       },
@@ -189,6 +189,7 @@ Swagger 우측 상단 **Authorize** 버튼 클릭
 
 - 내 계정으로 추가한 관심 매물만 반환 (다른 사용자 목록은 보이지 않음)
 - 추가한 매물이 없으면 빈 배열 `[]` 반환
+- 매물 가격 필드(`deposit`, `monthlyRent`)는 만원 단위다. 예: `deposit: 500`은 보증금 500만원, `monthlyRent: 70`은 월세 70만원.
 
 ---
 
