@@ -1,5 +1,7 @@
 # 추천 API 구현 가이드
 
+> 최신 추천 검색 구현은 설문 조건을 `WHERE` 필터로 강제하지 않고 `matchScore` 정렬에 사용한다. 점수 계산식과 1차 방 타입 정책은 `docs/recommendation-match-score.md`와 `docs/lifestyle-recommendation-api-requirements.md`를 기준으로 한다. 이 문서는 초기 구현 흐름을 이해하기 위한 참고 자료로만 사용한다.
+
 자취 MBTI 기반 매물 추천 기능의 전체 흐름과 각 파일의 역할을 단계별로 설명합니다.
 
 ---

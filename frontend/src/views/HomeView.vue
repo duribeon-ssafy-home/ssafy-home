@@ -3,7 +3,17 @@ import { computed, ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import FilterBar from '@/components/FilterBar.vue'
 import PropertyCard from '@/components/PropertyCard.vue'
+import { getMyLatestLifestyleResult } from '@/api/lifestyleApi'
 import { getProperties } from '@/api/propertyApi'
+import { getRecommendations } from '@/api/recommendationApi'
+import {
+  createLifestylePresetChips,
+  createLifestyleRecommendationFilters,
+  lifestyleTypeMeta,
+} from '@/data/lifestyle'
+import { useAuthStore } from '@/stores/auth'
+
+const authStore = useAuthStore()
 import { useFavorites } from '@/composables/useFavorites'
 
 const { loadFavorites } = useFavorites()
@@ -15,6 +25,37 @@ const currentPage = ref(0)
 const pageSize = ref(6)
 const sortOrder = ref('createdAt,desc')
 const isLoading = ref(false)
+const lifestyleResult = ref(null)
+const initialFilters = ref({
+  location: '',
+  deposit: '',
+  monthlyRent: '',
+  roomType: 'ALL',
+})
+
+const isRecommendationMode = computed(() => Boolean(lifestyleResult.value))
+const lifestyleMeta = computed(() =>
+  lifestyleResult.value?.lifestyleType
+    ? lifestyleTypeMeta[lifestyleResult.value.lifestyleType]
+    : null,
+)
+const recommendationChips = computed(() =>
+  createLifestylePresetChips(lifestyleResult.value?.filterPreset, []).slice(0, 4),
+)
+const recommendationNoticeDescription = computed(() => {
+  const typeName = lifestyleResult.value?.typeName || lifestyleMeta.value?.typeName
+  const conditionText = recommendationChips.value.join(', ')
+
+  if (!typeName) {
+    return ''
+  }
+
+  if (!conditionText) {
+    return `${typeName} 기준으로 대표 방 타입과 최신 매물을 우선 반영 중입니다.`
+  }
+
+  return `${typeName} 기준으로 ${conditionText} 조건을 우선 반영 중입니다.`
+})
 const activeFilters = ref({})
 
 const SIDO_ALIASES = {
@@ -71,6 +112,9 @@ const visiblePages = computed(() => {
 async function fetchProperties(params = {}) {
   isLoading.value = true
   try {
+    properties.value = isRecommendationMode.value
+      ? await getRecommendations(params)
+      : await getProperties(params)
     const result = await getProperties({ ...params, page: currentPage.value, size: pageSize.value, sort: sortOrder.value })
     properties.value = result.content
     totalPages.value = result.totalPages
@@ -83,12 +127,17 @@ async function fetchProperties(params = {}) {
   }
 }
 
-function handleSearch(filters) {
+function buildSearchParams(filters) {
   const params = {}
-  Object.assign(params, resolveLocationParam(filters.location))
+  Object.assign(params, resolveLocationParam(filters.location || ''))
   if (filters.roomType !== 'ALL') params.roomType = filters.roomType
   if (filters.deposit) params.maxDeposit = Number(filters.deposit)
   if (filters.monthlyRent) params.maxMonthlyRent = Number(filters.monthlyRent)
+  return params
+}
+
+function handleSearch(filters) {
+  const params = buildSearchParams(filters)
   activeFilters.value = params
   currentPage.value = 0
   fetchProperties(params)
@@ -110,8 +159,30 @@ function goToPage(page) {
   document.getElementById('featured-properties')?.scrollIntoView({ behavior: 'smooth' })
 }
 
+async function loadInitialProperties() {
+  if (authStore.isAuthenticated) {
+    try {
+      const result = await getMyLatestLifestyleResult()
+      lifestyleResult.value = result
+      initialFilters.value = createLifestyleRecommendationFilters(result)
+
+      const params = buildSearchParams(initialFilters.value)
+      activeFilters.value = params
+      currentPage.value = 0
+      await fetchProperties(params)
+      return
+    } catch {
+      lifestyleResult.value = null
+    }
+  }
+
+  activeFilters.value = {}
+  currentPage.value = 0
+  await fetchProperties()
+}
+
 onMounted(() => {
-  fetchProperties()
+  loadInitialProperties()
   loadFavorites()
 })
 </script>
@@ -149,7 +220,7 @@ onMounted(() => {
 
     <section class="filter-section" aria-label="매물 검색 필터">
       <div class="section-container">
-        <FilterBar @search="handleSearch" />
+        <FilterBar :initial-filters="initialFilters" @search="handleSearch" />
       </div>
     </section>
 
@@ -165,21 +236,50 @@ onMounted(() => {
           </p>
         </div>
 
-        <div class="result-controls">
-          <span class="result-count">총 {{ totalElements.toLocaleString() }}개</span>
-          <div class="control-group">
-            <select class="control-select" v-model="sortOrder" @change="handleSortChange">
-              <option value="createdAt,desc">최신순</option>
-              <option value="deposit,asc">가격 낮은순</option>
-              <option value="deposit,desc">가격 높은순</option>
-            </select>
-            <select class="control-select" v-model="pageSize" @change="handlePageSizeChange">
-              <option :value="6">6개씩 보기</option>
-              <option :value="18">18개씩 보기</option>
-              <option :value="30">30개씩 보기</option>
-            </select>
-          </div>
-        </div>
+<div
+  v-if="isRecommendationMode"
+  class="recommendation-notice"
+  data-testid="recommendation-notice"
+>
+  <div class="recommendation-notice__content">
+    <strong>생활 성향 기준 우선 정렬</strong>
+    <span>{{ recommendationNoticeDescription }}</span>
+  </div>
+  <div v-if="recommendationChips.length" class="recommendation-notice__chips">
+    <span v-for="chip in recommendationChips" :key="chip">{{ chip }}</span>
+  </div>
+</div>
+
+<div class="result-controls">
+  <span class="result-count">총 {{ totalElements.toLocaleString() }}개</span>
+  <div class="control-group">
+    <select
+      v-if="isRecommendationMode"
+      class="control-select"
+      disabled
+      aria-label="추천 정렬"
+    >
+      <option>추천순</option>
+    </select>
+
+    <select
+      v-else
+      class="control-select"
+      v-model="sortOrder"
+      @change="handleSortChange"
+    >
+      <option value="createdAt,desc">최신순</option>
+      <option value="deposit,asc">가격 낮은순</option>
+      <option value="deposit,desc">가격 높은순</option>
+    </select>
+
+    <select class="control-select" v-model="pageSize" @change="handlePageSizeChange">
+      <option :value="6">6개씩 보기</option>
+      <option :value="18">18개씩 보기</option>
+      <option :value="30">30개씩 보기</option>
+    </select>
+  </div>
+</div>
 
         <div v-if="isLoading" class="empty-result">
           <strong>매물을 불러오는 중입니다...</strong>
@@ -391,6 +491,55 @@ onMounted(() => {
 
   .section-copy {
     max-width: 460px;
+  }
+}
+
+.recommendation-notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px 18px;
+  margin-bottom: 24px;
+  border: 1px solid rgba(54, 95, 145, 0.18);
+  border-left: 4px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  background: #f8fbff;
+  padding: 14px 16px;
+}
+
+.recommendation-notice__content {
+  display: grid;
+  gap: 4px;
+  min-width: 260px;
+
+  strong {
+    color: var(--color-heading);
+    font-size: 14px;
+    font-weight: 900;
+  }
+
+  span {
+    color: var(--color-muted);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.45;
+  }
+}
+
+.recommendation-notice__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  span {
+    border: 1px solid rgba(54, 95, 145, 0.18);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-primary-dark);
+    font-size: 12px;
+    font-weight: 900;
+    padding: 7px 9px;
   }
 }
 

@@ -1,14 +1,26 @@
 <script setup>
-import { reactive } from 'vue'
+import { reactive, watch } from 'vue'
 import { roomTypeLabels } from '@/data/mockProperties'
+
+const props = defineProps({
+  initialFilters: {
+    type: Object,
+    default: () => ({}),
+  },
+})
 
 const emit = defineEmits(['search'])
 
-const filters = reactive({
+const defaultFilters = {
   location: '',
   deposit: '',
   monthlyRent: '',
   roomType: 'ALL',
+}
+
+const filters = reactive({
+  ...defaultFilters,
+  ...props.initialFilters,
 })
 
 const roomTypes = [
@@ -21,18 +33,31 @@ const roomTypes = [
 function submitSearch() {
   emit('search', { ...filters })
 }
+
+watch(
+  () => props.initialFilters,
+  (nextFilters) => {
+    Object.assign(filters, defaultFilters, nextFilters || {})
+  },
+  { deep: true },
+)
 </script>
 
 <template>
   <form class="filter-bar" @submit.prevent="submitSearch">
     <label class="field">
       <span>지역</span>
-      <input v-model="filters.location" type="search" placeholder="서울, 강남구, 역삼동" />
+      <input
+        v-model="filters.location"
+        data-testid="location-input"
+        type="search"
+        placeholder="서울, 강남구, 역삼동"
+      />
     </label>
 
     <label class="field">
       <span>보증금</span>
-      <select v-model="filters.deposit">
+      <select v-model="filters.deposit" data-testid="deposit-select">
         <option value="">전체</option>
         <option value="1000">1,000만 이하</option>
         <option value="3000">3,000만 이하</option>
@@ -42,7 +67,7 @@ function submitSearch() {
 
     <label class="field">
       <span>월세</span>
-      <select v-model="filters.monthlyRent">
+      <select v-model="filters.monthlyRent" data-testid="monthly-rent-select">
         <option value="">전체</option>
         <option value="50">50만 이하</option>
         <option value="80">80만 이하</option>
@@ -57,6 +82,7 @@ function submitSearch() {
           v-for="roomType in roomTypes"
           :key="roomType.value"
           class="filter-chip"
+          :data-testid="`room-type-${roomType.value}`"
           :class="{ 'filter-chip--active': filters.roomType === roomType.value }"
           type="button"
           @click="filters.roomType = roomType.value"
@@ -66,7 +92,7 @@ function submitSearch() {
       </div>
     </div>
 
-    <button class="search-button" type="submit">검색하기</button>
+    <button class="search-button" data-testid="search-button" type="submit">검색하기</button>
   </form>
 </template>
 

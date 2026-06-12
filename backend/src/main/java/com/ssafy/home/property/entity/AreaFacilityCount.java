@@ -12,6 +12,8 @@ import java.time.LocalDateTime;
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class AreaFacilityCount {
 
+    private static final int FACILITY_CATEGORY_COUNT = 7;
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long areaId;
@@ -61,7 +63,23 @@ public class AreaFacilityCount {
                 + coalesce(restaurantCount500m);
     }
 
+    public int coverageScore() {
+        int coveredCategories = covered(subwayCount500m)
+                + covered(martCount1km)
+                + covered(convenienceCount500m)
+                + covered(hospitalCount1km)
+                + covered(pharmacyCount500m)
+                + covered(cafeCount500m)
+                + covered(restaurantCount500m);
+
+        return Math.round(coveredCategories * 100.0f / FACILITY_CATEGORY_COUNT);
+    }
+
     private int coalesce(Integer value) {
         return value != null ? value : 0;
+    }
+
+    private int covered(Integer value) {
+        return value != null && value > 0 ? 1 : 0;
     }
 }

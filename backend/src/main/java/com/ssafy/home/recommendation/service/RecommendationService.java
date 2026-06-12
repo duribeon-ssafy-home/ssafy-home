@@ -4,27 +4,29 @@ import com.ssafy.home.common.exception.BusinessException;
 import com.ssafy.home.common.exception.ErrorCode;
 import com.ssafy.home.lifestyle.entity.LifestyleResult;
 import com.ssafy.home.lifestyle.repository.LifestyleResultRepository;
-import com.ssafy.home.property.dto.FacilityInfo;
 import com.ssafy.home.property.dto.PropertyResponse;
+import com.ssafy.home.property.dto.PropertySearchCondition;
 import com.ssafy.home.property.entity.AreaFacilityCount;
 import com.ssafy.home.property.entity.Property;
-import com.ssafy.home.property.entity.PropertyStatus;
 import com.ssafy.home.property.repository.AreaFacilityCountRepository;
 import com.ssafy.home.property.repository.PropertyRepository;
 import com.ssafy.home.property.repository.PropertySpecification;
-import jakarta.persistence.criteria.Predicate;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.ArrayList;
+import java.time.LocalDateTime;
+import java.util.Comparator;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
-import java.util.stream.Collectors;
+import java.util.Set;
 
 @RequiredArgsConstructor
 @Service
@@ -34,66 +36,133 @@ public class RecommendationService {
     private final LifestyleResultRepository lifestyleResultRepository;
     private final PropertyRepository propertyRepository;
     private final AreaFacilityCountRepository areaFacilityCountRepository;
+    private final RecommendationScorer recommendationScorer;
 
-    public Page<PropertyResponse> recommend(Long userId, Pageable pageable) {
+    public Page<PropertyResponse> recommend(Long userId, PropertySearchCondition condition, Pageable pageable) {
         LifestyleResult lifestyle = lifestyleResultRepository
                 .findTopByUserIdOrderByCreatedAtDescIdDesc(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LIFESTYLE_RESULT_NOT_FOUND));
 
-        Specification<Property> spec = buildSpec(lifestyle);
+        Specification<Property> spec = PropertySpecification.search(normalizeCondition(condition));
+        List<Property> candidates = propertyRepository.findAll(spec);
+        Map<String, AreaFacilityCount> facilityMap = buildFacilityMap(candidates);
 
-        if (lifestyle.getFacilityCountMin() != null) {
-            List<AreaFacilityCount> qualifyingAreas =
-                    areaFacilityCountRepository.findWithMinTotalCount(lifestyle.getFacilityCountMin());
-            spec = spec.and(PropertySpecification.inAreas(qualifyingAreas));
-        }
+        List<ScoredProperty> scoredProperties = candidates.stream()
+                .map(property -> {
+                    AreaFacilityCount area = facilityMap.get(areaKey(property));
+                    int matchScore = recommendationScorer.calculate(lifestyle, property, area);
+                    return new ScoredProperty(property, area, matchScore);
+                })
+                .sorted(scoredPropertyComparator())
+                .toList();
 
-        Page<Property> page = propertyRepository.findAll(spec, pageable);
+        List<PropertyResponse> content = pageContent(scoredProperties, pageable).stream()
+                .map(scored -> PropertyResponse.from(scored.property(), scored.area()))
+                .toList();
 
-        Map<String, AreaFacilityCount> facilityMap = buildFacilityMap(page.getContent());
-
-        return page.map(p -> PropertyResponse.from(p,
-                facilityMap.get(areaKey(p.getSido(), p.getGugun(), p.getDong()))));
+        return new PageImpl<>(content, pageable, scoredProperties.size());
     }
 
-    private Specification<Property> buildSpec(LifestyleResult lifestyle) {
-        return (root, query, cb) -> {
-            List<Predicate> predicates = new ArrayList<>();
+    private PropertySearchCondition normalizeCondition(PropertySearchCondition condition) {
+        if (condition == null) {
+            return new PropertySearchCondition(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+        }
+        return new PropertySearchCondition(
+                normalizeSido(condition.sido()),
+                condition.gugun(),
+                condition.dong(),
+                condition.rentType(),
+                condition.roomType(),
+                condition.minDeposit(),
+                condition.maxDeposit(),
+                condition.minMonthlyRent(),
+                condition.maxMonthlyRent(),
+                condition.minArea(),
+                condition.maxArea(),
+                null
+        );
+    }
 
-            predicates.add(cb.equal(root.get("status"), PropertyStatus.APPROVED));
+    private Comparator<ScoredProperty> scoredPropertyComparator() {
+        return Comparator.comparingInt(ScoredProperty::matchScore)
+                .reversed()
+                .thenComparing(
+                        scored -> createdAtOrMin(scored.property()),
+                        Comparator.reverseOrder()
+                );
+    }
 
-            if (lifestyle.getMonthlyRentMax() != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("monthlyRent"), lifestyle.getMonthlyRentMax()));
-            }
-            if (lifestyle.getDepositMax() != null) {
-                predicates.add(cb.lessThanOrEqualTo(root.get("deposit"), lifestyle.getDepositMax()));
-            }
-            if (lifestyle.getAreaMin() != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("area"), lifestyle.getAreaMin()));
-            }
-            if (lifestyle.getBuildYearMin() != null) {
-                predicates.add(cb.greaterThanOrEqualTo(root.get("buildYear"), lifestyle.getBuildYearMin()));
-            }
+    private LocalDateTime createdAtOrMin(Property property) {
+        return property.getCreatedAt() != null ? property.getCreatedAt() : LocalDateTime.MIN;
+    }
 
-            return cb.and(predicates.toArray(new Predicate[0]));
-        };
+    private List<ScoredProperty> pageContent(List<ScoredProperty> scoredProperties, Pageable pageable) {
+        int start = (int) Math.min(pageable.getOffset(), scoredProperties.size());
+        int end = Math.min(start + pageable.getPageSize(), scoredProperties.size());
+        if (start >= end) {
+            return Collections.emptyList();
+        }
+        return scoredProperties.subList(start, end);
     }
 
     private Map<String, AreaFacilityCount> buildFacilityMap(List<Property> properties) {
-        return properties.stream()
-                .collect(Collectors.toMap(
-                        p -> areaKey(p.getSido(), p.getGugun(), p.getDong()),
-                        p -> areaFacilityCountRepository
-                                .findBySidoAndGugunAndDong(p.getSido(), p.getGugun(), p.getDong())
-                                .orElse(null),
-                        (existing, duplicate) -> existing
-                ))
-                .entrySet().stream()
-                .filter(e -> e.getValue() != null)
-                .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue));
+        Map<String, AreaFacilityCount> facilityMap = new HashMap<>();
+        Set<String> searchedKeys = new HashSet<>();
+
+        for (Property property : properties) {
+            String key = areaKey(property);
+            if (!searchedKeys.add(key)) {
+                continue;
+            }
+            areaFacilityCountRepository
+                    .findBySidoAndGugunAndDong(property.getSido(), property.getGugun(), property.getDong())
+                    .ifPresent(area -> facilityMap.put(key, area));
+        }
+
+        return facilityMap;
     }
 
-    private String areaKey(String sido, String gugun, String dong) {
-        return sido + "|" + gugun + "|" + dong;
+    private String areaKey(Property property) {
+        return property.getSido() + "|" + property.getGugun() + "|" + property.getDong();
+    }
+
+    private String normalizeSido(String sido) {
+        if (sido == null) return null;
+        return switch (sido.trim()) {
+            case "서울", "서울시" -> "서울특별시";
+            case "부산", "부산시" -> "부산광역시";
+            case "대구", "대구시" -> "대구광역시";
+            case "인천", "인천시" -> "인천광역시";
+            case "광주", "광주시" -> "광주광역시";
+            case "대전", "대전시" -> "대전광역시";
+            case "울산", "울산시" -> "울산광역시";
+            case "세종", "세종시" -> "세종특별자치시";
+            case "경기" -> "경기도";
+            case "강원", "강원도" -> "강원특별자치도";
+            case "충북" -> "충청북도";
+            case "충남" -> "충청남도";
+            case "전남" -> "전라남도";
+            case "전북", "전북도" -> "전북특별자치도";
+            case "경남" -> "경상남도";
+            case "경북" -> "경상북도";
+            case "제주", "제주도" -> "제주특별자치도";
+            default -> sido;
+        };
+    }
+
+    private record ScoredProperty(Property property, AreaFacilityCount area, int matchScore) {
     }
 }
