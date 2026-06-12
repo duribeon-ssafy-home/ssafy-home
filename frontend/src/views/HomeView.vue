@@ -11,11 +11,10 @@ import {
   createLifestyleRecommendationFilters,
   lifestyleTypeMeta,
 } from '@/data/lifestyle'
+import { useFavorites } from '@/composables/useFavorites'
 import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
-import { useFavorites } from '@/composables/useFavorites'
-
 const { loadFavorites } = useFavorites()
 
 const properties = ref([])
@@ -112,16 +111,24 @@ const visiblePages = computed(() => {
 async function fetchProperties(params = {}) {
   isLoading.value = true
   try {
-    properties.value = isRecommendationMode.value
-      ? await getRecommendations(params)
-      : await getProperties(params)
-    const result = await getProperties({ ...params, page: currentPage.value, size: pageSize.value, sort: sortOrder.value })
+    const requestParams = {
+      ...params,
+      page: currentPage.value,
+      size: pageSize.value,
+      ...(isRecommendationMode.value ? {} : { sort: sortOrder.value }),
+    }
+
+    const result = isRecommendationMode.value
+      ? await getRecommendations(requestParams)
+      : await getProperties(requestParams)
+
     properties.value = result.content
     totalPages.value = result.totalPages
     totalElements.value = result.totalElements
   } catch {
     properties.value = []
     totalPages.value = 0
+    totalElements.value = 0
   } finally {
     isLoading.value = false
   }
@@ -236,50 +243,50 @@ onMounted(() => {
           </p>
         </div>
 
-<div
-  v-if="isRecommendationMode"
-  class="recommendation-notice"
-  data-testid="recommendation-notice"
->
-  <div class="recommendation-notice__content">
-    <strong>생활 성향 기준 우선 정렬</strong>
-    <span>{{ recommendationNoticeDescription }}</span>
-  </div>
-  <div v-if="recommendationChips.length" class="recommendation-notice__chips">
-    <span v-for="chip in recommendationChips" :key="chip">{{ chip }}</span>
-  </div>
-</div>
+        <div
+          v-if="isRecommendationMode"
+          class="recommendation-notice"
+          data-testid="recommendation-notice"
+        >
+          <div class="recommendation-notice__content">
+            <strong>생활 성향 기준 우선 정렬</strong>
+            <span>{{ recommendationNoticeDescription }}</span>
+          </div>
+          <div v-if="recommendationChips.length" class="recommendation-notice__chips">
+            <span v-for="chip in recommendationChips" :key="chip">{{ chip }}</span>
+          </div>
+        </div>
 
-<div class="result-controls">
-  <span class="result-count">총 {{ totalElements.toLocaleString() }}개</span>
-  <div class="control-group">
-    <select
-      v-if="isRecommendationMode"
-      class="control-select"
-      disabled
-      aria-label="추천 정렬"
-    >
-      <option>추천순</option>
-    </select>
+        <div class="result-controls">
+          <span class="result-count">총 {{ totalElements.toLocaleString() }}개</span>
+          <div class="control-group">
+            <select
+              v-if="isRecommendationMode"
+              class="control-select"
+              disabled
+              aria-label="추천 정렬"
+            >
+              <option>추천순</option>
+            </select>
 
-    <select
-      v-else
-      class="control-select"
-      v-model="sortOrder"
-      @change="handleSortChange"
-    >
-      <option value="createdAt,desc">최신순</option>
-      <option value="deposit,asc">가격 낮은순</option>
-      <option value="deposit,desc">가격 높은순</option>
-    </select>
+            <select
+              v-else
+              class="control-select"
+              v-model="sortOrder"
+              @change="handleSortChange"
+            >
+              <option value="createdAt,desc">최신순</option>
+              <option value="deposit,asc">가격 낮은순</option>
+              <option value="deposit,desc">가격 높은순</option>
+            </select>
 
-    <select class="control-select" v-model="pageSize" @change="handlePageSizeChange">
-      <option :value="6">6개씩 보기</option>
-      <option :value="18">18개씩 보기</option>
-      <option :value="30">30개씩 보기</option>
-    </select>
-  </div>
-</div>
+            <select class="control-select" v-model="pageSize" @change="handlePageSizeChange">
+              <option :value="6">6개씩 보기</option>
+              <option :value="18">18개씩 보기</option>
+              <option :value="30">30개씩 보기</option>
+            </select>
+          </div>
+        </div>
 
         <div v-if="isLoading" class="empty-result">
           <strong>매물을 불러오는 중입니다...</strong>

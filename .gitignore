@@ -20,7 +20,7 @@ backend/build/
 *.log
 
 # Data files
-data/
+/data/
 
 # Environment / secrets
 .env

@@ -19,6 +19,12 @@ vi.mock('@/api/recommendationApi', () => ({
   getRecommendations: vi.fn(),
 }))
 
+vi.mock('@/composables/useFavorites', () => ({
+  useFavorites: () => ({
+    loadFavorites: vi.fn(),
+  }),
+}))
+
 const lifestyleResult = {
   lifestyleType: 'LIVING_COST_COMPACT',
   typeName: '생활권 중심 실속형',
@@ -36,8 +42,8 @@ describe('HomeView', () => {
   beforeEach(() => {
     localStorage.clear()
     vi.clearAllMocks()
-    getProperties.mockResolvedValue([])
-    getRecommendations.mockResolvedValue([])
+    getProperties.mockResolvedValue(createPage())
+    getRecommendations.mockResolvedValue(createPage())
     getMyLatestLifestyleResult.mockRejectedValue({
       response: { data: { errorCode: 'LIFESTYLE_RESULT_NOT_FOUND' } },
     })
@@ -48,7 +54,11 @@ describe('HomeView', () => {
     await flushPromises()
 
     expect(getMyLatestLifestyleResult).not.toHaveBeenCalled()
-    expect(getProperties).toHaveBeenCalledWith({})
+    expect(getProperties).toHaveBeenCalledWith({
+      page: 0,
+      size: 6,
+      sort: 'createdAt,desc',
+    })
     expect(getRecommendations).not.toHaveBeenCalled()
   })
 
@@ -62,6 +72,8 @@ describe('HomeView', () => {
       maxDeposit: 1000,
       maxMonthlyRent: 50,
       roomType: 'ONE_ROOM',
+      page: 0,
+      size: 6,
     })
     expect(getProperties).not.toHaveBeenCalled()
     expect(wrapper.get('[data-testid="deposit-select"]').element.value).toBe('1000')
@@ -89,6 +101,8 @@ describe('HomeView', () => {
       maxDeposit: 1000,
       maxMonthlyRent: 80,
       roomType: 'ONE_ROOM',
+      page: 0,
+      size: 6,
     })
   })
 
@@ -97,10 +111,23 @@ describe('HomeView', () => {
     await flushPromises()
 
     expect(getMyLatestLifestyleResult).toHaveBeenCalled()
-    expect(getProperties).toHaveBeenCalledWith({})
+    expect(getProperties).toHaveBeenCalledWith({
+      page: 0,
+      size: 6,
+      sort: 'createdAt,desc',
+    })
     expect(getRecommendations).not.toHaveBeenCalled()
   })
 })
+
+function createPage(content = []) {
+  return {
+    content,
+    totalPages: 0,
+    totalElements: content.length,
+    currentPage: 0,
+  }
+}
 
 function mountHome(options = {}) {
   const pinia = createPinia()
