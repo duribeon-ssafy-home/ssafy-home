@@ -20,10 +20,32 @@ const SIDO_ALIASES = {
 function resolveLocation(input) {
   const v = input.trim()
   if (!v) return {}
-  if (SIDO_ALIASES[v]) return { sido: SIDO_ALIASES[v] }
-  if (/(특별시|광역시|특별자치시|특별자치도|도)$/.test(v)) return { sido: v }
-  if (/[구군시]$/.test(v)) return { gugun: v }
-  return { dong: v }
+
+  const parts = v.split(/\s+/)
+
+  if (parts.length === 1) {
+    const p = parts[0]
+    if (SIDO_ALIASES[p]) return { sido: SIDO_ALIASES[p] }
+    if (/(특별시|광역시|특별자치시|특별자치도|도)$/.test(p)) return { sido: p }
+    if (/[구군시]$/.test(p)) return { gugun: p }
+    return { dong: p }
+  }
+
+  const result = {}
+  let lastUnmatched = null
+  for (const part of parts) {
+    if (SIDO_ALIASES[part]) {
+      result.sido = SIDO_ALIASES[part]
+    } else if (/(특별시|광역시|특별자치시|특별자치도|도)$/.test(part)) {
+      result.sido = part
+    } else if (/[구군시]$/.test(part)) {
+      result.gugun = part
+    } else {
+      lastUnmatched = part
+    }
+  }
+  if (lastUnmatched) result.dong = lastUnmatched
+  return Object.keys(result).length ? result : { dong: v }
 }
 
 const location = ref('')
@@ -32,10 +54,8 @@ const roomType = ref(null)
 const depositRange = ref([0, 100000])
 const rentRange = ref([0, 500])
 const areaRange = ref([0, 200])
-const facilityMin = ref(0)
-
 const DEPOSIT_MAX = 100000
-const RENT_MAX = 500
+const RENT_MAX = 150
 const AREA_MAX = 200
 
 const depositInputs = reactive({ min: '', max: '' })
@@ -88,11 +108,6 @@ function setRoomType(value) {
   handleSearch()
 }
 
-function setFacility(value) {
-  facilityMin.value = facilityMin.value === value ? 0 : value
-  handleSearch()
-}
-
 function handleSearch() {
   const params = {}
   Object.assign(params, resolveLocation(location.value))
@@ -104,7 +119,6 @@ function handleSearch() {
   if (rentRange.value[1] < RENT_MAX) params.maxMonthlyRent = rentRange.value[1]
   if (areaRange.value[0] > 0) params.minArea = areaRange.value[0]
   if (areaRange.value[1] < AREA_MAX) params.maxArea = areaRange.value[1]
-  if (facilityMin.value > 0) params.facilityCountMin = facilityMin.value
   emit('search', params)
 }
 </script>
@@ -187,15 +201,6 @@ function handleSearch() {
         </div>
       </div>
 
-      <div class="filter-group">
-        <span class="filter-label">주변 시설</span>
-        <div class="chips">
-          <button type="button" class="chip" :class="{ 'chip--active': facilityMin === 0 }" data-testid="facility-0" @click="facilityMin = 0; handleSearch()">제한없음</button>
-          <button type="button" class="chip" :class="{ 'chip--active': facilityMin === 5 }" data-testid="facility-5" @click="setFacility(5)">5개+</button>
-          <button type="button" class="chip" :class="{ 'chip--active': facilityMin === 10 }" data-testid="facility-10" @click="setFacility(10)">10개+</button>
-        </div>
-      </div>
-
       <button class="search-btn" type="submit">검색</button>
     </div>
   </form>
@@ -224,7 +229,7 @@ function handleSearch() {
   gap: 6px;
 }
 
-.filter-group--range { min-width: 180px; }
+.filter-group--range { flex: 0 0 200px; }
 
 .filter-label {
   color: var(--color-muted);
@@ -275,7 +280,8 @@ function handleSearch() {
 .range-inputs { display: flex; gap: 6px; align-items: center; }
 
 .range-text {
-  width: 76px;
+  flex: 1;
+  min-width: 0;
   height: 34px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -294,6 +300,7 @@ function handleSearch() {
 
 .search-btn {
   height: 34px;
+  margin-bottom: 26px;
   padding: 0 20px;
   background: var(--color-primary);
   color: var(--color-surface);
