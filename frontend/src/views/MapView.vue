@@ -197,6 +197,7 @@ onUnmounted(() => observer?.disconnect())
 
 .split-layout {
   flex: 1;
+  min-height: 0;
   display: flex;
   overflow: hidden;
 }
@@ -204,6 +205,7 @@ onUnmounted(() => observer?.disconnect())
 .list-panel {
   width: 33%;
   flex-shrink: 0;
+  min-height: 0;
   display: flex;
   flex-direction: column;
   border-right: 1px solid var(--color-border);
@@ -241,6 +243,7 @@ onUnmounted(() => observer?.disconnect())
 
 .list-scroll {
   flex: 1;
+  min-height: 0;
   overflow-y: auto;
   padding: 10px;
   display: flex;
@@ -264,6 +267,7 @@ onUnmounted(() => observer?.disconnect())
 
 .map-panel {
   flex: 1;
+  min-height: 0;
   position: relative;
   overflow: hidden;
 }

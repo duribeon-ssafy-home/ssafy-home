@@ -89,7 +89,7 @@ watch(() => props.selectedId, applySelectedStyle)
 </template>
 
 <style>
-.kakao-map { width: 100%; height: 100%; }
+.kakao-map { position: absolute; inset: 0; }
 
 .map-price-marker {
   background: #1f344f;
