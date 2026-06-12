@@ -3,6 +3,7 @@ package com.ssafy.home.recommendation.controller;
 import com.ssafy.home.common.response.ApiResponse;
 import com.ssafy.home.common.annotation.CurrentUser;
 import com.ssafy.home.property.dto.PropertyResponse;
+import com.ssafy.home.property.dto.PropertySearchCondition;
 import com.ssafy.home.recommendation.service.RecommendationService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -34,9 +35,10 @@ public class RecommendationController {
     @GetMapping
     public ResponseEntity<ApiResponse<Page<PropertyResponse>>> recommend(
             @Parameter(hidden = true) @CurrentUser Long userId,
+            @ParameterObject PropertySearchCondition condition,
             @ParameterObject @PageableDefault(size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable
     ) {
-        Page<PropertyResponse> result = recommendationService.recommend(userId, pageable);
+        Page<PropertyResponse> result = recommendationService.recommend(userId, condition, pageable);
         return ResponseEntity.ok(ApiResponse.success("추천 매물 조회에 성공했습니다.", result));
     }
 }

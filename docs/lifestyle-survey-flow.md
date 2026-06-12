@@ -86,18 +86,18 @@ costSensitive = costSensitivityScore > 0
 homeQualityImportant = homeQualityScore > 0
 ```
 
-세 boolean 조합으로 8개 생활 성향 유형 중 하나가 결정된다.
+세 boolean 조합으로 8개 생활 성향 유형 중 하나가 결정된다. `typeName`은 프론트 표시명과 동일하게 관리한다.
 
-| 생활권 | 비용 | 집 품질 | lifestyleType |
-| --- | --- | --- | --- |
-| true | true | true | `LIVING_COST_HOME_BALANCED` |
-| true | true | false | `LIVING_COST_COMPACT` |
-| true | false | true | `LIVING_FLEXIBLE_HOME` |
-| true | false | false | `LIVING_FLEXIBLE_COMPACT` |
-| false | true | true | `LOCATION_FLEXIBLE_COST_HOME` |
-| false | true | false | `LOCATION_FLEXIBLE_COST_COMPACT` |
-| false | false | true | `LOCATION_FLEXIBLE_HOME` |
-| false | false | false | `LOCATION_FLEXIBLE_COMPACT` |
+| 생활권 | 비용 | 집 품질 | lifestyleType | typeName |
+| --- | --- | --- | --- | --- |
+| true | true | true | `LIVING_COST_HOME_BALANCED` | 균형 잡힌 생활권 실속형 |
+| true | true | false | `LIVING_COST_COMPACT` | 생활권 중심 실속형 |
+| true | false | true | `LIVING_FLEXIBLE_HOME` | 편안한 공간 우선형 |
+| true | false | false | `LIVING_FLEXIBLE_COMPACT` | 생활권 중심 실용형 |
+| false | true | true | `LOCATION_FLEXIBLE_COST_HOME` | 조건 꼼꼼 공간형 |
+| false | true | false | `LOCATION_FLEXIBLE_COST_COMPACT` | 비용 절약 실속형 |
+| false | false | true | `LOCATION_FLEXIBLE_HOME` | 집 자체 만족형 |
+| false | false | false | `LOCATION_FLEXIBLE_COMPACT` | 조건 유연 탐색형 |
 
 ## 필터 프리셋 생성 규칙
 
@@ -121,7 +121,7 @@ homeQualityImportant = homeQualityScore > 0
 ```json
 {
   "lifestyleType": "LIVING_COST_HOME_BALANCED",
-  "typeName": "생활권 꼼꼼 실속형",
+  "typeName": "균형 잡힌 생활권 실속형",
   "filterPreset": {
     "facilityScoreMin": 70,
     "monthlyRentMax": 50,
