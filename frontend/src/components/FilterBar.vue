@@ -28,7 +28,6 @@ const roomTypes = [
   { value: 'ONE_ROOM', label: roomTypeLabels.ONE_ROOM },
   { value: 'TWO_ROOM', label: roomTypeLabels.TWO_ROOM },
   { value: 'OFFICETEL', label: roomTypeLabels.OFFICETEL },
-  { value: 'APARTMENT', label: roomTypeLabels.APARTMENT },
 ]
 
 function submitSearch() {
@@ -147,7 +146,6 @@ select {
 .chips {
   display: flex;
   gap: 8px;
-  overflow-x: auto;
 }
 
 .filter-chip {

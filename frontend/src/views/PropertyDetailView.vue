@@ -1,8 +1,10 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
-import { RouterLink } from 'vue-router'
-import { getProperty } from '@/api/propertyApi'
+import { RouterLink, useRouter } from 'vue-router'
+import { getProperty, getPropertyRisk } from '@/api/propertyApi'
 import { roomTypeLabels } from '@/data/mockProperties'
+import { useFavorites } from '@/composables/useFavorites'
+import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps({
   id: {
@@ -11,24 +13,60 @@ const props = defineProps({
   },
 })
 
+const router = useRouter()
+const authStore = useAuthStore()
+const { loadFavorites, toggleFavorite: toggle, isFavorited } = useFavorites()
+
 const property = ref(null)
+const risk = ref(null)
 const isLoading = ref(false)
 const isError = ref(false)
+
+const riskMeta = {
+  SAFE:    { label: '안전', class: 'risk--safe' },
+  CAUTION: { label: '주의', class: 'risk--caution' },
+  DANGER:  { label: '위험', class: 'risk--danger' },
+  UNKNOWN: { label: '분석 불가', class: 'risk--unknown' },
+}
+const isToggling = ref(false)
+
+const isFavorite = computed(() => property.value ? isFavorited(property.value.propertyId) : false)
 
 async function fetchProperty() {
   isLoading.value = true
   isError.value = false
   try {
-    property.value = await getProperty(props.id)
-  } catch {
-    isError.value = true
+    const [propertyData, riskData] = await Promise.allSettled([
+      getProperty(props.id),
+      getPropertyRisk(props.id),
+    ])
+    if (propertyData.status === 'fulfilled') property.value = propertyData.value
+    else isError.value = true
+    if (riskData.status === 'fulfilled') risk.value = riskData.value
   } finally {
     isLoading.value = false
   }
 }
 
-onMounted(fetchProperty)
+onMounted(() => {
+  fetchProperty()
+  loadFavorites()
+})
 watch(() => props.id, fetchProperty)
+
+async function handleFavorite() {
+  if (!authStore.isAuthenticated) {
+    router.push({ name: 'login', query: { redirect: router.currentRoute.value.fullPath } })
+    return
+  }
+  if (isToggling.value || !property.value) return
+  isToggling.value = true
+  try {
+    await toggle(property.value.propertyId)
+  } finally {
+    isToggling.value = false
+  }
+}
 
 const imageUrl = computed(() => property.value?.images?.[0]?.imageUrl)
 const priceLabel = computed(() => {
@@ -91,8 +129,43 @@ function formatMoneyManwon(value) {
             </div>
           </dl>
 
+          <div v-if="risk" class="risk-panel" :class="riskMeta[risk.label]?.class">
+            <div class="risk-header">
+              <span class="risk-badge">{{ riskMeta[risk.label]?.label }}</span>
+              <span v-if="risk.label !== 'UNKNOWN'" class="risk-score">위험 점수 {{ risk.score }}점</span>
+            </div>
+            <dl class="risk-detail">
+              <div v-if="risk.marketPriceAvg">
+                <dt>주변 시세 평균</dt>
+                <dd>{{ Number(risk.marketPriceAvg).toLocaleString('ko-KR') }}만원</dd>
+              </div>
+              <div v-if="risk.priceGapRate != null">
+                <dt>시세 대비 차이</dt>
+                <dd>{{ risk.priceGapRate > 0 ? '+' : '' }}{{ (risk.priceGapRate * 100).toFixed(1) }}%</dd>
+              </div>
+              <div>
+                <dt>신고 건수</dt>
+                <dd>{{ risk.reportCount }}건</dd>
+              </div>
+              <div>
+                <dt>소유자 확인</dt>
+                <dd>{{ risk.ownerVerified ? '확인됨' : '미확인' }}</dd>
+              </div>
+            </dl>
+            <p v-if="risk.label === 'UNKNOWN'" class="risk-notice">
+              비교 가능한 주변 매물이 부족해 분석이 어렵습니다.
+            </p>
+          </div>
+
           <div class="panel-actions">
-            <button type="button">찜하기</button>
+            <button
+              type="button"
+              :class="{ active: isFavorite }"
+              :disabled="isToggling"
+              @click="handleFavorite"
+            >
+              {{ isFavorite ? '♥ 찜 해제' : '♡ 찜하기' }}
+            </button>
             <button class="ghost" type="button">신고</button>
           </div>
         </aside>
@@ -189,6 +262,67 @@ function formatMoneyManwon(value) {
   }
 }
 
+.risk-panel {
+  border-radius: var(--radius-sm);
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.risk--safe    { background: #ecfdf3; }
+.risk--caution { background: #fffbeb; }
+.risk--danger  { background: #fff1f0; }
+.risk--unknown { background: var(--color-surface-muted); }
+
+.risk-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.risk-badge {
+  border-radius: var(--radius-xs);
+  font-size: 12px;
+  font-weight: 900;
+  padding: 4px 9px;
+
+  .risk--safe &    { background: #027a48; color: #fff; }
+  .risk--caution & { background: #b45309; color: #fff; }
+  .risk--danger &  { background: var(--color-danger); color: #fff; }
+  .risk--unknown & { background: var(--color-muted); color: #fff; }
+}
+
+.risk-score {
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.risk-detail {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+
+  dt {
+    color: var(--color-muted);
+    font-size: 12px;
+    font-weight: 800;
+  }
+
+  dd {
+    margin-top: 3px;
+    color: var(--color-heading);
+    font-size: 14px;
+    font-weight: 900;
+  }
+}
+
+.risk-notice {
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
 .panel-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -206,6 +340,10 @@ function formatMoneyManwon(value) {
     border: 1px solid var(--color-border);
     background: var(--color-surface);
     color: var(--color-heading);
+  }
+
+  .active {
+    background: var(--color-danger);
   }
 }
 
