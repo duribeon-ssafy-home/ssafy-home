@@ -189,10 +189,15 @@ onUnmounted(() => observer?.disconnect())
 
 <style lang="scss" scoped>
 .map-view {
-  height: calc(100vh - var(--header-height));
+  position: fixed;
+  top: var(--header-height);
+  left: 0;
+  right: 0;
+  bottom: 0;
   display: flex;
   flex-direction: column;
   overflow: hidden;
+  background: var(--color-surface);
 }
 
 .split-layout {
