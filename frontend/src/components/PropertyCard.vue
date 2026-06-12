@@ -16,10 +16,12 @@ const primaryImage = computed(() => props.property.images?.[0]?.imageUrl || '')
 
 const priceLabel = computed(() => {
   if (props.property.rentType === 'JEONSE') {
-    return `전세 ${formatMoney(props.property.deposit)}`
+    return `전세 ${formatMoneyManwon(props.property.deposit)}`
   }
 
-  return `월세 ${props.property.monthlyRent} / 보증금 ${formatMoney(props.property.deposit)}`
+  return `월세 ${formatMoneyManwon(props.property.monthlyRent)} / 보증금 ${formatMoneyManwon(
+    props.property.deposit,
+  )}`
 })
 
 const specLabel = computed(() => {
@@ -29,8 +31,9 @@ const specLabel = computed(() => {
   return `${roomType} · ${area}m2 · ${props.property.floor}층${mgmt}`
 })
 
-function formatMoney(value) {
-  return Number(value).toLocaleString('ko-KR')
+function formatMoneyManwon(value) {
+  const amount = Number(value)
+  return Number.isFinite(amount) ? `${amount.toLocaleString('ko-KR')}만` : '-'
 }
 
 function toggleFavorite() {

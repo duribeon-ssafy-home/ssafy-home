@@ -158,8 +158,8 @@ class PropertySearchApiTests {
 
     @Test
     void rentType_MONTHLY_필터() throws Exception {
-        saveProperty(b -> b.rentType(RentType.MONTHLY).monthlyRent(700_000).status(PropertyStatus.APPROVED));
-        saveProperty(b -> b.rentType(RentType.JEONSE).deposit(300_000_000L).status(PropertyStatus.APPROVED));
+        saveProperty(b -> b.rentType(RentType.MONTHLY).monthlyRent(70).status(PropertyStatus.APPROVED));
+        saveProperty(b -> b.rentType(RentType.JEONSE).deposit(30_000L).status(PropertyStatus.APPROVED));
 
         mockMvc.perform(get("/api/properties?rentType=MONTHLY"))
                 .andExpect(status().isOk())
@@ -184,25 +184,25 @@ class PropertySearchApiTests {
 
     @Test
     void 보증금_범위_필터() throws Exception {
-        saveProperty(b -> b.deposit(50_000_000L).status(PropertyStatus.APPROVED));
-        saveProperty(b -> b.deposit(200_000_000L).status(PropertyStatus.APPROVED));
-        saveProperty(b -> b.deposit(400_000_000L).status(PropertyStatus.APPROVED));
+        saveProperty(b -> b.deposit(5_000L).status(PropertyStatus.APPROVED));
+        saveProperty(b -> b.deposit(20_000L).status(PropertyStatus.APPROVED));
+        saveProperty(b -> b.deposit(40_000L).status(PropertyStatus.APPROVED));
 
-        mockMvc.perform(get("/api/properties?minDeposit=100000000&maxDeposit=300000000"))
+        mockMvc.perform(get("/api/properties?minDeposit=10000&maxDeposit=30000"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.totalElements").value(1))
-                .andExpect(jsonPath("$.data.content[0].deposit").value(200_000_000));
+                .andExpect(jsonPath("$.data.content[0].deposit").value(20_000));
     }
 
     @Test
     void 월세_최대값_필터() throws Exception {
-        saveProperty(b -> b.rentType(RentType.MONTHLY).monthlyRent(500_000).status(PropertyStatus.APPROVED));
-        saveProperty(b -> b.rentType(RentType.MONTHLY).monthlyRent(900_000).status(PropertyStatus.APPROVED));
+        saveProperty(b -> b.rentType(RentType.MONTHLY).monthlyRent(50).status(PropertyStatus.APPROVED));
+        saveProperty(b -> b.rentType(RentType.MONTHLY).monthlyRent(90).status(PropertyStatus.APPROVED));
 
-        mockMvc.perform(get("/api/properties?maxMonthlyRent=700000"))
+        mockMvc.perform(get("/api/properties?maxMonthlyRent=70"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.totalElements").value(1))
-                .andExpect(jsonPath("$.data.content[0].monthlyRent").value(500_000));
+                .andExpect(jsonPath("$.data.content[0].monthlyRent").value(50));
     }
 
     // ───────────────────────────────────────────
@@ -228,17 +228,17 @@ class PropertySearchApiTests {
     @Test
     void 복합필터_sido_rentType_maxMonthlyRent() throws Exception {
         saveProperty(b -> b.sido("서울특별시").gugun("강남구").dong("역삼동")
-                .rentType(RentType.MONTHLY).monthlyRent(600_000).status(PropertyStatus.APPROVED));
+                .rentType(RentType.MONTHLY).monthlyRent(60).status(PropertyStatus.APPROVED));
         saveProperty(b -> b.sido("서울특별시").gugun("강남구").dong("역삼동")
-                .rentType(RentType.MONTHLY).monthlyRent(1_000_000).status(PropertyStatus.APPROVED));
+                .rentType(RentType.MONTHLY).monthlyRent(100).status(PropertyStatus.APPROVED));
         saveProperty(b -> b.sido("부산광역시").gugun("해운대구").dong("우동")
-                .rentType(RentType.MONTHLY).monthlyRent(600_000).status(PropertyStatus.APPROVED));
+                .rentType(RentType.MONTHLY).monthlyRent(60).status(PropertyStatus.APPROVED));
 
-        mockMvc.perform(get("/api/properties?sido=서울특별시&rentType=MONTHLY&maxMonthlyRent=700000"))
+        mockMvc.perform(get("/api/properties?sido=서울특별시&rentType=MONTHLY&maxMonthlyRent=70"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.data.totalElements").value(1))
                 .andExpect(jsonPath("$.data.content[0].sido").value("서울특별시"))
-                .andExpect(jsonPath("$.data.content[0].monthlyRent").value(600_000));
+                .andExpect(jsonPath("$.data.content[0].monthlyRent").value(60));
     }
 
     // ───────────────────────────────────────────
@@ -247,28 +247,28 @@ class PropertySearchApiTests {
 
     @Test
     void 보증금_오름차순_정렬() throws Exception {
-        saveProperty(b -> b.deposit(300_000_000L).status(PropertyStatus.APPROVED));
-        saveProperty(b -> b.deposit(100_000_000L).status(PropertyStatus.APPROVED));
-        saveProperty(b -> b.deposit(200_000_000L).status(PropertyStatus.APPROVED));
+        saveProperty(b -> b.deposit(30_000L).status(PropertyStatus.APPROVED));
+        saveProperty(b -> b.deposit(10_000L).status(PropertyStatus.APPROVED));
+        saveProperty(b -> b.deposit(20_000L).status(PropertyStatus.APPROVED));
 
         mockMvc.perform(get("/api/properties?sort=deposit,asc"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.content[0].deposit").value(100_000_000))
-                .andExpect(jsonPath("$.data.content[1].deposit").value(200_000_000))
-                .andExpect(jsonPath("$.data.content[2].deposit").value(300_000_000));
+                .andExpect(jsonPath("$.data.content[0].deposit").value(10_000))
+                .andExpect(jsonPath("$.data.content[1].deposit").value(20_000))
+                .andExpect(jsonPath("$.data.content[2].deposit").value(30_000));
     }
 
     @Test
     void 월세_내림차순_정렬() throws Exception {
-        saveProperty(b -> b.rentType(RentType.MONTHLY).monthlyRent(500_000).status(PropertyStatus.APPROVED));
-        saveProperty(b -> b.rentType(RentType.MONTHLY).monthlyRent(900_000).status(PropertyStatus.APPROVED));
-        saveProperty(b -> b.rentType(RentType.MONTHLY).monthlyRent(700_000).status(PropertyStatus.APPROVED));
+        saveProperty(b -> b.rentType(RentType.MONTHLY).monthlyRent(50).status(PropertyStatus.APPROVED));
+        saveProperty(b -> b.rentType(RentType.MONTHLY).monthlyRent(90).status(PropertyStatus.APPROVED));
+        saveProperty(b -> b.rentType(RentType.MONTHLY).monthlyRent(70).status(PropertyStatus.APPROVED));
 
         mockMvc.perform(get("/api/properties?sort=monthlyRent,desc"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.data.content[0].monthlyRent").value(900_000))
-                .andExpect(jsonPath("$.data.content[1].monthlyRent").value(700_000))
-                .andExpect(jsonPath("$.data.content[2].monthlyRent").value(500_000));
+                .andExpect(jsonPath("$.data.content[0].monthlyRent").value(90))
+                .andExpect(jsonPath("$.data.content[1].monthlyRent").value(70))
+                .andExpect(jsonPath("$.data.content[2].monthlyRent").value(50));
     }
 
     // ───────────────────────────────────────────
