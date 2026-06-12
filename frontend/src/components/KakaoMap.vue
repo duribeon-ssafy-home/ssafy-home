@@ -65,6 +65,9 @@ function applySelectedStyle(id) {
   Object.entries(overlayMap).forEach(([pid, { el }]) => {
     el.classList.toggle('map-price-marker--active', Number(pid) === id)
   })
+  if (id != null && overlayMap[id]) {
+    map.panTo(overlayMap[id].overlay.getPosition())
+  }
 }
 
 onMounted(async () => {
