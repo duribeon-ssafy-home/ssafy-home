@@ -31,6 +31,7 @@ async function handleAuthAction() {
 
       <nav class="nav" aria-label="주요 메뉴">
         <RouterLink :to="{ name: 'home' }">매물 찾기</RouterLink>
+        <RouterLink :to="{ name: 'map' }">지도로 보기</RouterLink>
         <RouterLink :to="{ name: 'survey' }">라이프스타일 추천</RouterLink>
         <RouterLink :to="{ name: 'favorites' }">찜 목록</RouterLink>
         <RouterLink :to="{ name: 'my-page' }">마이페이지</RouterLink>
