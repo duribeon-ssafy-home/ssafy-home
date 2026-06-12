@@ -23,8 +23,7 @@ const isLoading = ref(false)
 const activeFilters = ref({})
 const sortOrder = ref('createdAt,desc')
 const showInfoWindow = ref(false)
-const sentinel = ref(null)
-let observer = null
+const listScroll = ref(null)
 
 const hasMore = computed(() => currentPage.value < totalPages.value - 1)
 
@@ -92,21 +91,15 @@ function goToDetail() {
   if (selectedId.value) router.push({ name: 'property-detail', params: { id: selectedId.value } })
 }
 
-onMounted(async () => {
-  await Promise.all([
-    fetchMapMarkers({}),
-    fetchListPage({}, 0),
-    loadFavorites(),
-  ])
+function onListScroll() {
+  const el = listScroll.value
+  if (!el) return
+  if (el.scrollHeight - el.scrollTop - el.clientHeight < 150) loadMore()
+}
 
-  observer = new IntersectionObserver(
-    (entries) => { if (entries[0].isIntersecting) loadMore() },
-    { threshold: 0.1 }
-  )
-  if (sentinel.value) observer.observe(sentinel.value)
+onMounted(() => {
+  Promise.all([fetchMapMarkers({}), fetchListPage({}, 0), loadFavorites()])
 })
-
-onUnmounted(() => observer?.disconnect())
 </script>
 
 <template>
@@ -124,7 +117,7 @@ onUnmounted(() => observer?.disconnect())
           </select>
         </div>
 
-        <div class="list-scroll">
+        <div class="list-scroll" ref="listScroll" @scroll="onListScroll">
           <MapPropertyCard
             v-for="property in listProperties"
             :id="`map-card-${property.propertyId}`"
@@ -139,7 +132,6 @@ onUnmounted(() => observer?.disconnect())
             조건에 맞는 매물이 없습니다
           </div>
 
-          <div ref="sentinel" class="sentinel" />
         </div>
       </aside>
 
@@ -255,6 +247,9 @@ onUnmounted(() => observer?.disconnect())
   flex-direction: column;
   gap: 8px;
 
+  // 항목이 많아도 카드 높이가 압축되지 않도록
+  > * { flex-shrink: 0; }
+
   &::-webkit-scrollbar { width: 4px; }
   &::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 2px; }
 }
@@ -268,7 +263,6 @@ onUnmounted(() => observer?.disconnect())
   font-weight: 700;
 }
 
-.sentinel { height: 1px; }
 
 .map-panel {
   flex: 1;

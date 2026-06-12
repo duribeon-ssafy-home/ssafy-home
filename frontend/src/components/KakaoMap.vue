@@ -8,6 +8,7 @@ const props = defineProps({
 const emit = defineEmits(['select'])
 
 const mapContainer = ref(null)
+const mapError = ref('')
 let map = null
 const overlayMap = {}  // propertyId -> { overlay, el }
 
@@ -75,6 +76,7 @@ onMounted(async () => {
     if (props.properties.length) renderMarkers(props.properties)
   } catch (e) {
     console.error(e)
+    mapError.value = e.message || '지도 로드 실패'
   }
 })
 
@@ -85,11 +87,37 @@ watch(() => props.selectedId, applySelectedStyle)
 </script>
 
 <template>
-  <div ref="mapContainer" class="kakao-map" />
+  <div class="kakao-map-wrapper">
+    <div ref="mapContainer" class="kakao-map" />
+    <div v-if="mapError" class="kakao-map-error">
+      <p>🗺️ 지도 로드 실패</p>
+      <p class="kakao-map-error__msg">{{ mapError }}</p>
+      <p class="kakao-map-error__hint">카카오 개발자 콘솔에서 JavaScript 키와 localhost 도메인이 등록되어 있는지 확인해주세요.</p>
+    </div>
+  </div>
 </template>
 
 <style>
+.kakao-map-wrapper { position: absolute; inset: 0; }
 .kakao-map { position: absolute; inset: 0; }
+
+.kakao-map-error {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #f8fafc;
+  color: #667085;
+  font-size: 14px;
+  text-align: center;
+  padding: 24px;
+}
+
+.kakao-map-error__msg { font-weight: 700; color: #b42318; font-size: 13px; }
+.kakao-map-error__hint { font-size: 12px; max-width: 320px; line-height: 1.6; }
 
 .map-price-marker {
   background: #1f344f;
