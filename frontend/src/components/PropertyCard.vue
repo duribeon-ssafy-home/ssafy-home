@@ -1,7 +1,9 @@
 <script setup>
 import { computed, ref } from 'vue'
-import { RouterLink } from 'vue-router'
+import { RouterLink, useRouter } from 'vue-router'
 import { rentTypeLabels, roomTypeLabels } from '@/data/mockProperties'
+import { useFavorites } from '@/composables/useFavorites'
+import { useAuthStore } from '@/stores/auth'
 
 const props = defineProps({
   property: {
@@ -10,8 +12,12 @@ const props = defineProps({
   },
 })
 
-const isFavorite = ref(false)
+const router = useRouter()
+const authStore = useAuthStore()
+const { toggleFavorite: toggle, isFavorited } = useFavorites()
+const isToggling = ref(false)
 
+const isFavorite = computed(() => isFavorited(props.property.propertyId))
 const primaryImage = computed(() => props.property.images?.[0]?.imageUrl || '')
 
 const priceLabel = computed(() => {
@@ -36,8 +42,19 @@ function formatMoneyManwon(value) {
   return Number.isFinite(amount) ? `${amount.toLocaleString('ko-KR')}만` : '-'
 }
 
-function toggleFavorite() {
-  isFavorite.value = !isFavorite.value
+async function toggleFavorite(e) {
+  e.preventDefault()
+  if (!authStore.isAuthenticated) {
+    router.push({ name: 'login', query: { redirect: router.currentRoute.value.fullPath } })
+    return
+  }
+  if (isToggling.value) return
+  isToggling.value = true
+  try {
+    await toggle(props.property.propertyId)
+  } finally {
+    isToggling.value = false
+  }
 }
 </script>
 
