@@ -59,17 +59,17 @@ describe('MapView', () => {
     expect(wrapper.findAll('.map-property-card').length).toBeGreaterThan(0)
   })
 
-  it('카드 select 이벤트 시 selectedId가 업데이트된다', async () => {
+  it('카드 select 이벤트 시 인포윈도우가 표시된다', async () => {
     const wrapper = mount(MapView)
     await flushPromises()
     await wrapper.find('.map-property-card').trigger('click')
-    const mapStub = wrapper.find('.kakao-map-stub')
-    expect(mapStub.exists()).toBe(true)
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.info-window').exists()).toBe(true)
   })
 
   it('총 결과 수를 표시한다', async () => {
     const wrapper = mount(MapView)
     await flushPromises()
-    expect(wrapper.text()).toContain('1')
+    expect(wrapper.text()).toContain('총 1개')
   })
 })

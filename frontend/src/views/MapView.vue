@@ -117,7 +117,7 @@ onUnmounted(() => observer?.disconnect())
       <aside class="list-panel">
         <div class="list-header">
           <span class="result-count">총 {{ totalElements.toLocaleString() }}개</span>
-          <select v-model="sortOrder" class="sort-select" @change="handleSearch(activeFilters)">
+          <select v-model="sortOrder" class="sort-select" @change="handleSearch(activeFilters.value)">
             <option value="createdAt,desc">최신순</option>
             <option value="deposit,asc">가격 낮은순</option>
             <option value="deposit,desc">가격 높은순</option>
