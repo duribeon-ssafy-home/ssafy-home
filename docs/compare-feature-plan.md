@@ -14,8 +14,8 @@ PropertyDetailView와 Risk API에서 가져올 수 있는 항목 기준.
 | 항목 | 필드 | 강조 기준 |
 |------|------|-----------|
 | 거래 유형 | `rentType` | — |
-| 보증금 | `deposit` | 최솟값 |
-| 월세 | `monthlyRent` | 최솟값 |
+| 보증금 / 전세금 | `deposit` | 최솟값 |
+| 월세 | `monthlyRent` | 최솟값 (전세는 "—") |
 | 관리비 | `managementFee` | 최솟값 |
 | 방 타입 | `roomType` | — |
 | 면적 | `area` | 최댓값 |
@@ -25,6 +25,14 @@ PropertyDetailView와 Risk API에서 가져올 수 있는 항목 기준.
 | 위험 등급 | `risk.label` | SAFE 강조 |
 | 위험 점수 | `risk.score` | 최솟값 |
 | 시세 대비 | `risk.priceGapRate` | 음수(저렴) 강조 |
+
+### 전세/월세 혼합 처리
+
+비교 대상에 전세(`JEONSE`)와 월세(`MONTHLY`)가 섞일 수 있다.
+
+- **보증금 행**: 전세는 전세금, 월세는 보증금을 그대로 표시. 행 라벨을 "보증금 / 전세금"으로 표기.
+- **월세 행**: 전세 매물은 "—" 표시, 강조 대상에서 제외.
+- **강조**: 월세 행 강조는 `rentType === 'MONTHLY'`인 매물끼리만 비교.
 
 ---
 
@@ -175,22 +183,46 @@ const items = await Promise.all(
 ### 강조 표시 로직
 
 ```js
-function highlight(field, values, mode) {
+function highlight(values, mode) {
   // mode: 'min' | 'max'
-  const nums = values.map(Number).filter(isFinite)
+  const nums = values.map(Number).filter(Number.isFinite)
+  if (nums.length < 2) return () => false   // 비교 대상 없으면 강조 없음
   const target = mode === 'min' ? Math.min(...nums) : Math.max(...nums)
+  const allSame = nums.every((n) => n === target)
+  if (allSame) return () => false           // 모두 동일하면 강조 없음
   return (v) => Number(v) === target
 }
 
 // 사용 예
-const isLowestRent = highlight('monthlyRent', items.map(i => i.property?.monthlyRent), 'min')
+const isLowestRent = highlight(
+  items.filter(i => i.property?.rentType === 'MONTHLY').map(i => i.property?.monthlyRent),
+  'min'
+)
+const isLargestArea = highlight(items.map(i => i.property?.area), 'max')
 ```
 
-강조 항목은 초록 배경(`#ecfdf3`) + 굵은 텍스트로 표시. 단, 모든 값이 동일하면 강조 없음.
+강조 항목은 초록 배경(`#ecfdf3`) + 굵은 텍스트로 표시.
 
 ### 빈 슬롯 처리
 
 ids가 2개 미만이면 "2개 이상의 매물을 선택해주세요" 안내 + 찜 목록 / 홈으로 이동 버튼 표시.
+
+### CompareView에서 직접 제거
+
+각 매물 열 헤더(이미지 위)에 × 버튼을 두어 `compareStore.toggle(propertyId)`로 즉시 제거.  
+제거 후 ids가 1개 미만이면 빈 슬롯 안내로 전환.
+
+### store 변경 시 데이터 리페칭
+
+CompareView는 `compareStore.ids`를 `watch`해서 ids가 바뀌면 데이터를 다시 페칭한다.
+
+```js
+watch(
+  () => compareStore.ids,
+  () => { fetchAll() },
+  { deep: true }
+)
+```
 
 ---
 
@@ -200,17 +232,29 @@ ids가 2개 미만이면 "2개 이상의 매물을 선택해주세요" 안내 + 
 
 찜 버튼 옆에 비교 버튼 추가. 비교함이 꽉 찬 경우 비활성화.
 
+```js
+// <script setup> 추가
+import { computed } from 'vue'
+import { useCompareStore } from '@/stores/compare'
+
+const compareStore = useCompareStore()
+const isComparing = computed(() => compareStore.has(props.property.propertyId))
+```
+
 ```html
 <button
   class="compare-button"
   :class="{ 'compare-button--active': isComparing }"
   :disabled="compareStore.isFull && !isComparing"
   type="button"
+  :aria-label="isComparing ? '비교 제거' : '비교 추가'"
   @click.prevent="compareStore.toggle(property.propertyId)"
 >
   {{ isComparing ? '✓' : '+' }}
 </button>
 ```
+
+비교함이 꽉 찬(`isFull`) 상태에서 추가를 시도하면 버튼이 `disabled` 처리되어 별도 토스트 없이도 상태를 직관적으로 전달한다.
 
 ### PropertyDetailView.vue
 
@@ -221,6 +265,10 @@ ids가 2개 미만이면 "2개 이상의 매물을 선택해주세요" 안내 + 
   {{ compareStore.has(property.propertyId) ? '비교함에서 제거' : '비교 추가' }}
 </button>
 ```
+
+### MapPropertyCard.vue
+
+PropertyCard와 동일한 방식으로 비교 버튼 추가. 가로형 카드이므로 버튼 위치는 우측 하단.
 
 ### FavoritesView.vue
 
