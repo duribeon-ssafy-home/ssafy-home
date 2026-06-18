@@ -4,6 +4,7 @@ import { RouterLink, useRouter } from 'vue-router'
 import { rentTypeLabels, roomTypeLabels } from '@/data/mockProperties'
 import { useFavorites } from '@/composables/useFavorites'
 import { useAuthStore } from '@/stores/auth'
+import { useCompareStore } from '@/stores/compare'
 
 const props = defineProps({
   property: {
@@ -15,7 +16,10 @@ const props = defineProps({
 const router = useRouter()
 const authStore = useAuthStore()
 const { toggleFavorite: toggle, isFavorited } = useFavorites()
+const compareStore = useCompareStore()
 const isToggling = ref(false)
+
+const isComparing = computed(() => compareStore.has(props.property.propertyId))
 
 const isFavorite = computed(() => isFavorited(props.property.propertyId))
 const primaryImage = computed(() => props.property.images?.[0]?.imageUrl || '')
@@ -90,6 +94,17 @@ async function toggleFavorite(e) {
       @click="toggleFavorite"
     >
       {{ isFavorite ? '♥' : '♡' }}
+    </button>
+
+    <button
+      class="compare-button"
+      :class="{ 'compare-button--active': isComparing }"
+      :disabled="compareStore.isFull && !isComparing"
+      type="button"
+      :aria-label="isComparing ? '비교 제거' : '비교 추가'"
+      @click.prevent="compareStore.toggle(property.propertyId)"
+    >
+      {{ isComparing ? '✓' : '+' }}
     </button>
   </article>
 </template>
@@ -226,5 +241,39 @@ h3 {
 .favorite-button--active {
   background: var(--color-danger-soft);
   color: var(--color-danger);
+}
+
+.compare-button {
+  position: absolute;
+  top: 58px;
+  right: 12px;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.72);
+  border-radius: var(--radius-sm);
+  background: rgba(255, 255, 255, 0.88);
+  color: var(--color-heading);
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
+
+  &:hover:not(:disabled) {
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+}
+
+.compare-button--active {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
 }
 </style>
