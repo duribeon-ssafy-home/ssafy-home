@@ -36,7 +36,7 @@ public class PropertyService {
     private final UserRepository userRepository;
 
     @Transactional
-    public void createProperty(PropertyCreateRequest request, Long userId) {
+    public Long createProperty(PropertyCreateRequest request, Long userId) {
         User user = findUser(userId);
         validateCanCreateProperty(user);
 
@@ -58,11 +58,11 @@ public class PropertyService {
                 .floor(request.floor())
                 .buildYear(request.buildYear())
                 .dealDate(request.dealDate())
-                .status(PropertyStatus.PENDING)
+                .status(PropertyStatus.APPROVED)
                 .dataSource(DataSource.AGENT)
                 .build();
 
-        propertyRepository.save(property);
+        return propertyRepository.save(property).getPropertyId();
     }
 
     public Page<PropertyResponse> getProperties(PropertySearchCondition condition, Pageable pageable) {
@@ -113,6 +113,14 @@ public class PropertyService {
                 .findBySidoAndGugunAndDong(property.getSido(), property.getGugun(), property.getDong())
                 .orElse(null);
         return PropertyResponse.from(property, area);
+    }
+
+    public PropertyResponse getMyProperty(Long propertyId, Long userId) {
+        Property property = findNonDeletedProperty(propertyId);
+        if (!property.getOwnerId().equals(userId)) {
+            throw new BusinessException(ErrorCode.PROPERTY_ACCESS_DENIED);
+        }
+        return PropertyResponse.from(property);
     }
 
     public List<PropertyResponse> getMyProperties(Long userId) {

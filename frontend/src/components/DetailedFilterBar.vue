@@ -1,6 +1,11 @@
 <script setup>
-import { reactive, ref } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import RangeSlider from '@/components/RangeSlider.vue'
+
+const props = defineProps({
+  initialLocation: { type: String, default: '' },
+  initialParams: { type: Object, default: () => ({}) },
+})
 
 const emit = defineEmits(['search'])
 
@@ -48,19 +53,46 @@ function resolveLocation(input) {
   return Object.keys(result).length ? result : { dong: v }
 }
 
-const location = ref('')
-const rentType = ref(null)
-const roomType = ref(null)
-const depositRange = ref([0, 100000])
-const rentRange = ref([0, 500])
-const areaRange = ref([0, 200])
 const DEPOSIT_MAX = 100000
 const RENT_MAX = 150
 const AREA_MAX = 200
 
+const location = ref(props.initialLocation)
+const rentType = ref(null)
+const roomType = ref(null)
+const depositRange = ref([0, DEPOSIT_MAX])
+const rentRange = ref([0, RENT_MAX])
+const areaRange = ref([0, AREA_MAX])
+
 const depositInputs = reactive({ min: '', max: '' })
 const rentInputs = reactive({ min: '', max: '' })
 const areaInputs = reactive({ min: '', max: '' })
+
+function applyParams(p) {
+  if (!p || !Object.keys(p).length) return
+  rentType.value = p.rentType ?? null
+  roomType.value = p.roomType ?? null
+  const dMin = p.minDeposit ?? 0
+  const dMax = p.maxDeposit ?? DEPOSIT_MAX
+  depositRange.value = [dMin, dMax]
+  depositInputs.min = dMin > 0 ? String(dMin) : ''
+  depositInputs.max = dMax < DEPOSIT_MAX ? String(dMax) : ''
+  const rMin = p.minMonthlyRent ?? 0
+  const rMax = p.maxMonthlyRent ?? RENT_MAX
+  rentRange.value = [rMin, rMax]
+  rentInputs.min = rMin > 0 ? String(rMin) : ''
+  rentInputs.max = rMax < RENT_MAX ? String(rMax) : ''
+  const aMin = p.minArea ?? 0
+  const aMax = p.maxArea ?? AREA_MAX
+  areaRange.value = [aMin, aMax]
+  areaInputs.min = aMin > 0 ? String(aMin) : ''
+  areaInputs.max = aMax < AREA_MAX ? String(aMax) : ''
+}
+
+applyParams(props.initialParams)
+
+watch(() => props.initialLocation, (v) => { location.value = v })
+watch(() => props.initialParams, applyParams, { deep: true })
 
 function syncDepositSlider([min, max]) {
   depositRange.value = [min, max]
@@ -119,7 +151,7 @@ function handleSearch() {
   if (rentRange.value[1] < RENT_MAX) params.maxMonthlyRent = rentRange.value[1]
   if (areaRange.value[0] > 0) params.minArea = areaRange.value[0]
   if (areaRange.value[1] < AREA_MAX) params.maxArea = areaRange.value[1]
-  emit('search', params)
+  emit('search', params, location.value)
 }
 </script>
 
@@ -129,7 +161,7 @@ function handleSearch() {
 
       <div class="filter-group">
         <span class="filter-label">지역</span>
-        <input v-model="location" class="filter-input" placeholder="서울 강남구, 역삼동..." />
+        <input v-model="location" class="filter-input" placeholder="부산광역시, 사하구, 하단동..." />
       </div>
 
       <div class="filter-group">

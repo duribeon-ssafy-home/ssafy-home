@@ -13,8 +13,10 @@ import {
 } from '@/data/lifestyle'
 import { useFavorites } from '@/composables/useFavorites'
 import { useAuthStore } from '@/stores/auth'
+import { useSearchStore } from '@/stores/search'
 
 const authStore = useAuthStore()
+const searchStore = useSearchStore()
 const { loadFavorites } = useFavorites()
 
 const properties = ref([])
@@ -32,7 +34,9 @@ const initialFilters = ref({
   roomType: 'ALL',
 })
 
-const isRecommendationMode = computed(() => Boolean(lifestyleResult.value))
+const isRecommendationMode = computed(
+  () => sortOrder.value === 'recommendation' && Boolean(lifestyleResult.value),
+)
 const lifestyleMeta = computed(() =>
   lifestyleResult.value?.lifestyleType
     ? lifestyleTypeMeta[lifestyleResult.value.lifestyleType]
@@ -146,6 +150,7 @@ function buildSearchParams(filters) {
 function handleSearch(filters) {
   const params = buildSearchParams(filters)
   activeFilters.value = params
+  searchStore.setSearch(params, filters.location || '')
   currentPage.value = 0
   fetchProperties(params)
 }
@@ -167,25 +172,32 @@ function goToPage(page) {
 }
 
 async function loadInitialProperties() {
+  const defaultParams = { dong: '하단동' }
+
   if (authStore.isAuthenticated) {
     try {
       const result = await getMyLatestLifestyleResult()
       lifestyleResult.value = result
+      sortOrder.value = 'recommendation'
       initialFilters.value = createLifestyleRecommendationFilters(result)
 
-      const params = buildSearchParams(initialFilters.value)
+      const lifestyleParams = buildSearchParams(initialFilters.value)
+      const params = { ...defaultParams, ...lifestyleParams }
       activeFilters.value = params
+      searchStore.setSearch(params, '하단동')
       currentPage.value = 0
       await fetchProperties(params)
       return
     } catch {
       lifestyleResult.value = null
+      sortOrder.value = 'createdAt,desc'
     }
   }
 
-  activeFilters.value = {}
+  activeFilters.value = defaultParams
+  searchStore.setSearch(defaultParams, '하단동')
   currentPage.value = 0
-  await fetchProperties()
+  await fetchProperties(defaultParams)
 }
 
 onMounted(() => {
@@ -261,20 +273,11 @@ onMounted(() => {
           <span class="result-count">총 {{ totalElements.toLocaleString() }}개</span>
           <div class="control-group">
             <select
-              v-if="isRecommendationMode"
-              class="control-select"
-              disabled
-              aria-label="추천 정렬"
-            >
-              <option>추천순</option>
-            </select>
-
-            <select
-              v-else
               class="control-select"
               v-model="sortOrder"
               @change="handleSortChange"
             >
+              <option v-if="lifestyleResult" value="recommendation">추천순</option>
               <option value="createdAt,desc">최신순</option>
               <option value="deposit,asc">가격 낮은순</option>
               <option value="deposit,desc">가격 높은순</option>

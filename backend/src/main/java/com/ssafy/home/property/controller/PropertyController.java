@@ -45,6 +45,15 @@ public class PropertyController {
         return ResponseEntity.ok(ApiResponse.success("매물 목록을 조회했습니다.", propertyService.getProperties(condition, pageable)));
     }
 
+    @Operation(summary = "내 매물 단건 조회", description = "현재 로그인한 사용자가 등록한 매물을 상태와 무관하게 단건 조회합니다.")
+    @GetMapping("/me/{id}")
+    public ResponseEntity<ApiResponse<PropertyResponse>> getMyProperty(
+            @PathVariable Long id,
+            @Parameter(hidden = true) @CurrentUser Long userId
+    ) {
+        return ResponseEntity.ok(ApiResponse.success("매물을 조회했습니다.", propertyService.getMyProperty(id, userId)));
+    }
+
     @Operation(summary = "내 매물 목록 조회", description = "현재 로그인한 사용자가 등록한 매물 목록을 반환합니다.")
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<List<PropertyResponse>>> getMyProperties(
@@ -59,14 +68,14 @@ public class PropertyController {
         return ResponseEntity.ok(ApiResponse.success("매물을 조회했습니다.", propertyService.getProperty(id)));
     }
 
-    @Operation(summary = "매물 등록", description = "새로운 매물을 등록합니다.")
+    @Operation(summary = "매물 등록", description = "새로운 매물을 등록합니다. 응답 data에 생성된 매물 ID를 반환합니다.")
     @PostMapping
-    public ResponseEntity<ApiResponse<Void>> createProperty(
+    public ResponseEntity<ApiResponse<Long>> createProperty(
             @Valid @RequestBody PropertyCreateRequest request,
             @Parameter(hidden = true) @CurrentUser Long userId
     ) {
-        propertyService.createProperty(request, userId);
-        return ResponseEntity.ok(ApiResponse.success("매물이 등록되었습니다.", null));
+        Long propertyId = propertyService.createProperty(request, userId);
+        return ResponseEntity.ok(ApiResponse.success("매물이 등록되었습니다.", propertyId));
     }
 
     @Operation(summary = "매물 수정", description = "본인 소유 매물 정보를 수정합니다.")

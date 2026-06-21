@@ -83,7 +83,9 @@ function isPublicRequest(config) {
     return method === 'post' && PUBLIC_POST_PATHS.includes(requestPath)
   }
 
-  return PUBLIC_GET_PATHS.includes(requestPath) || /^\/properties\/[^/]+$/.test(requestPath)
+  return PUBLIC_GET_PATHS.includes(requestPath) ||
+    (/^\/properties\/[^/]+$/.test(requestPath) &&
+      !requestPath.startsWith('/properties/me'))
 }
 
 function normalizeRequestPath(url = '') {

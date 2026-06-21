@@ -6,9 +6,11 @@ import MapPropertyCard from '@/components/MapPropertyCard.vue'
 import KakaoMap from '@/components/KakaoMap.vue'
 import { getProperties } from '@/api/propertyApi'
 import { useFavorites } from '@/composables/useFavorites'
+import { useSearchStore } from '@/stores/search'
 
 const router = useRouter()
 const { loadFavorites } = useFavorites()
+const searchStore = useSearchStore()
 
 const listProperties = ref([])
 const mapProperties = ref([])
@@ -49,8 +51,9 @@ async function fetchListPage(params, page) {
   }
 }
 
-async function handleSearch(filters) {
+async function handleSearch(filters, locationText = '') {
   activeFilters.value = filters
+  searchStore.setSearch(filters, locationText)
   currentPage.value = 0
   selectedId.value = null
   showInfoWindow.value = false
@@ -98,13 +101,19 @@ function onListScroll() {
 }
 
 onMounted(() => {
-  Promise.all([fetchMapMarkers({}), fetchListPage({}, 0), loadFavorites()])
+  const initParams = Object.keys(searchStore.params).length ? searchStore.params : { dong: '하단동' }
+  activeFilters.value = initParams
+  Promise.all([fetchMapMarkers(initParams), fetchListPage(initParams, 0), loadFavorites()])
 })
 </script>
 
 <template>
   <div class="map-view">
-    <DetailedFilterBar @search="handleSearch" />
+    <DetailedFilterBar
+      :initial-location="searchStore.locationText"
+      :initial-params="searchStore.params"
+      @search="handleSearch"
+    />
 
     <div class="split-layout">
       <aside class="list-panel">

@@ -34,6 +34,7 @@ async function handleAuthAction() {
         <RouterLink :to="{ name: 'map' }">지도로 보기</RouterLink>
         <RouterLink :to="{ name: 'survey' }">라이프스타일 추천</RouterLink>
         <RouterLink :to="{ name: 'favorites' }">찜 목록</RouterLink>
+        <RouterLink v-if="authStore.isAgent" :to="{ name: 'agent-properties' }">매물 관리</RouterLink>
         <RouterLink :to="{ name: 'my-page' }">마이페이지</RouterLink>
       </nav>
 

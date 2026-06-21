@@ -5,7 +5,7 @@ import { getProperty, getPropertyRisk } from '@/api/propertyApi'
 import { roomTypeLabels } from '@/data/mockProperties'
 import { useFavorites } from '@/composables/useFavorites'
 import { useAuthStore } from '@/stores/auth'
-
+import { useCompareStore } from '@/stores/compare'
 const props = defineProps({
   id: {
     type: String,
@@ -16,6 +16,7 @@ const props = defineProps({
 const router = useRouter()
 const authStore = useAuthStore()
 const { loadFavorites, toggleFavorite: toggle, isFavorited } = useFavorites()
+const compareStore = useCompareStore()
 
 const property = ref(null)
 const risk = ref(null)
@@ -101,7 +102,10 @@ function formatMoneyManwon(value) {
 
       <div v-else-if="property" class="detail-layout">
         <div class="gallery-shell">
-          <img :src="imageUrl" :alt="property.title" />
+          <img v-if="imageUrl" :src="imageUrl" :alt="property.title" />
+          <div v-else class="gallery-placeholder">
+            <span>등록된 이미지가 없습니다</span>
+          </div>
         </div>
 
         <aside class="info-panel">
@@ -166,7 +170,15 @@ function formatMoneyManwon(value) {
             >
               {{ isFavorite ? '♥ 찜 해제' : '♡ 찜하기' }}
             </button>
-            <button class="ghost" type="button">신고</button>
+            <button
+              class="ghost"
+              type="button"
+              :class="{ 'compare-active': compareStore.has(property.propertyId) }"
+              :disabled="compareStore.isFull && !compareStore.has(property.propertyId)"
+              @click="compareStore.toggle(property)"
+            >
+              {{ compareStore.has(property.propertyId) ? '✓ 비교함에서 제거' : '+ 비교 추가' }}
+            </button>
           </div>
         </aside>
       </div>
@@ -209,6 +221,7 @@ function formatMoneyManwon(value) {
 }
 
 .gallery-shell {
+  position: relative;
   overflow: hidden;
   aspect-ratio: 16 / 10;
 
@@ -217,6 +230,18 @@ function formatMoneyManwon(value) {
     height: 100%;
     object-fit: cover;
   }
+}
+
+.gallery-placeholder {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-bg-soft);
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 700;
 }
 
 .info-panel {
@@ -340,6 +365,12 @@ function formatMoneyManwon(value) {
     border: 1px solid var(--color-border);
     background: var(--color-surface);
     color: var(--color-heading);
+  }
+
+  .compare-active {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+    color: var(--color-primary-dark);
   }
 
   .active {

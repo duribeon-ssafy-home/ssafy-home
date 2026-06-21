@@ -45,6 +45,19 @@ const router = createRouter({
       meta: { requiresAuth: true, roles: ['AGENT'] },
     },
     {
+      path: '/agent/properties/new',
+      name: 'agent-property-new',
+      component: () => import('@/views/PropertyFormView.vue'),
+      meta: { requiresAuth: true, roles: ['AGENT'] },
+    },
+    {
+      path: '/agent/properties/:id/edit',
+      name: 'agent-property-edit',
+      component: () => import('@/views/PropertyFormView.vue'),
+      props: true,
+      meta: { requiresAuth: true, roles: ['AGENT'] },
+    },
+    {
       path: '/admin',
       name: 'admin-dashboard',
       component: () => import('@/views/AdminDashboardView.vue'),

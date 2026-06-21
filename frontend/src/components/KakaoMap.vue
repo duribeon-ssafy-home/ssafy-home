@@ -12,16 +12,6 @@ const mapError = ref('')
 let map = null
 const overlayMap = {}  // propertyId -> { overlay, el }
 
-function loadKakaoScript() {
-  return new Promise((resolve, reject) => {
-    if (window.kakao?.maps) { resolve(); return }
-    const s = document.createElement('script')
-    s.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${import.meta.env.VITE_KAKAO_MAP_KEY}&autoload=false`
-    s.onload = () => window.kakao.maps.load(resolve)
-    s.onerror = () => reject(new Error('카카오맵 SDK 로드 실패'))
-    document.head.appendChild(s)
-  })
-}
 
 function formatPrice(property) {
   if (property.rentType === 'JEONSE') {
@@ -60,6 +50,7 @@ function jitteredPos(p) {
 }
 
 function renderMarkers(properties) {
+  if (!map) return
   clearOverlays()
   const bounds = new kakao.maps.LatLngBounds()
   properties.forEach((p) => {
@@ -79,12 +70,24 @@ function renderMarkers(properties) {
 }
 
 function applySelectedStyle(id) {
+  if (!map) return
   Object.entries(overlayMap).forEach(([pid, { el }]) => {
     el.classList.toggle('map-price-marker--active', Number(pid) === id)
   })
   if (id != null && overlayMap[id]) {
     map.panTo(overlayMap[id].overlay.getPosition())
   }
+}
+
+function loadKakaoScript() {
+  return new Promise((resolve, reject) => {
+    if (window.kakao?.maps) { resolve(); return }
+    const s = document.createElement('script')
+    s.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${import.meta.env.VITE_KAKAO_MAP_KEY}&autoload=false`
+    s.onload = () => window.kakao.maps.load(resolve)
+    s.onerror = () => reject(new Error('카카오맵 SDK 로드 실패'))
+    document.head.appendChild(s)
+  })
 }
 
 onMounted(async () => {
