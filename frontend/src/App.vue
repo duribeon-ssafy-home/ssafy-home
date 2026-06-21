@@ -1,6 +1,7 @@
 <script setup>
 import { RouterView } from 'vue-router'
 import AppHeader from '@/components/AppHeader.vue'
+import CompareBar from '@/components/CompareBar.vue'
 </script>
 
 <template>
@@ -11,6 +12,7 @@ import AppHeader from '@/components/AppHeader.vue'
         <component :is="Component" />
       </Transition>
     </RouterView>
+    <CompareBar />
   </div>
 </template>
 

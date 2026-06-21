@@ -69,8 +69,10 @@ async function toggleFavorite(e) {
       :to="{ name: 'property-detail', params: { id: property.propertyId } }"
     >
       <div class="image-wrap">
-        <img :src="primaryImage" :alt="property.title" />
+        <img v-if="primaryImage" :src="primaryImage" :alt="property.title" />
+        <div v-else class="img-placeholder" />
         <span class="rent-badge">{{ rentTypeLabels[property.rentType] }}</span>
+        <span v-if="property.dataSource === 'AGENT'" class="unreviewed-badge">미검증</span>
       </div>
 
       <div class="content">
@@ -102,7 +104,7 @@ async function toggleFavorite(e) {
       :disabled="compareStore.isFull && !isComparing"
       type="button"
       :aria-label="isComparing ? '비교 제거' : '비교 추가'"
-      @click.prevent="compareStore.toggle(property.propertyId)"
+      @click.prevent="compareStore.toggle(property)"
     >
       {{ isComparing ? '✓' : '+' }}
     </button>
@@ -152,6 +154,12 @@ async function toggleFavorite(e) {
   }
 }
 
+.img-placeholder {
+  width: 100%;
+  height: 100%;
+  background: var(--color-bg-soft);
+}
+
 .rent-badge {
   position: absolute;
   left: 14px;
@@ -162,6 +170,18 @@ async function toggleFavorite(e) {
   font-size: 12px;
   font-weight: 900;
   padding: 6px 9px;
+}
+
+.unreviewed-badge {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  border-radius: var(--radius-xs);
+  background: rgba(217, 119, 6, 0.88);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 900;
+  padding: 5px 8px;
 }
 
 .content {

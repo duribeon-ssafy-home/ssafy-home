@@ -51,7 +51,7 @@ watch(
         v-model="filters.location"
         data-testid="location-input"
         type="search"
-        placeholder="서울, 강남구, 역삼동"
+        placeholder="부산광역시, 사하구, 하단동"
       />
     </label>
 

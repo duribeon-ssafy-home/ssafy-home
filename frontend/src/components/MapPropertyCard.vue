@@ -3,6 +3,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { useFavorites } from '@/composables/useFavorites'
 import { useAuthStore } from '@/stores/auth'
+import { useCompareStore } from '@/stores/compare'
 
 const props = defineProps({
   property: { type: Object, required: true },
@@ -13,7 +14,10 @@ const emit = defineEmits(['select'])
 const router = useRouter()
 const authStore = useAuthStore()
 const { toggleFavorite: toggle, isFavorited } = useFavorites()
+const compareStore = useCompareStore()
 const isToggling = ref(false)
+
+const isComparing = computed(() => compareStore.has(props.property.propertyId))
 
 const rentTypeLabels = { JEONSE: '전세', MONTHLY: '월세' }
 const roomTypeLabels = {
@@ -68,13 +72,23 @@ async function onFavoriteClick(e) {
       <p class="addr">{{ property.gugun }} {{ property.dong }}</p>
     </div>
 
-    <button
-      class="fav-btn"
-      :class="{ 'fav-btn--active': isFavorite }"
-      type="button"
-      :aria-label="isFavorite ? '찜 해제' : '찜하기'"
-      @click="onFavoriteClick"
-    >{{ isFavorite ? '♥' : '♡' }}</button>
+    <div class="side-btns">
+      <button
+        class="fav-btn"
+        :class="{ 'fav-btn--active': isFavorite }"
+        type="button"
+        :aria-label="isFavorite ? '찜 해제' : '찜하기'"
+        @click="onFavoriteClick"
+      >{{ isFavorite ? '♥' : '♡' }}</button>
+      <button
+        class="cmp-btn"
+        :class="{ 'cmp-btn--active': isComparing }"
+        :disabled="compareStore.isFull && !isComparing"
+        type="button"
+        :aria-label="isComparing ? '비교 제거' : '비교 추가'"
+        @click.stop="compareStore.toggle(property)"
+      >{{ isComparing ? '✓' : '+' }}</button>
+    </div>
   </article>
 </template>
 
@@ -153,18 +167,45 @@ async function onFavoriteClick(e) {
 .spec { color: var(--color-muted); font-size: 11px; font-weight: 700; }
 .addr { color: var(--color-subtle); font-size: 11px; font-weight: 700; }
 
-.fav-btn {
-  padding: 10px 10px 10px 4px;
+.side-btns {
   display: flex;
-  align-items: flex-start;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 8px 6px 4px;
+  gap: 4px;
   flex-shrink: 0;
-  color: var(--color-subtle);
-  font-size: 17px;
-  line-height: 1;
-  transition: color var(--transition-fast);
-
-  &:hover { color: var(--color-danger); }
 }
 
+.fav-btn,
+.cmp-btn {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-xs);
+  font-size: 14px;
+  line-height: 1;
+  transition: color var(--transition-fast), background-color var(--transition-fast);
+}
+
+.fav-btn {
+  color: var(--color-subtle);
+  &:hover { color: var(--color-danger); }
+}
 .fav-btn--active { color: var(--color-danger); }
+
+.cmp-btn {
+  color: var(--color-subtle);
+  font-weight: 900;
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
+  &:hover:not(:disabled) { border-color: var(--color-primary); color: var(--color-primary); }
+  &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+.cmp-btn--active {
+  background: var(--color-primary-soft);
+  border-color: var(--color-primary);
+  color: var(--color-primary-dark);
+}
 </style>
