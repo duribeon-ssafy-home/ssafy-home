@@ -92,7 +92,8 @@ def main():
                          rent_type, room_type,
                          deposit, monthly_rent, area,
                          floor, build_year,
-                         data_source, deal_date, status)
+                         data_source, deal_date, status,
+                         created_at, updated_at)
                     VALUES
                         (NULL, %s, %s, %s,
                          %s, %s, %s,
@@ -100,7 +101,8 @@ def main():
                          %s, %s,
                          %s, %s, %s,
                          %s, %s,
-                         %s, %s, %s)
+                         %s, %s, %s,
+                         NOW(), NOW())
                 """, (
                     to_str(row.get('title')),
                     address,
@@ -126,8 +128,9 @@ def main():
                 cur.execute("""
                     INSERT INTO property_risk_scores
                         (property_id, risk_label, risk_score,
-                         market_price_avg, price_gap_rate, report_count)
-                    VALUES (%s, %s, 0, %s, %s, 0)
+                         market_price_avg, price_gap_rate, report_count,
+                         calculated_at)
+                    VALUES (%s, %s, 0, %s, %s, 0, NOW())
                 """, (
                     property_id,
                     to_str(row.get('risk_label')) or 'UNKNOWN',
