@@ -93,6 +93,49 @@ class AiChatApiTests {
     }
 
     @Test
+    @DisplayName("AI 채팅은 비교 매물이 있으면 위험도 설명 문장도 비교 분석으로 라우팅한다")
+    void chatRoutesRiskQuestionWithComparePropertiesToCompareIntent() throws Exception {
+        User user = saveUser();
+        Property first = saveProperty("First Property", 1000L);
+        Property second = saveProperty("Second Property", 700L);
+
+        mockMvc.perform(post("/api/ai/chat")
+                        .header("Authorization", "Bearer " + jwtTokenProvider.createAccessToken(user))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "message": "보증금이 싼데 위험 점수가 높은 매물을 설명해줘",
+                                  "propertyIds": [%d, %d]
+                                }
+                                """.formatted(first.getPropertyId(), second.getPropertyId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.intent").value("PROPERTY_COMPARE"))
+                .andExpect(jsonPath("$.data.compare.propertyAnalyses.length()").value(2));
+    }
+
+    @Test
+    @DisplayName("AI 채팅은 비교 매물이 있어도 순수 계약 용어 질문은 RAG 흐름으로 라우팅한다")
+    void chatRoutesContractConceptQuestionWithComparePropertiesToRagIntent() throws Exception {
+        User user = saveUser();
+        Property first = saveProperty("First Property", 1000L);
+        Property second = saveProperty("Second Property", 700L);
+
+        mockMvc.perform(post("/api/ai/chat")
+                        .header("Authorization", "Bearer " + jwtTokenProvider.createAccessToken(user))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {
+                                  "message": "반전세가 뭐야?",
+                                  "propertyIds": [%d, %d]
+                                }
+                                """.formatted(first.getPropertyId(), second.getPropertyId())))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.intent").value("CONTRACT_KNOWLEDGE"))
+                .andExpect(jsonPath("$.data.compare").doesNotExist())
+                .andExpect(jsonPath("$.data.sources[0].type").value("RAG"));
+    }
+
+    @Test
     @DisplayName("AI 채팅은 계약 지식 질문을 RAG 흐름으로 라우팅한다")
     void chatRoutesContractKnowledgeIntentWithRagSources() throws Exception {
         User user = saveUser();
