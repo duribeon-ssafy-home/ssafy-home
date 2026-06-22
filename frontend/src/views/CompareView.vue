@@ -230,6 +230,18 @@ watch(() => compareStore.ids, fetchAll, { deep: true })
               >{{ item.risk?.label !== 'UNKNOWN' && item.risk?.score != null ? `${item.risk.score}점` : '—' }}</td>
             </tr>
             <tr>
+              <td class="row-label">주변 평균 시세</td>
+              <td v-for="item in items" :key="item.property?.propertyId">
+                <template v-if="item.property?.rentType === 'JEONSE'">
+                  {{ item.risk?.marketPriceAvg != null ? `전세 ${Number(item.risk.marketPriceAvg).toLocaleString('ko-KR')}만원` : '—' }}
+                </template>
+                <template v-else-if="item.risk?.avgMonthlyRent != null">
+                  {{ `월세 ${Number(item.risk.avgMonthlyRent).toLocaleString('ko-KR')}만 / 보증금 ${Number(item.risk.avgDeposit).toLocaleString('ko-KR')}만` }}
+                </template>
+                <template v-else>—</template>
+              </td>
+            </tr>
+            <tr>
               <td class="row-label">시세 대비</td>
               <td
                 v-for="item in items"

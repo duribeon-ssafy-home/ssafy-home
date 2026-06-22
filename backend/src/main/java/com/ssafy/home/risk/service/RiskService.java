@@ -51,6 +51,8 @@ public class RiskService {
 
         double marketAvg;
         double priceGapRate;
+        Long avgDeposit = null;
+        Long avgMonthlyRent = null;
 
         if (property.getRentType() == RentType.JEONSE) {
             // 전세: 전세금(deposit)만 비교
@@ -81,6 +83,8 @@ public class RiskService {
                     .average().orElseThrow();
             long propertyEquiv = property.getDeposit() + property.getMonthlyRent() * JEONSE_CONVERSION_MULTIPLIER;
             priceGapRate = (propertyEquiv - marketAvg) / marketAvg * 100.0;
+            avgDeposit = Math.round(nearbyRentals.stream().mapToLong(RentalPriceRow::getDeposit).average().orElseThrow());
+            avgMonthlyRent = Math.round(nearbyRentals.stream().mapToLong(RentalPriceRow::getMonthlyRent).average().orElseThrow());
         }
 
         int priceScore = calcPriceScore(priceGapRate);
@@ -95,7 +99,9 @@ public class RiskService {
                 Math.round(marketAvg),
                 Math.round(priceGapRate * 10.0) / 10.0,
                 reports.size(),
-                ownerVerified
+                ownerVerified,
+                avgDeposit,
+                avgMonthlyRent
         );
     }
 
