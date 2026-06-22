@@ -10,6 +10,7 @@ langchain-chroma==0.1.4
 google-generativeai==0.8.3
 chromadb==0.5.23
 unstructured==0.16.11
+markdown==3.7
 python-dotenv==1.0.1
 httpx==0.28.1
 pytest==8.3.4
