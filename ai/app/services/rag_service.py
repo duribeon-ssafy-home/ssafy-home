@@ -27,7 +27,7 @@ class RAGService:
         self.vs_manager = VectorStoreManager.get_instance()
         self.loader = DocumentLoader()
         self.llm = ChatGoogleGenerativeAI(
-            model="gemini-1.5-flash",
+            model="gemini-2.5-flash-lite",
             google_api_key=settings.google_api_key,
             temperature=0.1,
             max_output_tokens=2048,
