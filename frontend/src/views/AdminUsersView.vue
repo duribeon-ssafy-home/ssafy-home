@@ -1,15 +1,24 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
-import { getAdminUsers } from '@/api/adminUserApi'
+import {
+  getAdminUser,
+  getAdminUsers,
+  updateAdminUserRole,
+  updateAdminUserStatus,
+} from '@/api/adminUserApi'
 
 const tableHeaders = ['회원', '이메일', '역할', '상태', '가입일', '관리']
 
-const featureAreas = [
-  { label: '회원 목록', status: '연동 완료' },
-  { label: '회원 검색', status: '연동 완료' },
-  { label: '회원 상세', status: '다음 작업' },
-  { label: '상태 변경', status: '다음 작업' },
-  { label: '역할 변경', status: '다음 작업' },
+const userStatusOptions = [
+  { label: '활성', value: 'ACTIVE' },
+  { label: '비활성', value: 'INACTIVE' },
+  { label: '정지', value: 'BANNED' },
+  { label: '탈퇴', value: 'DELETED' },
+]
+
+const userRoleOptions = [
+  { label: '일반 사용자', value: 'BUYER' },
+  { label: '중개인', value: 'AGENT' },
 ]
 
 const roleLabels = {
@@ -38,6 +47,16 @@ const appliedKeyword = ref('')
 const isLoading = ref(false)
 const errorMessage = ref('')
 const hasLoaded = ref(false)
+const selectedUser = ref(null)
+const isDetailLoading = ref(false)
+const detailErrorMessage = ref('')
+const actionMessage = ref('')
+const actionErrorMessage = ref('')
+const isSavingStatus = ref(false)
+const isSavingRole = ref(false)
+const statusForm = ref('ACTIVE')
+const roleForm = ref('BUYER')
+const rolePhoneNumber = ref('')
 
 const statusChipLabel = computed(() => {
   if (isLoading.value) {
@@ -66,6 +85,13 @@ const emptyDescription = computed(() =>
 )
 
 const hasUsers = computed(() => users.value.length > 0)
+const selectedUserName = computed(() => selectedUser.value ? getDisplayName(selectedUser.value) : '')
+const roleNeedsPhoneNumber = computed(() => roleForm.value === 'AGENT')
+const canSubmitRole = computed(() =>
+  !isSavingRole.value &&
+  selectedUser.value &&
+  (!roleNeedsPhoneNumber.value || rolePhoneNumber.value.trim()),
+)
 
 onMounted(() => {
   loadUsers()
@@ -80,6 +106,7 @@ async function loadUsers(keyword = appliedKeyword.value) {
   try {
     users.value = await getAdminUsers(normalizedKeyword ? { keyword: normalizedKeyword } : {})
     appliedKeyword.value = normalizedKeyword
+    syncSelectedUserFromList()
   } catch (error) {
     errorMessage.value = getApiErrorMessage(error)
     users.value = []
@@ -96,6 +123,91 @@ function submitSearch() {
 function clearSearch() {
   searchKeyword.value = ''
   loadUsers('')
+}
+
+async function selectUser(user) {
+  isDetailLoading.value = true
+  detailErrorMessage.value = ''
+  actionMessage.value = ''
+  actionErrorMessage.value = ''
+
+  try {
+    const detail = await getAdminUser(user.id)
+    setSelectedUser(detail)
+  } catch (error) {
+    detailErrorMessage.value = getApiErrorMessage(error, '회원 상세 정보를 불러오지 못했습니다.')
+  } finally {
+    isDetailLoading.value = false
+  }
+}
+
+async function submitStatusUpdate() {
+  if (!selectedUser.value || isSavingStatus.value) {
+    return
+  }
+
+  isSavingStatus.value = true
+  actionMessage.value = ''
+  actionErrorMessage.value = ''
+
+  try {
+    const updatedUser = await updateAdminUserStatus(selectedUser.value.id, {
+      status: statusForm.value,
+    })
+    applyUpdatedUser(updatedUser)
+    actionMessage.value = '회원 상태를 변경했습니다.'
+  } catch (error) {
+    actionErrorMessage.value = getApiErrorMessage(error, '회원 상태를 변경하지 못했습니다.')
+  } finally {
+    isSavingStatus.value = false
+  }
+}
+
+async function submitRoleUpdate() {
+  if (!selectedUser.value || !canSubmitRole.value) {
+    return
+  }
+
+  isSavingRole.value = true
+  actionMessage.value = ''
+  actionErrorMessage.value = ''
+
+  try {
+    const updatedUser = await updateAdminUserRole(selectedUser.value.id, {
+      role: roleForm.value,
+      phoneNumber: rolePhoneNumber.value,
+    })
+    applyUpdatedUser(updatedUser)
+    actionMessage.value = '회원 역할을 변경했습니다.'
+  } catch (error) {
+    actionErrorMessage.value = getApiErrorMessage(error, '회원 역할을 변경하지 못했습니다.')
+  } finally {
+    isSavingRole.value = false
+  }
+}
+
+function setSelectedUser(user) {
+  selectedUser.value = user
+  statusForm.value = user.status || 'ACTIVE'
+  roleForm.value = user.role === 'AGENT' ? 'AGENT' : 'BUYER'
+  rolePhoneNumber.value = user.phoneNumber || ''
+}
+
+function applyUpdatedUser(updatedUser) {
+  users.value = users.value.map((user) => user.id === updatedUser.id ? updatedUser : user)
+  setSelectedUser(updatedUser)
+}
+
+function syncSelectedUserFromList() {
+  if (!selectedUser.value) {
+    return
+  }
+
+  const syncedUser = users.value.find((user) => user.id === selectedUser.value.id)
+
+  if (syncedUser) {
+    setSelectedUser({ ...selectedUser.value, ...syncedUser })
+  }
 }
 
 function getDisplayName(user) {
@@ -132,8 +244,8 @@ function formatDate(value) {
   }).format(date)
 }
 
-function getApiErrorMessage(error) {
-  return error.response?.data?.message || '회원 목록을 불러오지 못했습니다.'
+function getApiErrorMessage(error, fallback = '회원 목록을 불러오지 못했습니다.') {
+  return error.response?.data?.message || fallback
 }
 </script>
 
@@ -144,7 +256,7 @@ function getApiErrorMessage(error) {
         <div>
           <p class="eyebrow">Admin Users</p>
           <h1>회원 관리</h1>
-          <p>회원 조회, 검색, 상세 확인, 상태 변경, 역할 변경 기능을 연결할 관리자 화면입니다.</p>
+          <p>회원 정보를 확인하고 계정 상태와 운영 역할을 관리합니다.</p>
         </div>
         <RouterLink class="back-link" :to="{ name: 'admin-dashboard' }">대시보드로 이동</RouterLink>
       </div>
@@ -251,7 +363,14 @@ function getApiErrorMessage(error) {
                     </td>
                     <td>{{ formatDate(user.createdAt) }}</td>
                     <td>
-                      <button class="manage-button" type="button" disabled>상세 준비 중</button>
+                      <button
+                        class="manage-button"
+                        type="button"
+                        :class="{ 'manage-button--active': selectedUser?.id === user.id }"
+                        @click="selectUser(user)"
+                      >
+                        상세 관리
+                      </button>
                     </td>
                   </tr>
                 </template>
@@ -260,21 +379,111 @@ function getApiErrorMessage(error) {
           </div>
         </div>
 
-        <aside class="scope-panel" aria-label="회원 관리 후속 범위">
+        <aside class="scope-panel" aria-label="회원 상세 관리">
           <div class="panel-heading">
-            <p class="eyebrow">Next Scope</p>
-            <h2>후속 기능</h2>
+            <p class="eyebrow">Selected User</p>
+            <h2>상세 관리</h2>
           </div>
 
-          <ul>
-            <li v-for="area in featureAreas" :key="area.label">
-              <span aria-hidden="true"></span>
+          <div v-if="isDetailLoading" class="side-state" role="status">
+            <span aria-hidden="true"></span>
+            <p>회원 상세 정보를 불러오는 중입니다.</p>
+          </div>
+
+          <div v-else-if="detailErrorMessage" class="side-state side-state--error" role="alert">
+            <strong>상세 조회 실패</strong>
+            <p>{{ detailErrorMessage }}</p>
+          </div>
+
+          <div v-else-if="!selectedUser" class="side-state">
+            <strong>회원을 선택하세요</strong>
+            <p>목록에서 상세 관리 버튼을 누르면 계정 정보를 확인하고 변경할 수 있습니다.</p>
+          </div>
+
+          <div v-else class="detail-stack">
+            <div class="detail-summary">
+              <strong>{{ selectedUserName }}</strong>
+              <span>{{ selectedUser.email || '-' }}</span>
+            </div>
+
+            <dl class="detail-list">
               <div>
-                <strong>{{ area.label }}</strong>
-                <small>{{ area.status }}</small>
+                <dt>회원 ID</dt>
+                <dd>{{ selectedUser.id }}</dd>
               </div>
-            </li>
-          </ul>
+              <div>
+                <dt>이름</dt>
+                <dd>{{ selectedUser.name || '-' }}</dd>
+              </div>
+              <div>
+                <dt>전화번호</dt>
+                <dd>{{ selectedUser.phoneNumber || '-' }}</dd>
+              </div>
+              <div>
+                <dt>가입 방식</dt>
+                <dd>{{ selectedUser.provider || '-' }}</dd>
+              </div>
+              <div>
+                <dt>최근 로그인</dt>
+                <dd>{{ formatDate(selectedUser.lastLoginAt) }}</dd>
+              </div>
+            </dl>
+
+            <form class="action-form" aria-label="회원 상태 변경" @submit.prevent="submitStatusUpdate">
+              <label>
+                계정 상태
+                <select v-model="statusForm" :disabled="isSavingStatus">
+                  <option
+                    v-for="status in userStatusOptions"
+                    :key="status.value"
+                    :value="status.value"
+                  >
+                    {{ status.label }}
+                  </option>
+                </select>
+              </label>
+              <button type="submit" :disabled="isSavingStatus">
+                {{ isSavingStatus ? '변경 중' : '상태 변경' }}
+              </button>
+            </form>
+
+            <form class="action-form" aria-label="회원 역할 변경" @submit.prevent="submitRoleUpdate">
+              <label>
+                역할
+                <select v-model="roleForm" :disabled="isSavingRole || selectedUser.role === 'ADMIN'">
+                  <option
+                    v-for="role in userRoleOptions"
+                    :key="role.value"
+                    :value="role.value"
+                  >
+                    {{ role.label }}
+                  </option>
+                </select>
+              </label>
+              <label v-if="roleNeedsPhoneNumber">
+                중개인 전화번호
+                <input
+                  v-model="rolePhoneNumber"
+                  type="tel"
+                  placeholder="01012345678"
+                  :disabled="isSavingRole || selectedUser.role === 'ADMIN'"
+                />
+              </label>
+              <p v-if="selectedUser.role === 'ADMIN'" class="helper-text">
+                관리자 계정의 역할은 이 화면에서 변경할 수 없습니다.
+              </p>
+              <button type="submit" :disabled="!canSubmitRole || selectedUser.role === 'ADMIN'">
+                {{ isSavingRole ? '변경 중' : '역할 변경' }}
+              </button>
+            </form>
+
+            <p v-if="actionMessage" class="form-message form-message--success" role="status">
+              {{ actionMessage }}
+            </p>
+            <p v-if="actionErrorMessage" class="form-message form-message--error" role="alert">
+              {{ actionErrorMessage }}
+            </p>
+          </div>
         </aside>
       </section>
     </section>
@@ -502,6 +711,11 @@ function getApiErrorMessage(error) {
   color: var(--color-danger);
 }
 
+.form-message--success {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
 .table-wrap {
   overflow-x: auto;
 
@@ -626,52 +840,153 @@ function getApiErrorMessage(error) {
   padding: 0 11px;
 }
 
+.manage-button--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
 .scope-panel {
   position: sticky;
   top: calc(var(--header-height) + 18px);
+}
 
-  ul {
-    display: grid;
-    gap: 10px;
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
+.side-state {
+  min-height: 220px;
+  display: grid;
+  place-items: center;
+  align-content: center;
+  gap: 8px;
+  color: var(--color-muted);
+  text-align: center;
 
-  li {
-    display: grid;
-    grid-template-columns: 10px minmax(0, 1fr);
-    gap: 10px;
-    align-items: start;
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-surface-muted);
-    padding: 13px;
-  }
-
-  span {
-    width: 10px;
-    height: 10px;
-    margin-top: 5px;
+  > span {
+    width: 32px;
+    height: 32px;
+    border: 4px solid var(--color-primary-soft);
+    border-top-color: var(--color-primary);
     border-radius: 50%;
-    background: var(--color-primary);
-  }
-
-  div {
-    display: grid;
-    gap: 3px;
+    animation: spin 800ms linear infinite;
   }
 
   strong {
     color: var(--color-heading);
+    font-size: 18px;
     font-weight: 900;
   }
 
-  small {
+  p {
+    max-width: 280px;
+    font-weight: 700;
+    line-height: 1.6;
+  }
+}
+
+.side-state--error strong {
+  color: var(--color-danger);
+}
+
+.detail-stack {
+  display: grid;
+  gap: 16px;
+}
+
+.detail-summary {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  padding: 15px;
+
+  strong {
+    color: var(--color-heading);
+    font-size: 18px;
+    font-weight: 900;
+    overflow-wrap: anywhere;
+  }
+
+  span {
+    color: var(--color-muted);
+    font-size: 13px;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+  }
+}
+
+.detail-list {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+
+  div {
+    display: grid;
+    grid-template-columns: 96px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+  }
+
+  dt {
     color: var(--color-muted);
     font-size: 12px;
-    font-weight: 800;
+    font-weight: 900;
   }
+
+  dd {
+    margin: 0;
+    color: var(--color-heading);
+    font-size: 13px;
+    font-weight: 800;
+    overflow-wrap: anywhere;
+  }
+}
+
+.action-form {
+  display: grid;
+  gap: 10px;
+  border-top: 1px solid var(--color-border);
+  padding-top: 16px;
+
+  label {
+    display: grid;
+    gap: 8px;
+    color: var(--color-muted);
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  select,
+  input {
+    width: 100%;
+    height: 42px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface);
+    color: var(--color-heading);
+    padding: 0 12px;
+    outline: none;
+  }
+
+  button {
+    min-height: 42px;
+    border-radius: var(--radius-sm);
+    background: var(--color-primary);
+    color: var(--color-surface);
+    font-size: 14px;
+    font-weight: 900;
+
+    &:disabled {
+      background: var(--color-surface-muted);
+      color: var(--color-subtle);
+    }
+  }
+}
+
+.helper-text {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.6;
 }
 
 @keyframes spin {
