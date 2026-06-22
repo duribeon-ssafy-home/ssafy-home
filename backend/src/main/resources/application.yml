@@ -40,7 +40,6 @@ spring:
     open-in-view: false
 
 jwt:
-  secret: ssafy-home-local-development-secret-key-change-before-release
   access-token-expiration-seconds: 3600
   refresh-token-expiration-seconds: 1209600
 
