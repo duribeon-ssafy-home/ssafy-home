@@ -38,6 +38,14 @@ frontend/dist/
 frontend/.env
 frontend/.env.*
 
+# Python AI service
+ai/venv/
+ai/.env
+ai/__pycache__/
+ai/**/__pycache__/
+ai/**/*.pyc
+ai/chroma_db/
+
 # Package manager logs
 npm-debug.log*
 yarn-debug.log*

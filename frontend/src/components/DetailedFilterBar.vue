@@ -170,6 +170,7 @@ function handleSearch() {
           <button type="button" class="chip" :class="{ 'chip--active': rentType === null }" @click="rentType = null; handleSearch()">전체</button>
           <button type="button" class="chip" :class="{ 'chip--active': rentType === 'JEONSE' }" data-testid="rent-JEONSE" @click="setRentType('JEONSE')">전세</button>
           <button type="button" class="chip" :class="{ 'chip--active': rentType === 'MONTHLY' }" data-testid="rent-MONTHLY" @click="setRentType('MONTHLY')">월세</button>
+          <button type="button" class="chip" :class="{ 'chip--active': rentType === 'SEMI_JEONSE' }" data-testid="rent-SEMI_JEONSE" @click="setRentType('SEMI_JEONSE')">반전세</button>
         </div>
       </div>
 

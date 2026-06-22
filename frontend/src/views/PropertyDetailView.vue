@@ -139,13 +139,25 @@ function formatMoneyManwon(value) {
               <span v-if="risk.label !== 'UNKNOWN'" class="risk-score">위험 점수 {{ risk.score }}점</span>
             </div>
             <dl class="risk-detail">
-              <div v-if="risk.marketPriceAvg">
-                <dt>주변 시세 평균</dt>
-                <dd>{{ Number(risk.marketPriceAvg).toLocaleString('ko-KR') }}만원</dd>
-              </div>
+              <template v-if="property.rentType === 'JEONSE'">
+                <div v-if="risk.marketPriceAvg">
+                  <dt>주변 전세금 평균</dt>
+                  <dd>{{ Number(risk.marketPriceAvg).toLocaleString('ko-KR') }}만원</dd>
+                </div>
+              </template>
+              <template v-else>
+                <div v-if="risk.avgMonthlyRent != null">
+                  <dt>주변 평균 월세</dt>
+                  <dd>{{ Number(risk.avgMonthlyRent).toLocaleString('ko-KR') }}만원</dd>
+                </div>
+                <div v-if="risk.avgDeposit != null">
+                  <dt>주변 평균 보증금</dt>
+                  <dd>{{ Number(risk.avgDeposit).toLocaleString('ko-KR') }}만원</dd>
+                </div>
+              </template>
               <div v-if="risk.priceGapRate != null">
                 <dt>시세 대비 차이</dt>
-                <dd>{{ risk.priceGapRate > 0 ? '+' : '' }}{{ (risk.priceGapRate * 100).toFixed(1) }}%</dd>
+                <dd>{{ risk.priceGapRate > 0 ? '+' : '' }}{{ risk.priceGapRate.toFixed(1) }}%</dd>
               </div>
               <div>
                 <dt>신고 건수</dt>

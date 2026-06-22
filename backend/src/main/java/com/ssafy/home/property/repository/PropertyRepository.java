@@ -36,4 +36,23 @@ public interface PropertyRepository extends JpaRepository<Property, Long>, JpaSp
             @Param("status") PropertyStatus status,
             @Param("excludeId") Long excludeId
     );
+
+    @Query("""
+        SELECT p.deposit AS deposit, p.monthlyRent AS monthlyRent FROM Property p
+        WHERE p.dong = :dong
+          AND p.rentType = :rentType
+          AND p.area BETWEEN :areaMin AND :areaMax
+          AND p.status = :status
+          AND p.propertyId != :excludeId
+          AND p.deposit IS NOT NULL
+          AND p.monthlyRent IS NOT NULL
+        """)
+    List<com.ssafy.home.property.repository.RentalPriceRow> findNearbyRentals(
+            @Param("dong") String dong,
+            @Param("rentType") RentType rentType,
+            @Param("areaMin") BigDecimal areaMin,
+            @Param("areaMax") BigDecimal areaMax,
+            @Param("status") PropertyStatus status,
+            @Param("excludeId") Long excludeId
+    );
 }
