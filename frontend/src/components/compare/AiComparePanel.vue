@@ -27,13 +27,15 @@ const presets = [
   '보증금이 싼데 위험 점수가 높은 매물을 설명해줘',
 ]
 
-const question = ref(presets[0])
+const question = ref('')
 const result = ref(null)
 const isLoading = ref(false)
 const errorMessage = ref('')
 const isResizing = ref(false)
 
-const canAnalyze = computed(() => props.propertyIds.length >= 2 && question.value.trim().length > 0)
+const hasCompareContext = computed(() => props.propertyIds.length >= 2)
+const isCompareResult = computed(() => Array.isArray(result.value?.propertyAnalyses))
+const canSubmit = computed(() => question.value.trim().length > 0)
 const answerParts = computed(() => {
   if (!result.value?.answer) return []
 
@@ -51,9 +53,9 @@ const answerParts = computed(() => {
 })
 
 watch(
-  () => props.open,
-  (isOpen) => {
-    if (isOpen && !question.value) {
+  () => [props.open, hasCompareContext.value],
+  ([isOpen, hasContext]) => {
+    if (isOpen && hasContext && !question.value) {
       question.value = presets[0]
     }
   },
@@ -64,10 +66,11 @@ function selectPreset(preset) {
 }
 
 async function submit() {
-  if (!canAnalyze.value || isLoading.value) return
+  if (!canSubmit.value || isLoading.value) return
 
   isLoading.value = true
   errorMessage.value = ''
+  result.value = null
 
   try {
     result.value = await compareWithAi({
@@ -185,41 +188,43 @@ onBeforeUnmount(() => {
         </header>
 
         <section class="ai-panel__section">
-          <h3>추천 질문</h3>
-          <div class="preset-list">
-            <button
-              v-for="preset in presets"
-              :key="preset"
-              type="button"
-              :class="{ active: question === preset }"
-              @click="selectPreset(preset)"
-            >
-              {{ preset }}
-            </button>
-          </div>
-        </section>
-
-        <section class="ai-panel__section">
           <label for="ai-compare-question">질문</label>
           <textarea
             id="ai-compare-question"
             v-model="question"
             rows="4"
             maxlength="500"
-            placeholder="비교 매물에 대해 궁금한 점을 입력하세요."
+            :placeholder="hasCompareContext ? '비교 매물에 대해 궁금한 점을 입력하세요.' : '부동산 계약이나 용어에 대해 궁금한 점을 입력하세요.'"
           />
-          <button class="analyze-button" type="button" :disabled="!canAnalyze || isLoading" @click="submit">
-            {{ isLoading ? '분석 중...' : '분석하기' }}
+          <button class="analyze-button" type="button" :disabled="!canSubmit || isLoading" @click="submit">
+            {{ isLoading ? '답변 생성 중...' : hasCompareContext ? '분석하기' : '질문하기' }}
           </button>
         </section>
 
-        <p v-if="propertyIds.length < 2" class="notice">
-          매물 2개 이상을 선택하면 AI 상담을 받을 수 있어요.
+        <Transition name="preset-rise">
+          <section v-if="hasCompareContext" class="ai-panel__section preset-section">
+            <h3>추천 질문</h3>
+            <div class="preset-list">
+              <button
+                v-for="preset in presets"
+                :key="preset"
+                type="button"
+                :class="{ active: question === preset }"
+                @click="selectPreset(preset)"
+              >
+                {{ preset }}
+              </button>
+            </div>
+          </section>
+        </Transition>
+
+        <p v-if="propertyIds.length > 0 && propertyIds.length < 2" class="notice">
+          매물 2개 이상을 선택하면 비교 분석까지 받을 수 있어요.
         </p>
         <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
         <section v-if="result" class="ai-result">
-          <div class="result-summary">
+          <div v-if="isCompareResult" class="result-summary">
             <div class="summary-card summary-card--wide">
               <span>추천 매물</span>
               <strong>{{ result.recommendedTitle }}</strong>
@@ -248,7 +253,7 @@ onBeforeUnmount(() => {
             <button type="button" @click="goSurvey">설문하러 가기</button>
           </div>
 
-          <div class="analysis-list">
+          <div v-if="isCompareResult" class="analysis-list">
             <article v-for="item in result.propertyAnalyses" :key="item.propertyId" class="analysis-item">
               <div class="analysis-item__head">
                 <div>
@@ -284,7 +289,7 @@ onBeforeUnmount(() => {
             </article>
           </div>
 
-          <details class="sources">
+          <details v-if="result.sources?.length" class="sources">
             <summary>근거 보기</summary>
             <ul>
               <li v-for="source in result.sources" :key="`${source.type}-${source.id}-${source.title}`">
@@ -292,6 +297,10 @@ onBeforeUnmount(() => {
               </li>
             </ul>
           </details>
+
+          <ul v-if="result.warnings?.length" class="warning-list">
+            <li v-for="warning in result.warnings" :key="warning">{{ warning }}</li>
+          </ul>
         </section>
       </div>
     </aside>
@@ -431,6 +440,19 @@ onBeforeUnmount(() => {
       color: var(--color-primary-dark);
     }
   }
+}
+
+.preset-rise-enter-active,
+.preset-rise-leave-active {
+  transition:
+    opacity var(--transition-base),
+    transform var(--transition-base);
+}
+
+.preset-rise-enter-from,
+.preset-rise-leave-to {
+  opacity: 0;
+  transform: translateY(14px);
 }
 
 .analyze-button {
@@ -745,6 +767,20 @@ onBeforeUnmount(() => {
     gap: 5px;
     margin-top: 10px;
     padding-left: 18px;
+  }
+}
+
+.warning-list {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid var(--color-border);
+  padding: 12px 0 0 18px;
+
+  li {
+    color: var(--color-muted);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.5;
   }
 }
 
