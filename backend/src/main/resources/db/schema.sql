@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS users (
 
 -- =============================================
 -- 2. PROPERTIES
--- rent_type  : JEONSE | MONTHLY
+-- rent_type  : JEONSE | MONTHLY | SEMI_JEONSE
 -- room_type  : ONE_ROOM | TWO_ROOM | OFFICETEL | APARTMENT
 -- data_source: AGENT | PUBLIC
 -- status     : PENDING | APPROVED | REJECTED | HIDDEN | DELETED
@@ -47,7 +47,7 @@ CREATE TABLE IF NOT EXISTS properties (
     dong         VARCHAR(50)   NOT NULL,
     latitude     DECIMAL(10,7) NULL,                      -- 전처리 후 채워짐
     longitude    DECIMAL(10,7) NULL,                      -- 전처리 후 채워짐
-    rent_type    VARCHAR(10)   NULL,
+    rent_type    VARCHAR(15)   NULL,
     room_type    VARCHAR(20)   NULL,
     deposit      BIGINT        NULL,                      -- 보증금 (만원)
     monthly_rent INT           NULL,                      -- 월세 (만원), MONTHLY일 때만

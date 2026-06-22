@@ -2,5 +2,6 @@ package com.ssafy.home.property.entity;
 
 public enum RentType {
     JEONSE,
-    MONTHLY
+    MONTHLY,
+    SEMI_JEONSE
 }
