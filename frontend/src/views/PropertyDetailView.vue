@@ -145,7 +145,7 @@ function formatMoneyManwon(value) {
               </div>
               <div v-if="risk.priceGapRate != null">
                 <dt>시세 대비 차이</dt>
-                <dd>{{ risk.priceGapRate > 0 ? '+' : '' }}{{ (risk.priceGapRate * 100).toFixed(1) }}%</dd>
+                <dd>{{ risk.priceGapRate > 0 ? '+' : '' }}{{ risk.priceGapRate.toFixed(1) }}%</dd>
               </div>
               <div>
                 <dt>신고 건수</dt>

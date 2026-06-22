@@ -81,7 +81,7 @@ function formatMoney(v) {
 
 function formatGapRate(v) {
   if (v == null || !Number.isFinite(Number(v))) return '—'
-  const pct = (Number(v) * 100).toFixed(1)
+  const pct = Number(v).toFixed(1)
   return `${Number(v) > 0 ? '+' : ''}${pct}%`
 }
 
