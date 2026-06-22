@@ -60,6 +60,7 @@ const recommendationNoticeDescription = computed(() => {
   return `${typeName} 기준으로 ${conditionText} 조건을 우선 반영 중입니다.`
 })
 const activeFilters = ref({})
+const activeRentType = ref(null)
 
 const SIDO_ALIASES = {
   '서울': '서울특별시', '서울시': '서울특별시',
@@ -116,6 +117,7 @@ async function fetchProperties(params = {}) {
   isLoading.value = true
   try {
     const requestParams = {
+      ...(activeRentType.value ? { rentType: activeRentType.value } : {}),
       ...params,
       page: currentPage.value,
       size: pageSize.value,
@@ -153,6 +155,18 @@ function handleSearch(filters) {
   searchStore.setSearch(params, filters.location || '')
   currentPage.value = 0
   fetchProperties(params)
+}
+
+function setRentType(type) {
+  activeRentType.value = activeRentType.value === type ? null : type
+  currentPage.value = 0
+  fetchProperties(activeFilters.value)
+}
+
+function clearRentType() {
+  activeRentType.value = null
+  currentPage.value = 0
+  fetchProperties(activeFilters.value)
 }
 
 function handleSortChange() {
@@ -267,6 +281,29 @@ onMounted(() => {
           <div v-if="recommendationChips.length" class="recommendation-notice__chips">
             <span v-for="chip in recommendationChips" :key="chip">{{ chip }}</span>
           </div>
+        </div>
+
+        <div class="rent-type-tabs">
+          <button
+            class="rent-tab"
+            :class="{ 'rent-tab--active': activeRentType === null }"
+            @click="clearRentType()"
+          >전체</button>
+          <button
+            class="rent-tab"
+            :class="{ 'rent-tab--active': activeRentType === 'JEONSE' }"
+            @click="setRentType('JEONSE')"
+          >전세</button>
+          <button
+            class="rent-tab"
+            :class="{ 'rent-tab--active': activeRentType === 'MONTHLY' }"
+            @click="setRentType('MONTHLY')"
+          >월세</button>
+          <button
+            class="rent-tab"
+            :class="{ 'rent-tab--active': activeRentType === 'SEMI_JEONSE' }"
+            @click="setRentType('SEMI_JEONSE')"
+          >반전세</button>
         </div>
 
         <div class="result-controls">
@@ -557,6 +594,43 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 20px;
+}
+
+.rent-type-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 16px;
+}
+
+.rent-tab {
+  height: 36px;
+  padding: 0 18px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+
+  &:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+}
+
+.rent-tab--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary);
+  color: var(--color-surface);
+
+  &:hover {
+    color: var(--color-surface);
+  }
 }
 
 .result-controls {

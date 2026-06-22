@@ -115,7 +115,7 @@ async function handleSubmit() {
       rentType: form.value.rentType,
       roomType: form.value.roomType,
       deposit: form.value.deposit ? Number(form.value.deposit) : null,
-      monthlyRent: form.value.rentType === 'MONTHLY' && form.value.monthlyRent
+      monthlyRent: (form.value.rentType === 'MONTHLY' || form.value.rentType === 'SEMI_JEONSE') && form.value.monthlyRent
         ? Number(form.value.monthlyRent)
         : null,
       area: form.value.area ? Number(form.value.area) : null,
@@ -272,6 +272,12 @@ onMounted(() => {
                 :class="{ 'chip--active': form.rentType === 'MONTHLY' }"
                 @click="form.rentType = 'MONTHLY'"
               >월세</button>
+              <button
+                type="button"
+                class="chip"
+                :class="{ 'chip--active': form.rentType === 'SEMI_JEONSE' }"
+                @click="form.rentType = 'SEMI_JEONSE'"
+              >반전세</button>
             </div>
           </div>
 
@@ -299,7 +305,7 @@ onMounted(() => {
               <label>보증금 (만원)</label>
               <input v-model="form.deposit" type="number" min="0" placeholder="예: 5000" />
             </div>
-            <div v-if="form.rentType === 'MONTHLY'" class="field">
+            <div v-if="form.rentType === 'MONTHLY' || form.rentType === 'SEMI_JEONSE'" class="field">
               <label>월세 (만원)</label>
               <input v-model="form.monthlyRent" type="number" min="0" placeholder="예: 60" />
             </div>

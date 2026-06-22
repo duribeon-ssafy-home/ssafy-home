@@ -30,6 +30,22 @@ const roomTypes = [
   { value: 'OFFICETEL', label: roomTypeLabels.OFFICETEL },
 ]
 
+const depositPresets = [
+  { value: '300', label: '300만' },
+  { value: '500', label: '500만' },
+  { value: '1000', label: '1,000만' },
+]
+
+const rentPresets = [
+  { value: '30', label: '30만' },
+  { value: '50', label: '50만' },
+  { value: '70', label: '70만' },
+]
+
+function togglePreset(field, value) {
+  filters[field] = filters[field] === value ? '' : value
+}
+
 function submitSearch() {
   emit('search', { ...filters })
 }
@@ -55,25 +71,47 @@ watch(
       />
     </label>
 
-    <label class="field">
-      <span>보증금</span>
-      <select v-model="filters.deposit" data-testid="deposit-select">
-        <option value="">전체</option>
-        <option value="1000">1,000만 이하</option>
-        <option value="3000">3,000만 이하</option>
-        <option value="5000">5,000만 이하</option>
-      </select>
-    </label>
+    <div class="field">
+      <span>보증금 이하</span>
+      <div class="preset-chips">
+        <button
+          v-for="p in depositPresets"
+          :key="p.value"
+          type="button"
+          class="preset-chip"
+          :class="{ 'preset-chip--active': filters.deposit === p.value }"
+          @click="togglePreset('deposit', p.value)"
+        >{{ p.label }}</button>
+      </div>
+      <input
+        v-model="filters.deposit"
+        data-testid="deposit-select"
+        type="number"
+        min="0"
+        placeholder="직접 입력 (만원)"
+      />
+    </div>
 
-    <label class="field">
-      <span>월세</span>
-      <select v-model="filters.monthlyRent" data-testid="monthly-rent-select">
-        <option value="">전체</option>
-        <option value="50">50만 이하</option>
-        <option value="80">80만 이하</option>
-        <option value="110">110만 이하</option>
-      </select>
-    </label>
+    <div class="field">
+      <span>월세 이하</span>
+      <div class="preset-chips">
+        <button
+          v-for="p in rentPresets"
+          :key="p.value"
+          type="button"
+          class="preset-chip"
+          :class="{ 'preset-chip--active': filters.monthlyRent === p.value }"
+          @click="togglePreset('monthlyRent', p.value)"
+        >{{ p.label }}</button>
+      </div>
+      <input
+        v-model="filters.monthlyRent"
+        data-testid="monthly-rent-select"
+        type="number"
+        min="0"
+        placeholder="직접 입력 (만원)"
+      />
+    </div>
 
     <div class="room-type" role="group" aria-label="방 타입">
       <span>방 타입</span>
@@ -99,9 +137,9 @@ watch(
 <style lang="scss" scoped>
 .filter-bar {
   display: grid;
-  grid-template-columns: 1.4fr 0.9fr 0.9fr 1.45fr auto;
+  grid-template-columns: 1.4fr 1fr 1fr 1.45fr auto;
   gap: 14px;
-  align-items: end;
+  align-items: stretch;
   padding: 18px;
   border: 1px solid rgba(208, 213, 221, 0.9);
   border-radius: var(--radius-sm);
@@ -111,20 +149,59 @@ watch(
 
 .field,
 .room-type {
-  display: grid;
-  gap: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
 
-  span {
+  > span {
     color: var(--color-muted);
     font-size: 12px;
     font-weight: 800;
+    flex-shrink: 0;
+  }
+
+  > input,
+  > .chips {
+    margin-top: auto;
   }
 }
 
-input,
-select {
+.preset-chips {
+  display: flex;
+  gap: 6px;
+}
+
+.preset-chip {
+  flex: 1;
+  height: 30px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-xs);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 800;
+  cursor: pointer;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    color var(--transition-fast);
+
+  &:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+  }
+}
+
+.preset-chip--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
+input[type='search'],
+input[type='number'] {
   width: 100%;
-  height: 46px;
+  height: 40px;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface);
@@ -141,6 +218,11 @@ select {
     border-color: var(--color-primary);
     box-shadow: 0 0 0 4px rgba(54, 95, 145, 0.12);
   }
+
+  &::-webkit-inner-spin-button,
+  &::-webkit-outer-spin-button {
+    opacity: 0.5;
+  }
 }
 
 .chips {
@@ -149,7 +231,7 @@ select {
 }
 
 .filter-chip {
-  height: 46px;
+  height: 40px;
   flex: 0 0 auto;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -176,6 +258,7 @@ select {
 }
 
 .search-button {
+  align-self: end;
   height: 46px;
   min-width: 112px;
   border-radius: var(--radius-sm);

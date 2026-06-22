@@ -28,7 +28,11 @@ const priceLabel = computed(() => {
   if (props.property.rentType === 'JEONSE') {
     return `전세 ${formatMoneyManwon(props.property.deposit)}`
   }
-
+  if (props.property.rentType === 'SEMI_JEONSE') {
+    return `반전세 ${formatMoneyManwon(props.property.monthlyRent)} / 보증금 ${formatMoneyManwon(
+      props.property.deposit,
+    )}`
+  }
   return `월세 ${formatMoneyManwon(props.property.monthlyRent)} / 보증금 ${formatMoneyManwon(
     props.property.deposit,
   )}`

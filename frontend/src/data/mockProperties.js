@@ -8,6 +8,7 @@ export const roomTypeLabels = {
 export const rentTypeLabels = {
   JEONSE: '전세',
   MONTHLY: '월세',
+  SEMI_JEONSE: '반전세',
 }
 
 export const mockProperties = [
