@@ -241,6 +241,7 @@ watch(() => compareStore.ids, fetchAll, { deep: true })
         </table>
       </div>
     </section>
+
   </main>
 </template>
 

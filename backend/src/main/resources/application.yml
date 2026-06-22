@@ -5,6 +5,22 @@ spring:
   application:
     name: ssafy-home
 
+  ai:
+    model:
+      chat: none
+      embedding: none
+      image: none
+      audio:
+        transcription: none
+        speech: none
+      moderation: none
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.2
+
   profiles:
     include: secret
 
@@ -34,3 +50,9 @@ springdoc:
 
 file:
   upload-dir: ./uploads
+
+app:
+  ai:
+    enabled: false
+    rag:
+      docs-path: ../docs/ai
