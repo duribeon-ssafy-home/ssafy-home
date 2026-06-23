@@ -22,6 +22,7 @@ public class RagKnowledgeService {
             한국어로 답한다.
             제공된 문서 근거가 있을 때만 계약 체크리스트나 위험도 해설을 구체적으로 설명한다.
             문서 근거가 부족하면 모른다고 말하고, 추가 확인이 필요하다고 안내한다.
+            마크다운 문법(**, ##, -, ``` 등)을 사용하지 않는다. 일반 텍스트로만 답변한다.
             """;
 
     private final ObjectProvider<VectorStore> vectorStoreProvider;

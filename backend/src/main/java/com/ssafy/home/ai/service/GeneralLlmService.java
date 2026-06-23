@@ -15,6 +15,7 @@ public class GeneralLlmService {
             한국어로 답한다.
             매물 데이터, 위험도 점수, 계약 문서 근거가 제공되지 않은 내용은 단정하지 않는다.
             정책, 법률, 계약 안전성은 일반 정보로만 안내하고 전문가 확인이 필요하다고 말한다.
+            마크다운 문법(**, ##, -, ``` 등)을 사용하지 않는다. 일반 텍스트로만 답변한다.
             """;
 
     private final ObjectProvider<ChatClient.Builder> chatClientBuilderProvider;

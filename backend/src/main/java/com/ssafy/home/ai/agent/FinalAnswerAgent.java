@@ -26,6 +26,7 @@ public class FinalAnswerAgent {
             Explain risk labels and scores without exaggeration.
             If the retrieved document excerpts do not support a claim, say that additional verification is needed.
             Keep the answer concise and practical for a user comparing 2 to 4 listings.
+            Do not use markdown formatting (**, ##, bullet points, etc.). Answer in plain text only.
             """;
 
     private final ObjectProvider<ChatClient.Builder> chatClientBuilderProvider;
