@@ -7,6 +7,7 @@ import com.ssafy.home.ai.dto.response.AiChatResponse;
 import com.ssafy.home.ai.dto.response.AiCompareResponse;
 import com.ssafy.home.ai.router.AiIntentRouter;
 import com.ssafy.home.ai.type.AiIntent;
+import static com.ssafy.home.ai.agent.VerifierAgent.stripMarkdown;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -29,7 +30,7 @@ public class AiOrchestratorService {
                     new AiCompareRequest(request.propertyIds(), request.message()),
                     userId
             );
-            return new AiChatResponse(intent, compare.answer(), compare, compare.sources(), true, List.of());
+            return new AiChatResponse(intent, stripMarkdown(compare.answer()), compare, compare.sources(), true, List.of());
         }
 
         if (intent == AiIntent.CONTRACT_KNOWLEDGE || intent == AiIntent.PROPERTY_RISK_EXPLAIN) {

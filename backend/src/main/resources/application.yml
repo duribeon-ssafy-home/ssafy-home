@@ -50,6 +50,10 @@ springdoc:
 file:
   upload-dir: ./uploads
 
+rag:
+  service:
+    url: ${RAG_SERVICE_URL:http://localhost:8000}
+
 app:
   ai:
     enabled: false

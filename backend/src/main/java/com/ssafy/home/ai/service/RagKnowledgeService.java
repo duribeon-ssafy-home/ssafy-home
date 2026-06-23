@@ -1,5 +1,6 @@
 package com.ssafy.home.ai.service;
 
+import com.ssafy.home.ai.client.RagServiceClient;
 import com.ssafy.home.ai.dto.response.AiCompareSourceResponse;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,15 +22,28 @@ public class RagKnowledgeService {
             한국어로 답한다.
             제공된 문서 근거가 있을 때만 계약 체크리스트나 위험도 해설을 구체적으로 설명한다.
             문서 근거가 부족하면 모른다고 말하고, 추가 확인이 필요하다고 안내한다.
+            마크다운 문법(**, ##, -, ``` 등)을 사용하지 않는다. 일반 텍스트로만 답변한다.
             """;
 
     private final ObjectProvider<VectorStore> vectorStoreProvider;
     private final ObjectProvider<ChatClient.Builder> chatClientBuilderProvider;
+    private final RagServiceClient ragServiceClient;
 
     @Value("${app.ai.enabled:false}")
     private boolean aiEnabled;
 
     public RagAnswer answer(String message) {
+        // Python RAG 서비스 우선 호출
+        try {
+            String pythonAnswer = ragServiceClient.chat(message);
+            if (pythonAnswer != null && !pythonAnswer.isBlank()) {
+                return new RagAnswer(pythonAnswer, List.of(), List.of());
+            }
+        } catch (RuntimeException ignored) {
+            // Python RAG 서비스 미가동 시 Spring AI VectorStore로 폴백
+        }
+
+        // VectorStore 폴백
         RagContext context = retrieve(message, 5);
         if (!context.available()) {
             return new RagAnswer(
