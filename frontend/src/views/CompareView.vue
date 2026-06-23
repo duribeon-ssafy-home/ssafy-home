@@ -3,7 +3,6 @@ import { ref, computed, watch, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useCompareStore } from '@/stores/compare'
 import { getProperty, getPropertyRisk } from '@/api/propertyApi'
-import AiChatPanel from '@/components/AiChatPanel.vue'
 
 const compareStore = useCompareStore()
 
@@ -254,10 +253,6 @@ watch(() => compareStore.ids, fetchAll, { deep: true })
         </table>
       </div>
     </section>
-    <AiChatPanel
-      v-if="items.length > 0"
-      :property-ids="compareStore.ids"
-    />
   </main>
 </template>
 

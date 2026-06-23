@@ -28,29 +28,28 @@ const presets = [
 ]
 
 const question = ref('')
-const result = ref(null)
+const history = ref([]) // { question, result, error }[]
 const isLoading = ref(false)
-const errorMessage = ref('')
 const isResizing = ref(false)
 
 const hasCompareContext = computed(() => props.propertyIds.length >= 2)
-const isCompareResult = computed(() => Array.isArray(result.value?.propertyAnalyses))
 const canSubmit = computed(() => question.value.trim().length > 0)
-const answerParts = computed(() => {
-  if (!result.value?.answer) return []
+
+function getAnswerParts(result) {
+  if (!result?.answer) return []
 
   const highlights = [
-    createHighlight(result.value.recommendedTitle, 'property'),
+    createHighlight(result.recommendedTitle, 'property'),
     createHighlight(
-      result.value.recommendedTotalScore != null ? `${result.value.recommendedTotalScore}점` : null,
-      scoreTone(result.value.recommendedTotalScore),
+      result.recommendedTotalScore != null ? `${result.recommendedTotalScore}점` : null,
+      scoreTone(result.recommendedTotalScore),
     ),
-    createHighlight(result.value.recommendedRiskLabelText, riskTone(result.value.recommendedRiskLabelText)),
-    createHighlight(result.value.lifestyleTypeName, 'lifestyle'),
+    createHighlight(result.recommendedRiskLabelText, riskTone(result.recommendedRiskLabelText)),
+    createHighlight(result.lifestyleTypeName, 'lifestyle'),
   ].filter(Boolean)
 
-  return splitHighlights(result.value.answer, highlights)
-})
+  return splitHighlights(result.answer, highlights)
+}
 
 watch(
   () => [props.open, hasCompareContext.value],
@@ -68,17 +67,18 @@ function selectPreset(preset) {
 async function submit() {
   if (!canSubmit.value || isLoading.value) return
 
+  const submittedQuestion = question.value.trim()
+  question.value = ''
   isLoading.value = true
-  errorMessage.value = ''
-  result.value = null
 
   try {
-    result.value = await compareWithAi({
+    const result = await compareWithAi({
       propertyIds: props.propertyIds,
-      question: question.value.trim(),
+      question: submittedQuestion,
     })
+    history.value.push({ question: submittedQuestion, result, error: null })
   } catch {
-    errorMessage.value = '분석 결과를 불러오지 못했어요. 잠시 후 다시 시도해주세요.'
+    history.value.push({ question: submittedQuestion, result: null, error: '분석 결과를 불러오지 못했어요. 잠시 후 다시 시도해주세요.' })
   } finally {
     isLoading.value = false
   }
@@ -221,87 +221,93 @@ onBeforeUnmount(() => {
         <p v-if="propertyIds.length > 0 && propertyIds.length < 2" class="notice">
           매물 2개 이상을 선택하면 비교 분석까지 받을 수 있어요.
         </p>
-        <p v-if="errorMessage" class="error-message">{{ errorMessage }}</p>
 
-        <section v-if="result" class="ai-result">
-          <div v-if="isCompareResult" class="result-summary">
-            <div class="summary-card summary-card--wide">
-              <span>추천 매물</span>
-              <strong>{{ result.recommendedTitle }}</strong>
-              <small>#{{ result.recommendedPropertyId }}</small>
-            </div>
-            <div class="summary-card" :class="`summary-card--${scoreTone(result.recommendedTotalScore)}`">
-              <span>총점</span>
-              <strong>{{ result.recommendedTotalScore }}점</strong>
-            </div>
-            <div class="summary-card" :class="`summary-card--${riskTone(result.recommendedRiskLabelText)}`">
-              <span>위험도</span>
-              <strong>{{ result.recommendedRiskLabelText }}</strong>
-            </div>
-          </div>
+        <div v-if="isLoading" class="chat-loading">AI가 분석 중입니다...</div>
 
-          <p class="answer">
-            <span
-              v-for="(part, index) in answerParts"
-              :key="`${part.text}-${index}`"
-              :class="part.tone ? ['answer-highlight', `answer-highlight--${part.tone}`] : null"
-            >{{ part.text }}</span>
-          </p>
+        <div class="chat-history">
+          <div v-for="(item, index) in history" :key="index" class="chat-entry">
+            <div class="chat-question">{{ item.question }}</div>
 
-          <div v-if="result.requiresLifestyleSurvey" class="survey-guide">
-            <p>{{ result.surveyGuideMessage }}</p>
-            <button type="button" @click="goSurvey">설문하러 가기</button>
-          </div>
+            <p v-if="item.error" class="error-message">{{ item.error }}</p>
 
-          <div v-if="isCompareResult" class="analysis-list">
-            <article v-for="item in result.propertyAnalyses" :key="item.propertyId" class="analysis-item">
-              <div class="analysis-item__head">
-                <div>
-                  <span>#{{ item.propertyId }}</span>
-                  <h3>{{ item.title }}</h3>
+            <section v-if="item.result" class="ai-result">
+              <div v-if="Array.isArray(item.result.propertyAnalyses)" class="result-summary">
+                <div class="summary-card summary-card--wide">
+                  <span>추천 매물</span>
+                  <strong>{{ item.result.recommendedTitle }}</strong>
+                  <small>#{{ item.result.recommendedPropertyId }}</small>
                 </div>
-                <strong>{{ item.totalScore }}점</strong>
-              </div>
-
-              <div class="score-grid">
-                <span>위험도 {{ item.riskLabelText }} · {{ item.riskScore }}점</span>
-                <span>
-                  생활 적합도
-                  {{ item.lifestyleFitScore != null ? `${item.lifestyleFitScore}점` : '설문 필요' }}
-                </span>
-                <span>비용 조건 {{ item.costScore }}점</span>
-              </div>
-
-              <div class="reason-columns">
-                <div>
-                  <h4>좋은 점</h4>
-                  <ul>
-                    <li v-for="pro in item.pros" :key="pro">{{ pro }}</li>
-                  </ul>
+                <div class="summary-card" :class="`summary-card--${scoreTone(item.result.recommendedTotalScore)}`">
+                  <span>총점</span>
+                  <strong>{{ item.result.recommendedTotalScore }}점</strong>
                 </div>
-                <div>
-                  <h4>주의할 점</h4>
-                  <ul>
-                    <li v-for="con in item.cons" :key="con">{{ con }}</li>
-                  </ul>
+                <div class="summary-card" :class="`summary-card--${riskTone(item.result.recommendedRiskLabelText)}`">
+                  <span>위험도</span>
+                  <strong>{{ item.result.recommendedRiskLabelText }}</strong>
                 </div>
               </div>
-            </article>
+
+              <p class="answer">
+                <span
+                  v-for="(part, pIdx) in getAnswerParts(item.result)"
+                  :key="`${part.text}-${pIdx}`"
+                  :class="part.tone ? ['answer-highlight', `answer-highlight--${part.tone}`] : null"
+                >{{ part.text }}</span>
+              </p>
+
+              <div v-if="item.result.requiresLifestyleSurvey" class="survey-guide">
+                <p>{{ item.result.surveyGuideMessage }}</p>
+                <button type="button" @click="goSurvey">설문하러 가기</button>
+              </div>
+
+              <div v-if="Array.isArray(item.result.propertyAnalyses)" class="analysis-list">
+                <article v-for="analysis in item.result.propertyAnalyses" :key="analysis.propertyId" class="analysis-item">
+                  <div class="analysis-item__head">
+                    <div>
+                      <span>#{{ analysis.propertyId }}</span>
+                      <h3>{{ analysis.title }}</h3>
+                    </div>
+                    <strong>{{ analysis.totalScore }}점</strong>
+                  </div>
+
+                  <div class="score-grid">
+                    <span>위험도 {{ analysis.riskLabelText }} · {{ analysis.riskScore }}점</span>
+                    <span>생활 적합도 {{ analysis.lifestyleFitScore != null ? `${analysis.lifestyleFitScore}점` : '설문 필요' }}</span>
+                    <span>비용 조건 {{ analysis.costScore }}점</span>
+                  </div>
+
+                  <div class="reason-columns">
+                    <div>
+                      <h4>좋은 점</h4>
+                      <ul>
+                        <li v-for="pro in analysis.pros" :key="pro">{{ pro }}</li>
+                      </ul>
+                    </div>
+                    <div>
+                      <h4>주의할 점</h4>
+                      <ul>
+                        <li v-for="con in analysis.cons" :key="con">{{ con }}</li>
+                      </ul>
+                    </div>
+                  </div>
+                </article>
+              </div>
+
+              <details v-if="item.result.sources?.length" class="sources">
+                <summary>근거 보기</summary>
+                <ul>
+                  <li v-for="source in item.result.sources" :key="`${source.type}-${source.id}-${source.title}`">
+                    {{ source.type }} · {{ source.id }} · {{ source.title }}
+                  </li>
+                </ul>
+              </details>
+
+              <ul v-if="item.result.warnings?.length" class="warning-list">
+                <li v-for="warning in item.result.warnings" :key="warning">{{ warning }}</li>
+              </ul>
+            </section>
           </div>
-
-          <details v-if="result.sources?.length" class="sources">
-            <summary>근거 보기</summary>
-            <ul>
-              <li v-for="source in result.sources" :key="`${source.type}-${source.id}-${source.title}`">
-                {{ source.type }} · {{ source.id }} · {{ source.title }}
-              </li>
-            </ul>
-          </details>
-
-          <ul v-if="result.warnings?.length" class="warning-list">
-            <li v-for="warning in result.warnings" :key="warning">{{ warning }}</li>
-          </ul>
-        </section>
+        </div>
       </div>
     </aside>
   </Transition>
@@ -485,6 +491,39 @@ onBeforeUnmount(() => {
 .error-message {
   background: var(--color-danger-soft);
   color: var(--color-danger);
+}
+
+.chat-loading {
+  padding: 12px;
+  color: var(--color-muted);
+  font-size: 13px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.chat-history {
+  display: grid;
+  gap: 24px;
+}
+
+.chat-entry {
+  display: grid;
+  gap: 12px;
+}
+
+.chat-question {
+  align-self: end;
+  justify-self: end;
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 16px 16px 4px 16px;
+  background: var(--color-primary);
+  color: white;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  word-break: keep-all;
 }
 
 .ai-result {
