@@ -14,7 +14,16 @@ const adminModules = [
   },
 ]
 
-const checklistItems = ['회원 상태 변경', '역할 변경', '신고 상세 확인', '신고 처리 상태 변경']
+const operationGuides = [
+  {
+    title: '회원 운영',
+    description: '계정 상태를 관리하고 일반 사용자와 중개인 역할을 조정합니다.',
+  },
+  {
+    title: '신고 검토',
+    description: '접수된 신고 내용을 확인하고 운영 검토 상태를 기록합니다.',
+  },
+]
 </script>
 
 <template>
@@ -24,7 +33,7 @@ const checklistItems = ['회원 상태 변경', '역할 변경', '신고 상세 
         <div>
           <p class="eyebrow">Admin Console</p>
           <h1>관리자 대시보드</h1>
-          <p>회원과 신고 운영 기능을 연결하기 위한 관리자 전용 진입 화면입니다.</p>
+          <p>회원과 신고 운영 업무를 한 곳에서 시작하는 관리자 전용 화면입니다.</p>
         </div>
         <span class="status-chip">ADMIN 전용</span>
       </div>
@@ -45,23 +54,25 @@ const checklistItems = ['회원 상태 변경', '역할 변경', '신고 상세 
       <section class="dashboard-layout">
         <article class="readiness-panel">
           <div class="panel-heading">
-            <p class="eyebrow">Readiness</p>
-            <h2>연동 준비 상태</h2>
+            <p class="eyebrow">Operations</p>
+            <h2>운영 기준</h2>
           </div>
 
           <div class="readiness-list">
-            <div v-for="item in checklistItems" :key="item" class="readiness-item">
+            <div v-for="item in operationGuides" :key="item.title" class="readiness-item">
               <span aria-hidden="true"></span>
-              <p>{{ item }}</p>
-              <strong>대기</strong>
+              <div>
+                <p>{{ item.title }}</p>
+                <small>{{ item.description }}</small>
+              </div>
             </div>
           </div>
         </article>
 
         <article class="empty-state" role="status">
-          <span class="empty-label">운영 지표</span>
-          <h2>관리자 지표는 API 연동 후 표시됩니다.</h2>
-          <p>회원 수, 신고 대기 건수, 처리 완료 건수 같은 요약 정보를 이 영역에 배치할 수 있습니다.</p>
+          <span class="empty-label">Admin Only</span>
+          <h2>운영 작업은 왼쪽 메뉴에서 바로 진행할 수 있습니다.</h2>
+          <p>회원 관리와 신고 관리 화면에서 상세 확인, 상태 변경, 역할 변경을 처리하세요.</p>
         </article>
       </section>
     </section>
@@ -203,9 +214,9 @@ const checklistItems = ['회원 상태 변경', '역할 변경', '신고 상세 
 
 .readiness-item {
   display: grid;
-  grid-template-columns: 10px minmax(0, 1fr) auto;
+  grid-template-columns: 10px minmax(0, 1fr);
   gap: 12px;
-  align-items: center;
+  align-items: start;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
   background: var(--color-surface-muted);
@@ -223,13 +234,13 @@ const checklistItems = ['회원 상태 변경', '역할 변경', '신고 상세 
     font-weight: 900;
   }
 
-  strong {
-    border-radius: var(--radius-xs);
-    background: var(--color-accent-soft);
-    color: #6f5f45;
-    font-size: 12px;
-    font-weight: 900;
-    padding: 7px 9px;
+  small {
+    display: block;
+    margin-top: 5px;
+    color: var(--color-muted);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.5;
   }
 }
 

@@ -5,6 +5,22 @@ spring:
   application:
     name: ssafy-home
 
+  ai:
+    model:
+      chat: none
+      embedding: none
+      image: none
+      audio:
+        transcription: none
+        speech: none
+      moderation: none
+    openai:
+      api-key: ${OPENAI_API_KEY:}
+      chat:
+        options:
+          model: gpt-4o-mini
+          temperature: 0.2
+
   profiles:
     include: secret
 
@@ -23,15 +39,7 @@ spring:
         default_batch_fetch_size: 100
     open-in-view: false
 
-  ai:
-    openai:
-      chat:
-        options:
-          model: gpt-4o-mini
-          temperature: 0.3
-
 jwt:
-  secret: ssafy-home-local-development-secret-key-change-before-release
   access-token-expiration-seconds: 3600
   refresh-token-expiration-seconds: 1209600
 
@@ -45,3 +53,9 @@ file:
 rag:
   service:
     url: ${RAG_SERVICE_URL:http://localhost:8000}
+
+app:
+  ai:
+    enabled: false
+    rag:
+      docs-path: ../docs/ai

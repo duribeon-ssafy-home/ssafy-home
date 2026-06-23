@@ -1,6 +1,6 @@
 plugins {
 	id 'java'
-	id 'org.springframework.boot' version '3.3.5'
+	id 'org.springframework.boot' version '3.4.5'
 	id 'io.spring.dependency-management' version '1.1.7'
 }
 
@@ -18,11 +18,19 @@ repositories {
 	maven { url 'https://repo.spring.io/milestone' }
 }
 
+dependencyManagement {
+	imports {
+		mavenBom "org.springframework.ai:spring-ai-bom:1.0.9"
+	}
+}
+
 dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 	implementation 'org.springframework.boot:spring-boot-starter-security'
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+	implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+	implementation 'org.springframework.ai:spring-ai-vector-store'
 	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.5.0'
 
 	runtimeOnly 'com.mysql:mysql-connector-j'
@@ -39,10 +47,6 @@ dependencies {
 	testAnnotationProcessor 'org.projectlombok:lombok'
 	testRuntimeOnly 'com.h2database:h2'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-
-	// Spring AI (Gemini는 OpenAI 호환 API를 통해 연결)
-	implementation platform('org.springframework.ai:spring-ai-bom:1.0.0')
-	implementation 'org.springframework.ai:spring-ai-starter-model-openai'
 
 	// WebClient (Python RAG 서비스 HTTP 호출용)
 	implementation 'org.springframework.boot:spring-boot-starter-webflux'
