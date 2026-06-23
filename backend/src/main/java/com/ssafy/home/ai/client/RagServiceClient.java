@@ -1,5 +1,6 @@
 package com.ssafy.home.ai.client;
 
+import com.ssafy.home.ai.agent.VerifierAgent;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -32,7 +33,7 @@ public class RagServiceClient {
         if (result == null || result.data() == null) {
             return "RAG 서비스에서 응답을 받지 못했습니다.";
         }
-        return result.data().answer();
+        return VerifierAgent.stripMarkdown(result.data().answer());
     }
 
     record RagChatResult(boolean success, String message, RagData data) {}

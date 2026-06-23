@@ -34,9 +34,18 @@ public class VerifierAgent {
     }
 
     private String softenUnsafeClaims(String answer) {
-        return answer
+        return stripMarkdown(answer)
                 .replace("100% 안전", "상대적으로 안전")
                 .replace("무조건 안전", "현재 근거 기준으로 비교적 안전")
                 .replace("무조건 위험", "주의가 필요한 상태");
+    }
+
+    public static String stripMarkdown(String text) {
+        if (text == null) return null;
+        return text
+                .replaceAll("\\*\\*(.+?)\\*\\*", "$1")   // **bold** → bold
+                .replaceAll("\\*(.+?)\\*", "$1")           // *italic* → italic
+                .replaceAll("(?m)^#{1,6}\\s+", "")        // ## 제목 → 제목
+                .replaceAll("`{1,3}([^`]*)`{1,3}", "$1"); // `code` → code
     }
 }
