@@ -54,6 +54,7 @@ const actionMessage = ref('')
 const actionErrorMessage = ref('')
 const isSavingStatus = ref(false)
 const isSavingRole = ref(false)
+const isDetailModalOpen = ref(false)
 const statusForm = ref('ACTIVE')
 const roleForm = ref('BUYER')
 const rolePhoneNumber = ref('')
@@ -126,6 +127,7 @@ function clearSearch() {
 }
 
 async function selectUser(user) {
+  isDetailModalOpen.value = true
   isDetailLoading.value = true
   detailErrorMessage.value = ''
   actionMessage.value = ''
@@ -139,6 +141,10 @@ async function selectUser(user) {
   } finally {
     isDetailLoading.value = false
   }
+}
+
+function closeDetailModal() {
+  isDetailModalOpen.value = false
 }
 
 async function submitStatusUpdate() {
@@ -379,32 +385,44 @@ function getApiErrorMessage(error, fallback = '회원 목록을 불러오지 못
           </div>
         </div>
 
-        <aside class="scope-panel" aria-label="회원 상세 관리">
-          <div class="panel-heading">
-            <p class="eyebrow">Selected User</p>
-            <h2>상세 관리</h2>
-          </div>
+        <Teleport to="body">
+          <div
+            v-if="isDetailModalOpen"
+            class="detail-modal-backdrop"
+            role="presentation"
+            @click.self="closeDetailModal"
+          >
+            <aside class="scope-panel detail-modal" role="dialog" aria-modal="true" aria-label="회원 상세 관리">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Selected User</p>
+                  <h2>상세 관리</h2>
+                </div>
+                <button class="modal-close-button" type="button" aria-label="상세 관리 닫기" @click="closeDetailModal">
+                  X
+                </button>
+              </div>
 
-          <div v-if="isDetailLoading" class="side-state" role="status">
-            <span aria-hidden="true"></span>
-            <p>회원 상세 정보를 불러오는 중입니다.</p>
-          </div>
+              <div v-if="isDetailLoading" class="side-state" role="status">
+                <span aria-hidden="true"></span>
+                <p>회원 상세 정보를 불러오는 중입니다.</p>
+              </div>
 
-          <div v-else-if="detailErrorMessage" class="side-state side-state--error" role="alert">
-            <strong>상세 조회 실패</strong>
-            <p>{{ detailErrorMessage }}</p>
-          </div>
+              <div v-else-if="detailErrorMessage" class="side-state side-state--error" role="alert">
+                <strong>상세 조회 실패</strong>
+                <p>{{ detailErrorMessage }}</p>
+              </div>
 
-          <div v-else-if="!selectedUser" class="side-state">
-            <strong>회원을 선택하세요</strong>
-            <p>목록에서 상세 관리 버튼을 누르면 계정 정보를 확인하고 변경할 수 있습니다.</p>
-          </div>
+              <div v-else-if="!selectedUser" class="side-state">
+                <strong>회원을 선택하세요</strong>
+                <p>목록에서 상세 관리 버튼을 누르면 계정 정보를 확인하고 변경할 수 있습니다.</p>
+              </div>
 
-          <div v-else class="detail-stack">
-            <div class="detail-summary">
-              <strong>{{ selectedUserName }}</strong>
-              <span>{{ selectedUser.email || '-' }}</span>
-            </div>
+              <div v-else class="detail-stack">
+                <div class="detail-summary">
+                  <strong>{{ selectedUserName }}</strong>
+                  <span>{{ selectedUser.email || '-' }}</span>
+                </div>
 
             <dl class="detail-list">
               <div>
@@ -480,11 +498,13 @@ function getApiErrorMessage(error, fallback = '회원 목록을 불러오지 못
             <p v-if="actionMessage" class="form-message form-message--success" role="status">
               {{ actionMessage }}
             </p>
-            <p v-if="actionErrorMessage" class="form-message form-message--error" role="alert">
-              {{ actionErrorMessage }}
-            </p>
+                <p v-if="actionErrorMessage" class="form-message form-message--error" role="alert">
+                  {{ actionErrorMessage }}
+                </p>
+              </div>
+            </aside>
           </div>
-        </aside>
+        </Teleport>
       </section>
     </section>
   </main>
@@ -646,10 +666,7 @@ function getApiErrorMessage(error, fallback = '회원 목록을 불러오지 못
 }
 
 .list-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(240px, 0.28fr);
-  gap: 18px;
-  align-items: start;
+  display: block;
 }
 
 .table-panel,
@@ -846,11 +863,6 @@ function getApiErrorMessage(error, fallback = '회원 목록을 불러오지 못
   color: var(--color-primary-dark);
 }
 
-.scope-panel {
-  position: sticky;
-  top: calc(var(--header-height) + 18px);
-}
-
 .side-state {
   min-height: 220px;
   display: grid;
@@ -989,6 +1001,44 @@ function getApiErrorMessage(error, fallback = '회원 목록을 불러오지 못
   line-height: 1.6;
 }
 
+.detail-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.42);
+  padding: 24px;
+}
+
+.detail-modal {
+  width: min(680px, 100%);
+  max-height: min(760px, calc(100vh - 48px));
+  overflow-y: auto;
+}
+
+.modal-close-button {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--color-heading);
+  font-size: 14px;
+  font-weight: 900;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
+
+  &:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+    transform: translateY(-1px);
+  }
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -996,12 +1046,9 @@ function getApiErrorMessage(error, fallback = '회원 목록을 불러오지 못
 }
 
 @media (max-width: 920px) {
-  .list-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .scope-panel {
-    position: static;
+  .detail-modal-backdrop {
+    align-items: end;
+    padding: 14px;
   }
 }
 
@@ -1030,6 +1077,10 @@ function getApiErrorMessage(error, fallback = '회원 목록을 불러오지 못
   .table-panel,
   .scope-panel {
     padding: 20px;
+  }
+
+  .detail-modal {
+    max-height: calc(100vh - 28px);
   }
 }
 </style>

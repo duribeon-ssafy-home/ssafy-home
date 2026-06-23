@@ -1,5 +1,5 @@
 <script setup>
-import { computed, ref, onMounted } from 'vue'
+import { computed, nextTick, ref, onMounted } from 'vue'
 import { RouterLink } from 'vue-router'
 import FilterBar from '@/components/FilterBar.vue'
 import PropertyCard from '@/components/PropertyCard.vue'
@@ -149,12 +149,14 @@ function buildSearchParams(filters) {
   return params
 }
 
-function handleSearch(filters) {
+async function handleSearch(filters) {
   const params = buildSearchParams(filters)
   activeFilters.value = params
   searchStore.setSearch(params, filters.location || '')
   currentPage.value = 0
-  fetchProperties(params)
+  await fetchProperties(params)
+  await nextTick()
+  scrollToProperties()
 }
 
 function setRentType(type) {
@@ -183,6 +185,12 @@ function goToPage(page) {
   currentPage.value = page
   fetchProperties(activeFilters.value)
   document.getElementById('featured-properties')?.scrollIntoView({ behavior: 'smooth' })
+}
+
+function scrollToProperties() {
+  const target = document.getElementById('featured-properties')
+  if (!target) return
+  target.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 async function loadInitialProperties() {
@@ -229,31 +237,34 @@ onMounted(() => {
         <h1>내 예산과 조건에 맞는 집을 찾으세요</h1>
         <p>지역, 보증금, 월세, 방 타입부터 생활 패턴까지 고려해 더 잘 맞는 매물을 추천합니다.</p>
         <div class="hero__actions">
-          <a class="primary-action" href="#featured-properties">매물 검색하기</a>
+          <button class="primary-action" type="button" @click="scrollToProperties">매물 살펴보기</button>
           <RouterLink class="secondary-action" :to="{ name: 'survey' }">
             생활패턴으로 추천받기
           </RouterLink>
         </div>
-        <dl class="hero__stats" aria-label="서비스 요약">
-          <div>
-            <dt>6</dt>
-            <dd>추천 mock 매물</dd>
-          </div>
-          <div>
-            <dt>3</dt>
-            <dd>핵심 조건 필터</dd>
-          </div>
-          <div>
-            <dt>6</dt>
-            <dd>라이프스타일 질문</dd>
-          </div>
-        </dl>
-      </div>
-    </section>
 
-    <section class="filter-section" aria-label="매물 검색 필터">
-      <div class="section-container">
-        <FilterBar :initial-filters="initialFilters" @search="handleSearch" />
+        <div class="hero__search-panel" aria-label="매물 검색 필터">
+          <div class="hero__search-heading">
+            <strong>조건에 맞는 매물 찾기</strong>
+            <span>지역과 예산을 입력하거나 주요 금액을 선택해 바로 검색하세요.</span>
+          </div>
+          <FilterBar :initial-filters="initialFilters" @search="handleSearch" />
+        </div>
+
+        <div class="hero__features" aria-label="주요 기능">
+          <article>
+            <strong>조건 검색</strong>
+            <span>지역·가격·방 타입으로 빠르게 좁히기</span>
+          </article>
+          <article>
+            <strong>생활 맞춤 추천</strong>
+            <span>설문 결과를 반영한 추천 매물 보기</span>
+          </article>
+          <article>
+            <strong>의심 매물 신고</strong>
+            <span>신고 사유와 위험도 정보를 함께 확인</span>
+          </article>
+        </div>
       </div>
     </section>
 
@@ -383,13 +394,12 @@ onMounted(() => {
       <div class="section-container lifestyle-band__inner">
         <div>
           <p class="eyebrow">Lifestyle Match</p>
-          <h2>조건 검색 다음은 생활 방식까지 맞춰볼 차례입니다</h2>
+          <h2>생활패턴에 맞는 매물을 추천받아보세요</h2>
           <p>
-            간단한 A/B 선택으로 나에게 맞는 주거 타입을 확인하고, 추천 조건을 바로 매물 탐색에
-            연결해보세요.
+            통근, 예산, 편의시설 선호를 반영해 나에게 맞는 조건을 찾아드립니다.
           </p>
         </div>
-        <RouterLink class="band-action" :to="{ name: 'survey' }">설문 시작하기</RouterLink>
+        <RouterLink class="band-action" :to="{ name: 'survey' }">라이프스타일 설문 시작</RouterLink>
       </div>
     </section>
   </main>
@@ -397,17 +407,17 @@ onMounted(() => {
 
 <style lang="scss" scoped>
 .home-page {
-  padding-bottom: 72px;
+  padding-bottom: 0;
 }
 
 .hero {
   position: relative;
-  min-height: 470px;
+  min-height: min(820px, calc(100vh - 72px));
   display: grid;
-  align-items: center;
+  align-items: end;
   overflow: hidden;
   background:
-    linear-gradient(90deg, rgba(10, 17, 28, 0.72) 0%, rgba(10, 17, 28, 0.42) 45%, transparent 76%),
+    linear-gradient(90deg, rgba(10, 17, 28, 0.7) 0%, rgba(10, 17, 28, 0.38) 48%, rgba(10, 17, 28, 0.18) 100%),
     url('https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=2000&q=80')
       center / cover;
 }
@@ -422,24 +432,24 @@ onMounted(() => {
   position: relative;
   z-index: 1;
   color: var(--color-surface);
-  padding: 76px 0 86px;
+  padding: 210px 0 76px;
 
   .eyebrow {
     color: rgba(255, 255, 255, 0.78);
   }
 
   h1 {
-    max-width: 610px;
+    max-width: 680px;
     margin-top: 14px;
     color: var(--color-surface);
-    font-size: 52px;
+    font-size: 56px;
     font-weight: 900;
     letter-spacing: 0;
     line-height: 1.12;
   }
 
   p:not(.eyebrow) {
-    max-width: 600px;
+    max-width: 650px;
     margin-top: 18px;
     color: rgba(255, 255, 255, 0.82);
     font-size: 17px;
@@ -451,7 +461,7 @@ onMounted(() => {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 30px;
+  margin-top: 28px;
 }
 
 .primary-action,
@@ -494,39 +504,81 @@ onMounted(() => {
   }
 }
 
-.hero__stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 14px;
-  margin-top: 38px;
+.hero__search-panel {
+  width: min(100%, 1120px);
+  margin-top: 32px;
+  border-radius: 18px;
+  background: rgba(255, 255, 255, 0.94);
+  padding: 18px;
+  box-shadow: 0 28px 70px rgba(15, 23, 42, 0.26);
 
-  div {
-    min-width: 128px;
-    border-left: 1px solid rgba(255, 255, 255, 0.28);
-    padding-left: 14px;
+  :deep(.filter-bar) {
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    padding: 0;
   }
+}
 
-  dt {
-    color: var(--color-surface);
-    font-size: 24px;
+.hero__search-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 14px;
+
+  strong {
+    color: var(--color-heading);
+    font-size: 20px;
     font-weight: 900;
   }
 
-  dd {
-    color: rgba(255, 255, 255, 0.72);
+  span {
+    max-width: 420px;
+    color: var(--color-muted);
     font-size: 13px;
     font-weight: 700;
+    line-height: 1.45;
+    text-align: right;
   }
 }
 
-.filter-section {
-  position: relative;
-  z-index: 2;
-  margin-top: -34px;
+.hero__features {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  width: min(100%, 860px);
+  margin-top: 20px;
+
+  article {
+    border-left: 1px solid rgba(255, 255, 255, 0.35);
+    padding: 2px 0 2px 14px;
+  }
+
+  strong,
+  span {
+    display: block;
+  }
+
+  strong {
+    color: var(--color-surface);
+    font-size: 14px;
+    font-weight: 900;
+  }
+
+  span {
+    margin-top: 4px;
+    color: rgba(255, 255, 255, 0.76);
+    font-size: 13px;
+    font-weight: 700;
+    line-height: 1.45;
+  }
 }
 
 .featured-section {
-  padding: 66px 0 54px;
+  padding: 54px 0;
+  scroll-margin-top: calc(var(--header-height) + 16px);
 }
 
 .section-heading {
@@ -744,33 +796,33 @@ onMounted(() => {
 }
 
 .lifestyle-band {
-  padding: 56px 0;
+  padding: 52px 0;
   background: linear-gradient(135deg, #1f344f 0%, #365f91 100%);
   color: var(--color-surface);
 }
 
 .lifestyle-band__inner {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 32px;
+  display: grid;
+  justify-items: center;
+  gap: 22px;
+  text-align: center;
 
   .eyebrow {
     color: rgba(255, 255, 255, 0.72);
   }
 
   h2 {
-    max-width: 620px;
+    max-width: 720px;
     margin-top: 8px;
     color: var(--color-surface);
-    font-size: 30px;
+    font-size: 32px;
     font-weight: 900;
     letter-spacing: 0;
     line-height: 1.25;
   }
 
   p:not(.eyebrow) {
-    max-width: 680px;
+    max-width: 620px;
     margin-top: 12px;
     color: rgba(255, 255, 255, 0.75);
     font-weight: 600;
@@ -778,7 +830,6 @@ onMounted(() => {
 }
 
 .band-action {
-  flex: 0 0 auto;
   background: var(--color-surface);
   color: var(--color-primary-dark);
 
@@ -789,8 +840,26 @@ onMounted(() => {
 }
 
 @media (max-width: 940px) {
+  .hero {
+    min-height: auto;
+  }
+
   .hero__content h1 {
     font-size: 42px;
+  }
+
+  .hero__search-heading {
+    align-items: flex-start;
+    flex-direction: column;
+
+    span {
+      max-width: none;
+      text-align: left;
+    }
+  }
+
+  .hero__features {
+    grid-template-columns: 1fr;
   }
 
   .section-heading,
@@ -806,7 +875,7 @@ onMounted(() => {
 
 @media (max-width: 640px) {
   .hero {
-    min-height: 520px;
+    min-height: auto;
     background:
       linear-gradient(180deg, rgba(10, 17, 28, 0.76) 0%, rgba(10, 17, 28, 0.42) 100%),
       url('https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=1400&q=80')
@@ -814,7 +883,7 @@ onMounted(() => {
   }
 
   .hero__content {
-    padding: 60px 0 88px;
+    padding: 56px 0 42px;
 
     h1 {
       font-size: 34px;
@@ -825,9 +894,18 @@ onMounted(() => {
     }
   }
 
-  .hero__stats {
-    display: grid;
-    grid-template-columns: 1fr;
+  .hero__actions {
+    margin-top: 24px;
+  }
+
+  .hero__search-panel {
+    margin-top: 26px;
+    border-radius: 14px;
+    padding: 14px;
+  }
+
+  .hero__features {
+    margin-top: 16px;
   }
 
   .property-grid {

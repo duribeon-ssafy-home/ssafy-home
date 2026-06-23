@@ -2,7 +2,9 @@
 import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { getProperty, getPropertyRisk } from '@/api/propertyApi'
+import { createPropertyReport } from '@/api/reportApi'
 import { roomTypeLabels } from '@/data/mockProperties'
+import { reportReasons } from '@/data/reportReasons'
 import { useFavorites } from '@/composables/useFavorites'
 import { useAuthStore } from '@/stores/auth'
 import { useCompareStore } from '@/stores/compare'
@@ -22,6 +24,12 @@ const property = ref(null)
 const risk = ref(null)
 const isLoading = ref(false)
 const isError = ref(false)
+const isReportModalOpen = ref(false)
+const reportReason = ref(reportReasons[0]?.value || '')
+const reportContent = ref('')
+const isSubmittingReport = ref(false)
+const reportMessage = ref('')
+const reportErrorMessage = ref('')
 
 const riskMeta = {
   SAFE:    { label: '안전', class: 'risk--safe' },
@@ -69,6 +77,56 @@ async function handleFavorite() {
   }
 }
 
+function openReportModal() {
+  if (!authStore.isAuthenticated) {
+    router.push({ name: 'login', query: { redirect: router.currentRoute.value.fullPath } })
+    return
+  }
+
+  reportReason.value = reportReasons[0]?.value || ''
+  reportContent.value = ''
+  reportMessage.value = ''
+  reportErrorMessage.value = ''
+  isReportModalOpen.value = true
+}
+
+function closeReportModal() {
+  if (isSubmittingReport.value) return
+  isReportModalOpen.value = false
+}
+
+async function submitReport() {
+  if (!property.value || isSubmittingReport.value || !reportReason.value) {
+    return
+  }
+
+  isSubmittingReport.value = true
+  reportMessage.value = ''
+  reportErrorMessage.value = ''
+
+  try {
+    await createPropertyReport(property.value.propertyId, {
+      reason: reportReason.value,
+      content: reportContent.value.trim() || null,
+    })
+    reportMessage.value = '신고가 접수되었습니다.'
+    isReportModalOpen.value = false
+    await refreshRisk()
+  } catch (error) {
+    reportErrorMessage.value = getReportErrorMessage(error)
+  } finally {
+    isSubmittingReport.value = false
+  }
+}
+
+async function refreshRisk() {
+  try {
+    risk.value = await getPropertyRisk(props.id)
+  } catch {
+    // 신고 접수 자체는 완료되었으므로 위험도 재조회 실패는 화면 흐름을 막지 않는다.
+  }
+}
+
 const imageUrl = computed(() => property.value?.images?.[0]?.imageUrl)
 const priceLabel = computed(() => {
   if (!property.value) return ''
@@ -83,6 +141,17 @@ const priceLabel = computed(() => {
 function formatMoneyManwon(value) {
   const amount = Number(value)
   return Number.isFinite(amount) ? `${amount.toLocaleString('ko-KR')}만` : '-'
+}
+
+function getReportErrorMessage(error) {
+  const message = error.response?.data?.message
+  const errorCode = error.response?.data?.errorCode
+
+  if (errorCode === 'REPORT_ALREADY_EXISTS') {
+    return '이미 신고한 매물입니다.'
+  }
+
+  return message || '신고 접수에 실패했습니다. 잠시 후 다시 시도해 주세요.'
 }
 </script>
 
@@ -191,13 +260,89 @@ function formatMoneyManwon(value) {
             >
               {{ compareStore.has(property.propertyId) ? '✓ 비교함에서 제거' : '+ 비교 추가' }}
             </button>
+            <button
+              class="danger-ghost"
+              type="button"
+              @click="openReportModal"
+            >
+              의심 매물 신고
+            </button>
           </div>
+          <p v-if="reportMessage" class="report-feedback report-feedback--success">
+            {{ reportMessage }}
+          </p>
+          <p v-if="reportErrorMessage && !isReportModalOpen" class="report-feedback report-feedback--error">
+            {{ reportErrorMessage }}
+          </p>
         </aside>
       </div>
 
       <div v-else class="placeholder">
         <strong>존재하지 않는 매물입니다</strong>
         <p>목록에서 다른 매물을 선택해 주세요.</p>
+      </div>
+
+      <div
+        v-if="isReportModalOpen"
+        class="modal-backdrop"
+        role="presentation"
+        @click.self="closeReportModal"
+      >
+        <section class="report-modal" role="dialog" aria-modal="true" aria-labelledby="report-modal-title">
+          <div class="report-modal__header">
+            <div>
+              <p class="eyebrow">Report</p>
+              <h2 id="report-modal-title">의심 매물 신고</h2>
+            </div>
+            <button
+              class="modal-close"
+              type="button"
+              aria-label="신고 모달 닫기"
+              :disabled="isSubmittingReport"
+              @click="closeReportModal"
+            >
+              ×
+            </button>
+          </div>
+
+          <form class="report-form" @submit.prevent="submitReport">
+            <fieldset>
+              <legend>신고 사유</legend>
+              <label
+                v-for="reason in reportReasons"
+                :key="reason.value"
+                class="reason-option"
+                :class="{ 'reason-option--active': reportReason === reason.value }"
+              >
+                <input v-model="reportReason" type="radio" name="reportReason" :value="reason.value" />
+                <span>{{ reason.label }}</span>
+              </label>
+            </fieldset>
+
+            <label class="content-field">
+              <span>상세 내용</span>
+              <textarea
+                v-model="reportContent"
+                maxlength="2000"
+                rows="6"
+                placeholder="의심되는 내용을 구체적으로 적어주세요."
+              />
+            </label>
+            <p class="content-count">{{ reportContent.length.toLocaleString('ko-KR') }} / 2,000</p>
+            <p v-if="reportErrorMessage" class="report-feedback report-feedback--error">
+              {{ reportErrorMessage }}
+            </p>
+
+            <div class="modal-actions">
+              <button type="button" class="ghost" :disabled="isSubmittingReport" @click="closeReportModal">
+                취소
+              </button>
+              <button type="submit" :disabled="isSubmittingReport || !reportReason">
+                {{ isSubmittingReport ? '접수 중...' : '신고 접수' }}
+              </button>
+            </div>
+          </form>
+        </section>
       </div>
     </section>
   </main>
@@ -388,6 +533,168 @@ function formatMoneyManwon(value) {
   .active {
     background: var(--color-danger);
   }
+
+  .danger-ghost {
+    grid-column: 1 / -1;
+    border: 1px solid #fecaca;
+    background: #fff7f7;
+    color: var(--color-danger);
+  }
+}
+
+.report-feedback {
+  border-radius: var(--radius-sm);
+  padding: 12px 14px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.report-feedback--success {
+  background: #ecfdf3;
+  color: #027a48;
+}
+
+.report-feedback--error {
+  background: #fff1f0;
+  color: var(--color-danger);
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgb(15 23 42 / 58%);
+}
+
+.report-modal {
+  width: min(560px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: 0 24px 70px rgb(15 23 42 / 28%);
+}
+
+.report-modal__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid var(--color-border);
+  padding: 22px 24px 18px;
+
+  h2 {
+    margin-top: 4px;
+    color: var(--color-heading);
+    font-size: 22px;
+    font-weight: 900;
+  }
+}
+
+.modal-close {
+  width: 36px;
+  height: 36px;
+  border-radius: var(--radius-xs);
+  background: var(--color-bg-soft);
+  color: var(--color-heading);
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.report-form {
+  display: grid;
+  gap: 16px;
+  padding: 22px 24px 24px;
+
+  fieldset {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    border: 0;
+    padding: 0;
+  }
+
+  legend,
+  .content-field span {
+    grid-column: 1 / -1;
+    margin-bottom: 4px;
+    color: var(--color-heading);
+    font-size: 14px;
+    font-weight: 900;
+  }
+}
+
+.reason-option {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  color: var(--color-heading);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+
+  input {
+    accent-color: var(--color-primary);
+  }
+}
+
+.reason-option--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
+}
+
+.content-field {
+  display: grid;
+  gap: 8px;
+
+  textarea {
+    width: 100%;
+    resize: vertical;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    color: var(--color-heading);
+    font: inherit;
+    line-height: 1.5;
+  }
+}
+
+.content-count {
+  justify-self: end;
+  margin-top: -8px;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+
+  button {
+    min-width: 104px;
+    height: 44px;
+    border-radius: var(--radius-sm);
+    background: var(--color-primary);
+    color: var(--color-surface);
+    font-weight: 900;
+  }
+
+  .ghost {
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-heading);
+  }
 }
 
 .placeholder {
@@ -407,6 +714,10 @@ function formatMoneyManwon(value) {
 
 @media (max-width: 900px) {
   .detail-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .report-form fieldset {
     grid-template-columns: 1fr;
   }
 }

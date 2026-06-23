@@ -1,10 +1,12 @@
 <script setup>
-import { computed } from 'vue'
-import { RouterLink, useRouter } from 'vue-router'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
 const router = useRouter()
+const route = useRoute()
 const authStore = useAuthStore()
+const isScrolled = ref(false)
 
 const roleLabels = {
   BUYER: '일반 사용자',
@@ -14,15 +16,29 @@ const roleLabels = {
 
 const displayName = computed(() => authStore.user?.nickname || authStore.user?.email || '사용자')
 const roleLabel = computed(() => roleLabels[authStore.role] || authStore.role || '사용자')
+const isTransparent = computed(() => route.name === 'home' && !isScrolled.value)
+
+function syncScrollState() {
+  isScrolled.value = window.scrollY > 8
+}
 
 async function handleAuthAction() {
   await authStore.logout()
   await router.push({ name: 'home' })
 }
+
+onMounted(() => {
+  syncScrollState()
+  window.addEventListener('scroll', syncScrollState, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', syncScrollState)
+})
 </script>
 
 <template>
-  <header class="app-header">
+  <header class="app-header" :class="{ 'app-header--transparent': isTransparent }">
     <div class="app-header__inner">
       <RouterLink class="brand" :to="{ name: 'home' }" aria-label="SSAFY HOME 메인으로 이동">
         <span>SSAFY</span>
@@ -65,13 +81,27 @@ async function handleAuthAction() {
 
 <style lang="scss" scoped>
 .app-header {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 20;
   height: var(--header-height);
   border-bottom: 1px solid rgba(229, 231, 235, 0.78);
   background: rgba(255, 255, 255, 0.86);
   backdrop-filter: blur(18px);
+  transition:
+    background-color var(--transition-base),
+    border-color var(--transition-base),
+    right var(--transition-base),
+    box-shadow var(--transition-base);
+}
+
+.app-header--transparent {
+  border-bottom-color: transparent;
+  background: transparent;
+  box-shadow: none;
+  backdrop-filter: none;
 }
 
 .app-header__inner {
@@ -82,9 +112,55 @@ async function handleAuthAction() {
   align-items: center;
   justify-content: space-between;
   gap: 28px;
+  min-width: 0;
+}
+
+.app-header--transparent {
+  .brand {
+    color: var(--color-surface);
+
+    strong {
+      color: var(--color-surface);
+    }
+  }
+
+  .nav a {
+    color: rgba(255, 255, 255, 0.82);
+  }
+
+  .nav a:hover,
+  .nav a.router-link-active {
+    background: rgba(255, 255, 255, 0.2);
+    color: var(--color-surface);
+  }
+
+  .user-summary {
+    p,
+    strong {
+      color: var(--color-surface);
+    }
+
+    .role-badge {
+      background: rgba(255, 255, 255, 0.18);
+      color: var(--color-surface);
+    }
+  }
+
+  .auth-button {
+    border-color: rgba(255, 255, 255, 0.36);
+    background: rgba(255, 255, 255, 0.14);
+    color: var(--color-surface);
+  }
+
+  .auth-button--primary {
+    border-color: var(--color-surface);
+    background: var(--color-surface);
+    color: var(--color-primary-dark);
+  }
 }
 
 .brand {
+  flex: 0 0 auto;
   display: inline-flex;
   align-items: baseline;
   gap: 6px;
@@ -108,8 +184,9 @@ async function handleAuthAction() {
   display: flex;
   align-items: center;
   justify-content: center;
-  flex: 1;
+  flex: 1 1 auto;
   gap: 8px;
+  min-width: 0;
 
   a {
     border-radius: var(--radius-sm);
@@ -134,7 +211,8 @@ async function handleAuthAction() {
   display: flex;
   align-items: center;
   justify-content: flex-end;
-  min-width: 190px;
+  flex: 0 1 auto;
+  min-width: 0;
 }
 
 .auth-links,
@@ -155,7 +233,7 @@ async function handleAuthAction() {
   display: grid;
   justify-items: end;
   gap: 3px;
-  min-width: 142px;
+  min-width: 0;
 
   p {
     max-width: 190px;
@@ -216,6 +294,65 @@ async function handleAuthAction() {
 
 .auth-button--ghost {
   background: var(--color-surface);
+}
+
+@media (max-width: 1180px) {
+  .app-header__inner {
+    width: min(100% - 28px, var(--content-width));
+    gap: 14px;
+  }
+
+  .nav {
+    gap: 4px;
+
+    a {
+      font-size: 13px;
+      padding: 9px 10px;
+    }
+  }
+
+  .user-menu {
+    gap: 8px;
+  }
+
+  .user-summary p {
+    max-width: 130px;
+  }
+
+  .auth-button {
+    min-width: 68px;
+    padding: 0 12px;
+  }
+}
+
+@media (max-width: 980px) {
+  .app-header {
+    height: auto;
+  }
+
+  .app-header__inner {
+    min-height: var(--header-height);
+    flex-wrap: wrap;
+    padding: 10px 0;
+  }
+
+  .brand {
+    order: 1;
+  }
+
+  .actions {
+    order: 2;
+    margin-left: auto;
+  }
+
+  .nav {
+    order: 3;
+    width: 100%;
+    flex-basis: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 2px;
+  }
 }
 
 @media (max-width: 760px) {

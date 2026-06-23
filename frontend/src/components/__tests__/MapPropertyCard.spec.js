@@ -11,6 +11,13 @@ vi.mock('@/composables/useFavorites', () => ({
 vi.mock('@/stores/auth', () => ({
   useAuthStore: () => ({ isAuthenticated: true }),
 }))
+vi.mock('@/stores/compare', () => ({
+  useCompareStore: () => ({
+    has: () => false,
+    isFull: false,
+    toggle: vi.fn(),
+  }),
+}))
 
 const base = {
   propertyId: 1,

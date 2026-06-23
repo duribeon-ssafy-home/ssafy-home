@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, watch } from 'vue'
+import { reactive, ref, watch } from 'vue'
 import { roomTypeLabels } from '@/data/mockProperties'
 
 const props = defineProps({
@@ -42,11 +42,19 @@ const rentPresets = [
   { value: '70', label: '70만' },
 ]
 
-function togglePreset(field, value) {
-  filters[field] = filters[field] === value ? '' : value
+const openAmountMenu = ref('')
+
+function selectPreset(field, value) {
+  filters[field] = value
+  openAmountMenu.value = ''
+}
+
+function toggleAmountMenu(field) {
+  openAmountMenu.value = openAmountMenu.value === field ? '' : field
 }
 
 function submitSearch() {
+  openAmountMenu.value = ''
   emit('search', { ...filters })
 }
 
@@ -73,44 +81,68 @@ watch(
 
     <div class="field">
       <span>보증금 이하</span>
-      <div class="preset-chips">
+      <div class="amount-control">
+        <input
+          v-model="filters.deposit"
+          data-testid="deposit-select"
+          type="number"
+          min="0"
+          placeholder="직접 입력"
+        />
         <button
-          v-for="p in depositPresets"
-          :key="p.value"
+          class="amount-menu-button"
           type="button"
-          class="preset-chip"
-          :class="{ 'preset-chip--active': filters.deposit === p.value }"
-          @click="togglePreset('deposit', p.value)"
-        >{{ p.label }}</button>
+          aria-label="보증금 주요 금액 선택"
+          :aria-expanded="openAmountMenu === 'deposit'"
+          @click="toggleAmountMenu('deposit')"
+        >
+          ▾
+        </button>
+        <div v-if="openAmountMenu === 'deposit'" class="amount-menu">
+          <button
+            v-for="p in depositPresets"
+            :key="p.value"
+            type="button"
+            :class="{ 'amount-menu__item--active': filters.deposit === p.value }"
+            @click="selectPreset('deposit', p.value)"
+          >
+            {{ p.label }}
+          </button>
+        </div>
       </div>
-      <input
-        v-model="filters.deposit"
-        data-testid="deposit-select"
-        type="number"
-        min="0"
-        placeholder="직접 입력 (만원)"
-      />
     </div>
 
     <div class="field">
       <span>월세 이하</span>
-      <div class="preset-chips">
+      <div class="amount-control">
+        <input
+          v-model="filters.monthlyRent"
+          data-testid="monthly-rent-select"
+          type="number"
+          min="0"
+          placeholder="직접 입력"
+        />
         <button
-          v-for="p in rentPresets"
-          :key="p.value"
+          class="amount-menu-button"
           type="button"
-          class="preset-chip"
-          :class="{ 'preset-chip--active': filters.monthlyRent === p.value }"
-          @click="togglePreset('monthlyRent', p.value)"
-        >{{ p.label }}</button>
+          aria-label="월세 주요 금액 선택"
+          :aria-expanded="openAmountMenu === 'monthlyRent'"
+          @click="toggleAmountMenu('monthlyRent')"
+        >
+          ▾
+        </button>
+        <div v-if="openAmountMenu === 'monthlyRent'" class="amount-menu">
+          <button
+            v-for="p in rentPresets"
+            :key="p.value"
+            type="button"
+            :class="{ 'amount-menu__item--active': filters.monthlyRent === p.value }"
+            @click="selectPreset('monthlyRent', p.value)"
+          >
+            {{ p.label }}
+          </button>
+        </div>
       </div>
-      <input
-        v-model="filters.monthlyRent"
-        data-testid="monthly-rent-select"
-        type="number"
-        min="0"
-        placeholder="직접 입력 (만원)"
-      />
     </div>
 
     <div class="room-type" role="group" aria-label="방 타입">
@@ -166,38 +198,6 @@ watch(
   }
 }
 
-.preset-chips {
-  display: flex;
-  gap: 6px;
-}
-
-.preset-chip {
-  flex: 1;
-  height: 30px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-xs);
-  background: var(--color-surface);
-  color: var(--color-muted);
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
-  transition:
-    background-color var(--transition-fast),
-    border-color var(--transition-fast),
-    color var(--transition-fast);
-
-  &:hover {
-    border-color: var(--color-primary);
-    color: var(--color-primary);
-  }
-}
-
-.preset-chip--active {
-  border-color: var(--color-primary);
-  background: var(--color-primary-soft);
-  color: var(--color-primary-dark);
-}
-
 input[type='search'],
 input[type='number'] {
   width: 100%;
@@ -223,6 +223,71 @@ input[type='number'] {
   &::-webkit-outer-spin-button {
     opacity: 0.5;
   }
+}
+
+.amount-control {
+  position: relative;
+  display: flex;
+  margin-top: auto;
+
+  input[type='number'] {
+    padding-right: 43px;
+  }
+}
+
+.amount-menu-button {
+  position: absolute;
+  top: 5px;
+  right: 5px;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius-xs);
+  background: var(--color-bg-soft);
+  color: var(--color-heading);
+  font-size: 13px;
+  font-weight: 900;
+  transition:
+    background-color var(--transition-fast),
+    color var(--transition-fast);
+
+  &:hover {
+    background: var(--color-primary-soft);
+    color: var(--color-primary-dark);
+  }
+}
+
+.amount-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 10;
+  display: grid;
+  width: min(160px, 100%);
+  overflow: hidden;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14);
+
+  button {
+    height: 38px;
+    background: var(--color-surface);
+    color: var(--color-heading);
+    font-size: 13px;
+    font-weight: 800;
+    text-align: left;
+    padding: 0 12px;
+
+    &:hover {
+      background: var(--color-primary-soft);
+      color: var(--color-primary-dark);
+    }
+  }
+}
+
+.amount-menu__item--active {
+  background: var(--color-primary-soft) !important;
+  color: var(--color-primary-dark) !important;
 }
 
 .chips {

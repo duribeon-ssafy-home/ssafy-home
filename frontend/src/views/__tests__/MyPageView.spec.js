@@ -1,9 +1,8 @@
 import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { nextTick } from 'vue'
 import { getMyLatestLifestyleResult } from '@/api/lifestyleApi'
-import { getMyProfile, updateMyProfile, updateMyRole, updateMyStatus } from '@/api/userApi'
+import { getMyProfile, updateMyProfile, updateMyStatus } from '@/api/userApi'
 import { useAuthStore } from '@/stores/auth'
 import MyPageView from '../MyPageView.vue'
 
@@ -30,7 +29,6 @@ vi.mock('vue-router', () => ({
 vi.mock('@/api/userApi', () => ({
   getMyProfile: vi.fn(),
   updateMyProfile: vi.fn(),
-  updateMyRole: vi.fn(),
   updateMyStatus: vi.fn(),
 }))
 
@@ -99,30 +97,14 @@ describe('MyPageView', () => {
     expect(wrapper.text()).toContain('프로필 정보가 저장되었습니다.')
   })
 
-  it('BUYER가 전화번호를 입력하면 AGENT로 전환한다', async () => {
-    const { wrapper, authStore } = mountMyPage()
+  it('권한 기반 기능 섹션 없이 기본 정보 다음에 선호 유형을 표시한다', async () => {
+    const { wrapper } = mountMyPage()
     await flushPromises()
 
-    updateMyRole.mockResolvedValue({
-      id: buyerProfile.id,
-      role: 'AGENT',
-      phoneNumber: '01099998888',
-    })
-
-    await wrapper.find('[data-testid="role-phone-input"]').setValue('01099998888')
-    await wrapper.find('form.role-upgrade').trigger('submit')
-    await flushPromises()
-    await nextTick()
-
-    expect(updateMyRole).toHaveBeenCalledWith({
-      role: 'AGENT',
-      phoneNumber: '01099998888',
-    })
-    expect(authStore.user.role).toBe('AGENT')
-    const agentEntry = wrapper.find('[data-testid="agent-entry-button"]')
-
-    expect(agentEntry.exists()).toBe(true)
-    expect(agentEntry.attributes('data-route-name')).toBe('agent-properties')
+    expect(wrapper.text()).toContain('기본 정보')
+    expect(wrapper.text()).toContain('저장된 선호 유형')
+    expect(wrapper.text()).not.toContain('권한 기반 기능')
+    expect(wrapper.find('[data-testid="role-phone-input"]').exists()).toBe(false)
   })
 
   it('ADMIN은 관리자 페이지 버튼이 admin-dashboard 라우트로 연결된다', async () => {
