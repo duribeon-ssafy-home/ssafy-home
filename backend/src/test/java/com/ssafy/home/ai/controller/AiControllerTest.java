@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ssafy.home.ai.dto.request.AiChatRequest;
 import com.ssafy.home.ai.dto.response.AiChatResponse;
 import com.ssafy.home.ai.service.AiOrchestratorService;
+import com.ssafy.home.ai.type.AiIntent;
 import com.ssafy.home.auth.jwt.JwtAuthentication;
 import com.ssafy.home.auth.jwt.JwtTokenProvider;
 import com.ssafy.home.user.type.Role;
@@ -48,7 +49,14 @@ class AiControllerTest {
     @Test
     void chat_returnsAnswer() throws Exception {
         when(aiOrchestratorService.chat(any(), eq(1L)))
-                .thenReturn(new AiChatResponse("전세사기를 예방하려면 등기부등본을 확인하세요."));
+                .thenReturn(new AiChatResponse(
+                        AiIntent.CONTRACT_KNOWLEDGE,
+                        "전세사기를 예방하려면 등기부등본을 확인하세요.",
+                        null,
+                        List.of(),
+                        true,
+                        List.of()
+                ));
 
         AiChatRequest request = new AiChatRequest("전세사기 어떻게 피해?", List.of());
 
