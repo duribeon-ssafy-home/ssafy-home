@@ -23,6 +23,15 @@ spring:
         default_batch_fetch_size: 100
     open-in-view: false
 
+  ai:
+    openai:
+      api-key: ${GOOGLE_API_KEY}
+      base-url: https://generativelanguage.googleapis.com/v1beta/openai
+      chat:
+        options:
+          model: gemini-2.5-flash-lite
+          temperature: 0.3
+
 jwt:
   secret: ssafy-home-local-development-secret-key-change-before-release
   access-token-expiration-seconds: 3600
@@ -34,16 +43,6 @@ springdoc:
 
 file:
   upload-dir: ./uploads
-
-spring:
-  ai:
-    openai:
-      api-key: ${GOOGLE_API_KEY}
-      base-url: https://generativelanguage.googleapis.com/v1beta/openai
-      chat:
-        options:
-          model: gemini-2.5-flash-lite
-          temperature: 0.3
 
 rag:
   service:
