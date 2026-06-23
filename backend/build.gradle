@@ -15,6 +15,7 @@ java {
 
 repositories {
 	mavenCentral()
+	maven { url 'https://repo.spring.io/milestone' }
 }
 
 dependencies {
@@ -38,6 +39,13 @@ dependencies {
 	testAnnotationProcessor 'org.projectlombok:lombok'
 	testRuntimeOnly 'com.h2database:h2'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	// Spring AI (Gemini는 OpenAI 호환 API를 통해 연결)
+	implementation platform('org.springframework.ai:spring-ai-bom:1.0.0')
+	implementation 'org.springframework.ai:spring-ai-starter-model-openai'
+
+	// WebClient (Python RAG 서비스 HTTP 호출용)
+	implementation 'org.springframework.boot:spring-boot-starter-webflux'
 }
 
 tasks.named('test') {
