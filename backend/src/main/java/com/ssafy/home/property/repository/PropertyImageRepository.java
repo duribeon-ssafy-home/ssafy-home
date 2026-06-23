@@ -16,4 +16,13 @@ public interface PropertyImageRepository extends JpaRepository<PropertyImage, Lo
     int findMaxSortOrderByPropertyId(@Param("propertyId") Long propertyId);
 
     java.util.Optional<PropertyImage> findByProperty_PropertyIdAndSortOrder(Long propertyId, Integer sortOrder);
+
+    @Query("""
+            select i
+            from PropertyImage i
+            join fetch i.property
+            where i.property.propertyId in :propertyIds
+              and i.sortOrder = 0
+            """)
+    List<PropertyImage> findRepresentativeImagesByPropertyIds(@Param("propertyIds") List<Long> propertyIds);
 }
