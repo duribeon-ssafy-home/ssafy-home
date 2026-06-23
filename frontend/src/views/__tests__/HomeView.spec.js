@@ -41,7 +41,9 @@ const lifestyleResult = {
 describe('HomeView', () => {
   beforeEach(() => {
     localStorage.clear()
+    document.body.innerHTML = ''
     vi.clearAllMocks()
+    Element.prototype.scrollIntoView = vi.fn()
     getProperties.mockResolvedValue(createPage())
     getRecommendations.mockResolvedValue(createPage())
     getMyLatestLifestyleResult.mockRejectedValue({
@@ -55,6 +57,7 @@ describe('HomeView', () => {
 
     expect(getMyLatestLifestyleResult).not.toHaveBeenCalled()
     expect(getProperties).toHaveBeenCalledWith({
+      dong: '하단동',
       page: 0,
       size: 6,
       sort: 'createdAt,desc',
@@ -69,6 +72,7 @@ describe('HomeView', () => {
     await flushPromises()
 
     expect(getRecommendations).toHaveBeenCalledWith({
+      dong: '하단동',
       maxDeposit: 1000,
       maxMonthlyRent: 50,
       roomType: 'ONE_ROOM',
@@ -106,17 +110,51 @@ describe('HomeView', () => {
     })
   })
 
+  it('검색 폼을 제출하면 검색 후 추천 매물 영역으로 부드럽게 이동한다', async () => {
+    const { wrapper } = mountHome()
+    await flushPromises()
+    Element.prototype.scrollIntoView.mockClear()
+
+    await wrapper.get('[data-testid="location-input"]').setValue('부산광역시')
+    await wrapper.get('form.filter-bar').trigger('submit')
+    await flushPromises()
+
+    expect(getProperties).toHaveBeenLastCalledWith({
+      sido: '부산광역시',
+      page: 0,
+      size: 6,
+      sort: 'createdAt,desc',
+    })
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'start',
+    })
+  })
+
   it('로그인 사용자라도 생활 성향 결과가 없으면 일반 매물 API로 조회한다', async () => {
     mountHome({ authenticated: true })
     await flushPromises()
 
     expect(getMyLatestLifestyleResult).toHaveBeenCalled()
     expect(getProperties).toHaveBeenCalledWith({
+      dong: '하단동',
       page: 0,
       size: 6,
       sort: 'createdAt,desc',
     })
     expect(getRecommendations).not.toHaveBeenCalled()
+  })
+
+  it('매물 살펴보기 버튼을 누르면 추천 매물 영역으로 부드럽게 이동한다', async () => {
+    const { wrapper } = mountHome()
+    await flushPromises()
+
+    await wrapper.findAll('button').find((button) => button.text() === '매물 살펴보기').trigger('click')
+
+    expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
+      behavior: 'smooth',
+      block: 'start',
+    })
   })
 })
 
@@ -143,6 +181,7 @@ function mountHome(options = {}) {
   }
 
   const wrapper = mount(HomeView, {
+    attachTo: document.body,
     global: {
       plugins: [pinia],
       stubs: {

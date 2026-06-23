@@ -1,6 +1,7 @@
 <script setup>
 import { computed, onMounted, ref } from 'vue'
 import { getAdminReport, getAdminReports, updateAdminReport } from '@/api/adminReportApi'
+import { reportReasonLabels } from '@/data/reportReasons'
 
 const reportStatuses = [
   { label: '전체', value: '' },
@@ -11,15 +12,6 @@ const reportStatuses = [
   { label: '처리 완료', value: 'RESOLVED' },
 ]
 const tableHeaders = ['신고 대상', '사유', '신고자', '처리 상태', '접수일', '관리']
-
-const reasonLabels = {
-  FAKE_LISTING: '허위 매물',
-  PRICE_MISMATCH: '가격 불일치',
-  PHOTO_MISMATCH: '사진 불일치',
-  NO_CONTACT: '연락 불가',
-  FRAUD_SUSPECTED: '사기 의심',
-  ETC: '기타',
-}
 
 const statusLabels = {
   PENDING: '대기',
@@ -48,6 +40,7 @@ const detailErrorMessage = ref('')
 const actionMessage = ref('')
 const actionErrorMessage = ref('')
 const isSavingStatus = ref(false)
+const isDetailModalOpen = ref(false)
 const reportStatusForm = ref('PENDING')
 
 const statusChipLabel = computed(() => {
@@ -110,6 +103,7 @@ function selectStatus(status) {
 }
 
 async function selectReport(report) {
+  isDetailModalOpen.value = true
   isDetailLoading.value = true
   detailErrorMessage.value = ''
   actionMessage.value = ''
@@ -123,6 +117,10 @@ async function selectReport(report) {
   } finally {
     isDetailLoading.value = false
   }
+}
+
+function closeDetailModal() {
+  isDetailModalOpen.value = false
 }
 
 async function submitReportStatusUpdate() {
@@ -176,7 +174,7 @@ function getStatusFilterLabel(status) {
 }
 
 function getReasonLabel(reason) {
-  return reasonLabels[reason] || reason || '-'
+  return reportReasonLabels[reason] || reason || '-'
 }
 
 function getStatusLabel(status) {
@@ -337,32 +335,44 @@ function getApiErrorMessage(error, fallback = '신고 목록을 불러오지 못
           </div>
         </div>
 
-        <aside class="feature-panel" aria-label="신고 상세 관리">
-          <div class="panel-heading">
-            <p class="eyebrow">Selected Report</p>
-            <h2>상세 관리</h2>
-          </div>
+        <Teleport to="body">
+          <div
+            v-if="isDetailModalOpen"
+            class="detail-modal-backdrop"
+            role="presentation"
+            @click.self="closeDetailModal"
+          >
+            <aside class="feature-panel detail-modal" role="dialog" aria-modal="true" aria-label="신고 상세 관리">
+              <div class="panel-heading">
+                <div>
+                  <p class="eyebrow">Selected Report</p>
+                  <h2>상세 관리</h2>
+                </div>
+                <button class="modal-close-button" type="button" aria-label="상세 관리 닫기" @click="closeDetailModal">
+                  X
+                </button>
+              </div>
 
-          <div v-if="isDetailLoading" class="side-state" role="status">
-            <span aria-hidden="true"></span>
-            <p>신고 상세 정보를 불러오는 중입니다.</p>
-          </div>
+              <div v-if="isDetailLoading" class="side-state" role="status">
+                <span aria-hidden="true"></span>
+                <p>신고 상세 정보를 불러오는 중입니다.</p>
+              </div>
 
-          <div v-else-if="detailErrorMessage" class="side-state side-state--error" role="alert">
-            <strong>상세 조회 실패</strong>
-            <p>{{ detailErrorMessage }}</p>
-          </div>
+              <div v-else-if="detailErrorMessage" class="side-state side-state--error" role="alert">
+                <strong>상세 조회 실패</strong>
+                <p>{{ detailErrorMessage }}</p>
+              </div>
 
-          <div v-else-if="!selectedReport" class="side-state">
-            <strong>신고를 선택하세요</strong>
-            <p>목록에서 상세 관리 버튼을 누르면 신고 내용과 처리 상태를 확인할 수 있습니다.</p>
-          </div>
+              <div v-else-if="!selectedReport" class="side-state">
+                <strong>신고를 선택하세요</strong>
+                <p>목록에서 상세 관리 버튼을 누르면 신고 내용과 처리 상태를 확인할 수 있습니다.</p>
+              </div>
 
-          <div v-else class="detail-stack">
-            <div class="detail-summary">
-              <strong>{{ selectedReportTitle }}</strong>
-              <span>{{ selectedReport.propertyAddress || '-' }}</span>
-            </div>
+              <div v-else class="detail-stack">
+                <div class="detail-summary">
+                  <strong>{{ selectedReportTitle }}</strong>
+                  <span>{{ selectedReport.propertyAddress || '-' }}</span>
+                </div>
 
             <dl class="detail-list">
               <div>
@@ -424,11 +434,13 @@ function getApiErrorMessage(error, fallback = '신고 목록을 불러오지 못
             <p v-if="actionMessage" class="form-message form-message--success" role="status">
               {{ actionMessage }}
             </p>
-            <p v-if="actionErrorMessage" class="form-message form-message--error" role="alert">
-              {{ actionErrorMessage }}
-            </p>
+                <p v-if="actionErrorMessage" class="form-message form-message--error" role="alert">
+                  {{ actionErrorMessage }}
+                </p>
+              </div>
+            </aside>
           </div>
-        </aside>
+        </Teleport>
       </section>
     </section>
   </main>
@@ -529,10 +541,7 @@ function getApiErrorMessage(error, fallback = '신고 목록을 불러오지 못
 }
 
 .reports-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(280px, 0.34fr);
-  gap: 18px;
-  align-items: start;
+  display: block;
 }
 
 .table-panel,
@@ -762,11 +771,6 @@ function getApiErrorMessage(error, fallback = '신고 목록을 불러오지 못
   color: #027a48;
 }
 
-.feature-panel {
-  position: sticky;
-  top: calc(var(--header-height) + 18px);
-}
-
 .side-state {
   min-height: 220px;
   display: grid;
@@ -926,6 +930,44 @@ function getApiErrorMessage(error, fallback = '신고 목록을 불러오지 못
   line-height: 1.6;
 }
 
+.detail-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  background: rgba(15, 23, 42, 0.42);
+  padding: 24px;
+}
+
+.detail-modal {
+  width: min(720px, 100%);
+  max-height: min(780px, calc(100vh - 48px));
+  overflow-y: auto;
+}
+
+.modal-close-button {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--color-heading);
+  font-size: 14px;
+  font-weight: 900;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    transform var(--transition-fast);
+
+  &:hover {
+    border-color: var(--color-primary);
+    background: var(--color-primary-soft);
+    transform: translateY(-1px);
+  }
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
@@ -933,12 +975,9 @@ function getApiErrorMessage(error, fallback = '신고 목록을 불러오지 못
 }
 
 @media (max-width: 980px) {
-  .reports-layout {
-    grid-template-columns: 1fr;
-  }
-
-  .feature-panel {
-    position: static;
+  .detail-modal-backdrop {
+    align-items: end;
+    padding: 14px;
   }
 }
 
@@ -956,6 +995,10 @@ function getApiErrorMessage(error, fallback = '신고 목록을 불러오지 못
   .table-panel,
   .feature-panel {
     padding: 20px;
+  }
+
+  .detail-modal {
+    max-height: calc(100vh - 28px);
   }
 }
 </style>

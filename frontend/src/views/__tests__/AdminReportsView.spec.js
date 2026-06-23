@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { getAdminReport, getAdminReports, updateAdminReport } from '@/api/adminReportApi'
 import AdminReportsView from '../AdminReportsView.vue'
 
@@ -35,6 +35,10 @@ describe('AdminReportsView', () => {
     getAdminReport.mockResolvedValue({ ...pendingReport })
     getAdminReports.mockResolvedValue([{ ...pendingReport }])
     updateAdminReport.mockResolvedValue({ ...pendingReport, status: 'HIDDEN' })
+  })
+
+  afterEach(() => {
+    document.body.innerHTML = ''
   })
 
   it('진입 시 관리자 신고 목록을 조회하고 테이블에 표시한다', async () => {
@@ -92,9 +96,9 @@ describe('AdminReportsView', () => {
     await flushPromises()
 
     expect(getAdminReport).toHaveBeenCalledWith(1)
-    expect(wrapper.text()).toContain('신고 내용')
-    expect(wrapper.text()).toContain('허위 매물로 의심됩니다.')
-    expect(wrapper.text()).toContain('실제 매물 노출 상태는 변경하지 않습니다.')
+    expect(document.body.textContent).toContain('신고 내용')
+    expect(document.body.textContent).toContain('허위 매물로 의심됩니다.')
+    expect(document.body.textContent).toContain('실제 매물 노출 상태는 변경하지 않습니다.')
   })
 
   it('선택 신고의 처리 상태를 변경한다', async () => {
@@ -104,17 +108,20 @@ describe('AdminReportsView', () => {
     await wrapper.findAll('button').find((button) => button.text() === '상세 관리').trigger('click')
     await flushPromises()
 
-    await wrapper.find('form.action-form select').setValue('HIDDEN')
-    await wrapper.find('form.action-form').trigger('submit')
+    const form = document.body.querySelector('form.action-form')
+    form.querySelector('select').value = 'HIDDEN'
+    form.querySelector('select').dispatchEvent(new Event('change', { bubbles: true }))
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     await flushPromises()
 
     expect(updateAdminReport).toHaveBeenCalledWith(1, { status: 'HIDDEN' })
-    expect(wrapper.text()).toContain('신고 처리 상태를 변경했습니다.')
+    expect(document.body.textContent).toContain('신고 처리 상태를 변경했습니다.')
   })
 })
 
 function mountAdminReportsView() {
   return mount(AdminReportsView, {
+    attachTo: document.body,
     global: {
       stubs: {
         RouterLink: routerLinkStub,

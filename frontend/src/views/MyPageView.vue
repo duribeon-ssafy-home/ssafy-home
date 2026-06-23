@@ -2,7 +2,7 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { getMyLatestLifestyleResult } from '@/api/lifestyleApi'
-import { getMyProfile, updateMyProfile, updateMyRole, updateMyStatus } from '@/api/userApi'
+import { getMyProfile, updateMyProfile, updateMyStatus } from '@/api/userApi'
 import { createLifestylePresetChips, lifestyleTypeMeta } from '@/data/lifestyle'
 import { useAuthStore } from '@/stores/auth'
 
@@ -14,7 +14,6 @@ const lifestyleResult = ref(null)
 const isLoading = ref(true)
 const isEditingProfile = ref(false)
 const isSavingProfile = ref(false)
-const isChangingRole = ref(false)
 const isChangingStatus = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
@@ -22,10 +21,6 @@ const successMessage = ref('')
 const profileForm = reactive({
   name: '',
   nickname: '',
-  phoneNumber: '',
-})
-
-const roleForm = reactive({
   phoneNumber: '',
 })
 
@@ -57,7 +52,6 @@ const statusLabel = computed(
   () => statusLabels[displayProfile.value.status] || displayProfile.value.status || '-',
 )
 const statusTone = computed(() => statusToneLabels[displayProfile.value.status] || '')
-const isBuyer = computed(() => displayProfile.value.role === 'BUYER')
 const isAgent = computed(() => displayProfile.value.role === 'AGENT')
 const isAdmin = computed(() => displayProfile.value.role === 'ADMIN')
 const profileInitial = computed(() => {
@@ -99,7 +93,6 @@ async function loadMyPage() {
   if (profileResult.status === 'fulfilled') {
     syncProfile(profileResult.value)
     resetProfileForm()
-    roleForm.phoneNumber = profileResult.value.phoneNumber || ''
   } else {
     errorMessage.value =
       profileResult.reason?.response?.data?.message || '내 정보를 불러오지 못했습니다.'
@@ -156,38 +149,6 @@ async function submitProfileUpdate() {
     errorMessage.value = getApiErrorMessage(error, '프로필 정보를 저장하지 못했습니다.')
   } finally {
     isSavingProfile.value = false
-  }
-}
-
-async function submitRoleUpgrade() {
-  clearFeedback()
-
-  if (!roleForm.phoneNumber.trim()) {
-    errorMessage.value = '중개인 전환에는 전화번호가 필요합니다.'
-    return
-  }
-
-  isChangingRole.value = true
-
-  try {
-    const roleResponse = await updateMyRole({
-      role: 'AGENT',
-      phoneNumber: roleForm.phoneNumber.trim(),
-    })
-    const updatedProfile = {
-      ...displayProfile.value,
-      role: roleResponse.role,
-      phoneNumber: roleResponse.phoneNumber,
-    }
-
-    syncProfile(updatedProfile)
-    resetProfileForm()
-    roleForm.phoneNumber = roleResponse.phoneNumber || ''
-    successMessage.value = '중개인 계정으로 전환되었습니다.'
-  } catch (error) {
-    errorMessage.value = getApiErrorMessage(error, '중개인 전환에 실패했습니다.')
-  } finally {
-    isChangingRole.value = false
   }
 }
 
@@ -402,45 +363,6 @@ function getApiErrorMessage(error, fallbackMessage) {
             </dl>
           </section>
 
-          <section class="role-panel">
-            <div class="panel-heading">
-              <p class="eyebrow">Access</p>
-              <h2>권한 기반 기능</h2>
-            </div>
-
-            <form v-if="isBuyer" class="role-upgrade" @submit.prevent="submitRoleUpgrade">
-              <div>
-                <strong>중개인 계정으로 전환</strong>
-                <p>전화번호 인증 정보가 등록되면 매물 등록과 내 매물 관리 기능을 사용할 수 있습니다.</p>
-              </div>
-              <label>
-                중개인 연락처
-                <input
-                  v-model="roleForm.phoneNumber"
-                  data-testid="role-phone-input"
-                  required
-                  type="tel"
-                  autocomplete="tel"
-                  placeholder="010-0000-0000"
-                />
-              </label>
-              <button class="primary-button" type="submit" :disabled="isChangingRole">
-                {{ isChangingRole ? '전환 중...' : '중개인으로 전환' }}
-              </button>
-            </form>
-
-            <div v-else class="role-ready">
-              <strong>{{ roleLabel }} 권한이 활성화되어 있습니다.</strong>
-              <p>
-                {{
-                  isAdmin
-                    ? '회원과 신고 관리 화면이 준비되면 관리자 페이지로 이동할 수 있습니다.'
-                    : '매물 관리 화면이 준비되면 내 매물 등록과 수정 작업을 이어갈 수 있습니다.'
-                }}
-              </p>
-            </div>
-          </section>
-
           <section class="preference-panel">
             <div class="panel-heading">
               <p class="eyebrow">Preference</p>
@@ -537,7 +459,6 @@ function getApiErrorMessage(error, fallbackMessage) {
 .loading-panel,
 .account-sidebar,
 .profile-panel,
-.role-panel,
 .preference-panel,
 .danger-panel {
   border: 1px solid rgba(208, 213, 221, 0.9);
@@ -716,7 +637,6 @@ function getApiErrorMessage(error, fallbackMessage) {
 }
 
 .profile-panel,
-.role-panel,
 .preference-panel,
 .danger-panel {
   padding: 28px;
@@ -769,8 +689,7 @@ function getApiErrorMessage(error, fallbackMessage) {
   }
 }
 
-.profile-form,
-.role-upgrade {
+.profile-form {
   display: grid;
   gap: 14px;
 
@@ -870,43 +789,6 @@ function getApiErrorMessage(error, fallbackMessage) {
 
   &:disabled {
     background: var(--color-subtle);
-  }
-}
-
-.role-upgrade {
-  grid-template-columns: minmax(0, 1fr) minmax(210px, 0.45fr) auto;
-  align-items: end;
-
-  strong {
-    color: var(--color-heading);
-    font-size: 18px;
-    font-weight: 900;
-  }
-
-  p {
-    margin-top: 8px;
-    color: var(--color-muted);
-    font-weight: 700;
-    line-height: 1.6;
-  }
-}
-
-.role-ready {
-  display: grid;
-  gap: 8px;
-  border: 1px solid rgba(54, 95, 145, 0.18);
-  border-radius: var(--radius-sm);
-  background: var(--color-primary-soft);
-  color: var(--color-primary-dark);
-  padding: 16px;
-
-  strong {
-    font-size: 17px;
-    font-weight: 900;
-  }
-
-  p {
-    font-weight: 700;
   }
 }
 
@@ -1021,8 +903,7 @@ function getApiErrorMessage(error, fallbackMessage) {
 }
 
 @media (max-width: 980px) {
-  .my-grid,
-  .role-upgrade {
+  .my-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1047,7 +928,6 @@ function getApiErrorMessage(error, fallbackMessage) {
   }
 
   .profile-panel,
-  .role-panel,
   .preference-panel,
   .danger-panel,
   .account-sidebar {

@@ -1,5 +1,5 @@
 import { flushPromises, mount } from '@vue/test-utils'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   getAdminUser,
   getAdminUsers,
@@ -50,6 +50,10 @@ describe('AdminUsersView', () => {
     getAdminUsers.mockResolvedValue([{ ...adminUser }])
     updateAdminUserRole.mockResolvedValue({ ...adminUser, role: 'AGENT', phoneNumber: '01098765432' })
     updateAdminUserStatus.mockResolvedValue({ ...adminUser, status: 'BANNED' })
+  })
+
+  afterEach(() => {
+    document.body.innerHTML = ''
   })
 
   it('진입 시 관리자 회원 목록을 조회하고 테이블에 표시한다', async () => {
@@ -109,9 +113,9 @@ describe('AdminUsersView', () => {
     await flushPromises()
 
     expect(getAdminUser).toHaveBeenCalledWith(1)
-    expect(wrapper.text()).toContain('최근 로그인')
-    expect(wrapper.text()).toContain('계정 상태')
-    expect(wrapper.text()).toContain('역할')
+    expect(document.body.textContent).toContain('최근 로그인')
+    expect(document.body.textContent).toContain('계정 상태')
+    expect(document.body.textContent).toContain('역할')
   })
 
   it('선택 회원의 상태와 역할을 변경한다', async () => {
@@ -126,32 +130,36 @@ describe('AdminUsersView', () => {
     await wrapper.findAll('button').find((button) => button.text() === '상세 관리').trigger('click')
     await flushPromises()
 
-    const forms = wrapper.findAll('form.action-form')
-    await forms[0].find('select').setValue('BANNED')
-    await forms[0].trigger('submit')
+    const forms = document.body.querySelectorAll('form.action-form')
+    forms[0].querySelector('select').value = 'BANNED'
+    forms[0].querySelector('select').dispatchEvent(new Event('change', { bubbles: true }))
+    forms[0].dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     await flushPromises()
 
     expect(updateAdminUserStatus).toHaveBeenCalledWith(2, { status: 'BANNED' })
-    expect(wrapper.text()).toContain('회원 상태를 변경했습니다.')
+    expect(document.body.textContent).toContain('회원 상태를 변경했습니다.')
 
-    await forms[1].find('select').setValue('AGENT')
+    forms[1].querySelector('select').value = 'AGENT'
+    forms[1].querySelector('select').dispatchEvent(new Event('change', { bubbles: true }))
     await flushPromises()
 
-    const roleForm = wrapper.findAll('form.action-form')[1]
-    await roleForm.find('input[type="tel"]').setValue('  01098765432  ')
-    await roleForm.trigger('submit')
+    const roleForm = document.body.querySelectorAll('form.action-form')[1]
+    roleForm.querySelector('input[type="tel"]').value = '  01098765432  '
+    roleForm.querySelector('input[type="tel"]').dispatchEvent(new Event('input', { bubbles: true }))
+    roleForm.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }))
     await flushPromises()
 
     expect(updateAdminUserRole).toHaveBeenCalledWith(2, {
       role: 'AGENT',
       phoneNumber: '  01098765432  ',
     })
-    expect(wrapper.text()).toContain('회원 역할을 변경했습니다.')
+    expect(document.body.textContent).toContain('회원 역할을 변경했습니다.')
   })
 })
 
 function mountAdminUsersView() {
   return mount(AdminUsersView, {
+    attachTo: document.body,
     global: {
       stubs: {
         RouterLink: routerLinkStub,

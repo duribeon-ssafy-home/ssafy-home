@@ -2,26 +2,17 @@
 const adminModules = [
   {
     title: '회원 관리',
-    description: '회원 목록, 검색, 상세 확인, 상태와 역할 변경 작업을 관리합니다.',
+    description: '가입 회원을 확인하고 계정 상태와 역할을 관리합니다.',
     routeName: 'admin-users',
     label: '회원 관리로 이동',
+    tasks: ['회원 목록 조회', '계정 상태 변경', '역할 변경'],
   },
   {
     title: '신고 관리',
-    description: '매물 신고 목록과 상세 내용을 확인하고 처리 상태를 업데이트합니다.',
+    description: '접수된 매물 신고를 검토하고 처리 상태를 기록합니다.',
     routeName: 'admin-reports',
     label: '신고 관리로 이동',
-  },
-]
-
-const operationGuides = [
-  {
-    title: '회원 운영',
-    description: '계정 상태를 관리하고 일반 사용자와 중개인 역할을 조정합니다.',
-  },
-  {
-    title: '신고 검토',
-    description: '접수된 신고 내용을 확인하고 운영 검토 상태를 기록합니다.',
+    tasks: ['신고 목록 확인', '신고 상세 검토', '처리 상태 변경'],
   },
 ]
 </script>
@@ -47,33 +38,11 @@ const operationGuides = [
         >
           <span>{{ module.title }}</span>
           <p>{{ module.description }}</p>
+          <ul>
+            <li v-for="task in module.tasks" :key="task">{{ task }}</li>
+          </ul>
           <strong>{{ module.label }}</strong>
         </RouterLink>
-      </section>
-
-      <section class="dashboard-layout">
-        <article class="readiness-panel">
-          <div class="panel-heading">
-            <p class="eyebrow">Operations</p>
-            <h2>운영 기준</h2>
-          </div>
-
-          <div class="readiness-list">
-            <div v-for="item in operationGuides" :key="item.title" class="readiness-item">
-              <span aria-hidden="true"></span>
-              <div>
-                <p>{{ item.title }}</p>
-                <small>{{ item.description }}</small>
-              </div>
-            </div>
-          </div>
-        </article>
-
-        <article class="empty-state" role="status">
-          <span class="empty-label">Admin Only</span>
-          <h2>운영 작업은 왼쪽 메뉴에서 바로 진행할 수 있습니다.</h2>
-          <p>회원 관리와 신고 관리 화면에서 상세 확인, 상태 변경, 역할 변경을 처리하세요.</p>
-        </article>
       </section>
     </section>
   </main>
@@ -90,7 +59,7 @@ const operationGuides = [
 
 .admin-page__inner {
   display: grid;
-  gap: 22px;
+  gap: 28px;
 }
 
 .page-heading {
@@ -131,12 +100,10 @@ const operationGuides = [
 .module-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 16px;
+  gap: 20px;
 }
 
-.module-card,
-.readiness-panel,
-.empty-state {
+.module-card {
   border: 1px solid rgba(208, 213, 221, 0.9);
   border-radius: var(--radius-sm);
   background: rgba(255, 255, 255, 0.94);
@@ -145,9 +112,9 @@ const operationGuides = [
 
 .module-card {
   display: grid;
-  gap: 12px;
-  min-height: 178px;
-  padding: 24px;
+  gap: 16px;
+  min-height: 310px;
+  padding: 30px;
   transition:
     border-color var(--transition-fast),
     box-shadow var(--transition-fast),
@@ -171,6 +138,32 @@ const operationGuides = [
     line-height: 1.7;
   }
 
+  ul {
+    display: grid;
+    gap: 10px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  li {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    color: var(--color-heading);
+    font-size: 14px;
+    font-weight: 800;
+
+    &::before {
+      width: 8px;
+      height: 8px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: var(--color-primary);
+      content: '';
+    }
+  }
+
   strong {
     width: fit-content;
     align-self: end;
@@ -183,101 +176,8 @@ const operationGuides = [
   }
 }
 
-.dashboard-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 0.56fr) minmax(0, 0.44fr);
-  gap: 18px;
-  align-items: stretch;
-}
-
-.readiness-panel,
-.empty-state {
-  padding: 24px;
-}
-
-.panel-heading {
-  display: grid;
-  gap: 6px;
-  margin-bottom: 18px;
-
-  h2 {
-    color: var(--color-heading);
-    font-size: 24px;
-    font-weight: 900;
-  }
-}
-
-.readiness-list {
-  display: grid;
-  gap: 10px;
-}
-
-.readiness-item {
-  display: grid;
-  grid-template-columns: 10px minmax(0, 1fr);
-  gap: 12px;
-  align-items: start;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-surface-muted);
-  padding: 14px;
-
-  span {
-    width: 10px;
-    height: 10px;
-    border-radius: 50%;
-    background: var(--color-accent);
-  }
-
-  p {
-    color: var(--color-heading);
-    font-weight: 900;
-  }
-
-  small {
-    display: block;
-    margin-top: 5px;
-    color: var(--color-muted);
-    font-size: 13px;
-    font-weight: 700;
-    line-height: 1.5;
-  }
-}
-
-.empty-state {
-  min-height: 260px;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 12px;
-  text-align: center;
-
-  h2 {
-    color: var(--color-heading);
-    font-size: 24px;
-    font-weight: 900;
-  }
-
-  p {
-    max-width: 420px;
-    color: var(--color-muted);
-    font-weight: 700;
-    line-height: 1.7;
-  }
-}
-
-.empty-label {
-  border-radius: var(--radius-xs);
-  background: var(--color-primary-soft);
-  color: var(--color-primary-dark);
-  font-size: 12px;
-  font-weight: 900;
-  padding: 7px 9px;
-}
-
 @media (max-width: 860px) {
-  .module-grid,
-  .dashboard-layout {
+  .module-grid {
     grid-template-columns: 1fr;
   }
 }
@@ -292,9 +192,8 @@ const operationGuides = [
     }
   }
 
-  .module-card,
-  .readiness-panel,
-  .empty-state {
+  .module-card {
+    min-height: auto;
     padding: 20px;
   }
 }

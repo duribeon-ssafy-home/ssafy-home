@@ -40,7 +40,7 @@ function resizeAiPanel(width) {
 <template>
   <div
     class="app-shell"
-    :class="{ 'app-shell--drawer-open': isAiPanelOpen }"
+    :class="{ 'app-shell--drawer-open': isAiPanelOpen, 'app-shell--home': route.name === 'home' }"
     :style="{ '--ai-drawer-width': `${effectiveDrawerWidth}px` }"
   >
     <div class="app-main">
@@ -79,7 +79,12 @@ function resizeAiPanel(width) {
 .app-main {
   flex: 1 1 auto;
   min-width: 0;
+  padding-top: var(--header-height);
   transition: flex-basis var(--transition-base);
+}
+
+.app-shell--home .app-main {
+  padding-top: 0;
 }
 
 .app-shell--drawer-open {
@@ -91,6 +96,10 @@ function resizeAiPanel(width) {
   }
 
   :deep(.compare-bar) {
+    right: var(--ai-drawer-width);
+  }
+
+  :deep(.app-header) {
     right: var(--ai-drawer-width);
   }
 }
