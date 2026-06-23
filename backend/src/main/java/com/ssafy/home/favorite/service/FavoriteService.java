@@ -6,9 +6,13 @@ import com.ssafy.home.favorite.dto.FavoriteResponse;
 import com.ssafy.home.favorite.entity.Favorite;
 import com.ssafy.home.favorite.repository.FavoriteRepository;
 import com.ssafy.home.property.entity.Property;
+import com.ssafy.home.property.entity.PropertyImage;
 import com.ssafy.home.property.entity.PropertyStatus;
+import com.ssafy.home.property.repository.PropertyImageRepository;
 import com.ssafy.home.property.repository.PropertyRepository;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +24,7 @@ public class FavoriteService {
 
     private final FavoriteRepository favoriteRepository;
     private final PropertyRepository propertyRepository;
+    private final PropertyImageRepository propertyImageRepository;
 
     @Transactional
     public void addFavorite(Long userId, Long propertyId) {
@@ -46,9 +51,29 @@ public class FavoriteService {
     }
 
     public List<FavoriteResponse> getMyFavorites(Long userId) {
-        return favoriteRepository.findAllByUserId(userId)
+        List<Favorite> favorites = favoriteRepository.findAllByUserIdWithProperty(userId);
+        if (favorites.isEmpty()) {
+            return List.of();
+        }
+
+        List<Long> propertyIds = favorites.stream()
+                .map(favorite -> favorite.getProperty().getPropertyId())
+                .toList();
+        Map<Long, PropertyImage> representativeImageMap = propertyImageRepository
+                .findRepresentativeImagesByPropertyIds(propertyIds)
                 .stream()
-                .map(FavoriteResponse::from)
+                .collect(Collectors.toMap(
+                        image -> image.getProperty().getPropertyId(),
+                        image -> image,
+                        (existing, duplicate) -> existing
+                ));
+
+        return favorites
+                .stream()
+                .map(favorite -> FavoriteResponse.from(
+                        favorite,
+                        representativeImageMap.get(favorite.getProperty().getPropertyId())
+                ))
                 .toList();
     }
 }

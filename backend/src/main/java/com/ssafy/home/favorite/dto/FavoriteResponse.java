@@ -1,18 +1,18 @@
 package com.ssafy.home.favorite.dto;
 
 import com.ssafy.home.favorite.entity.Favorite;
-import com.ssafy.home.property.dto.PropertyResponse;
+import com.ssafy.home.property.entity.PropertyImage;
 import java.time.LocalDateTime;
 
 public record FavoriteResponse(
         Long favoriteId,
-        PropertyResponse property,
+        FavoritePropertySummaryResponse property,
         LocalDateTime createdAt
 ) {
-    public static FavoriteResponse from(Favorite favorite) {
+    public static FavoriteResponse from(Favorite favorite, PropertyImage representativeImage) {
         return new FavoriteResponse(
                 favorite.getFavoriteId(),
-                PropertyResponse.from(favorite.getProperty()),
+                FavoritePropertySummaryResponse.from(favorite.getProperty(), representativeImage),
                 favorite.getCreatedAt()
         );
     }
