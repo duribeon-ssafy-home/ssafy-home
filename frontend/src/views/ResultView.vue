@@ -398,8 +398,7 @@ async function initializeAuthIfPossible() {
     color: var(--color-heading);
     font-size: 42px;
     font-weight: 900;
-    letter-spacing: 0;
-    line-height: 1.18;
+    line-height: var(--lh-tight);
   }
 
   p:not(.eyebrow) {
@@ -407,7 +406,7 @@ async function initializeAuthIfPossible() {
     color: var(--color-muted);
     font-size: 17px;
     font-weight: 700;
-    line-height: 1.7;
+    line-height: var(--lh-loose);
   }
 }
 
@@ -425,7 +424,7 @@ async function initializeAuthIfPossible() {
 .result-copy,
 .summary-panel {
   border: 1px solid rgba(208, 213, 221, 0.9);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.94);
   box-shadow: var(--shadow-panel);
 }
@@ -459,8 +458,7 @@ async function initializeAuthIfPossible() {
     color: var(--color-heading);
     font-size: 52px;
     font-weight: 900;
-    letter-spacing: 0;
-    line-height: 1.12;
+    line-height: var(--lh-tight);
   }
 
   p:not(.eyebrow) {
@@ -469,7 +467,7 @@ async function initializeAuthIfPossible() {
     color: var(--color-muted);
     font-size: 18px;
     font-weight: 700;
-    line-height: 1.7;
+    line-height: var(--lh-loose);
   }
 }
 
@@ -497,7 +495,7 @@ async function initializeAuthIfPossible() {
   p {
     color: var(--color-muted);
     font-weight: 700;
-    line-height: 1.7;
+    line-height: var(--lh-loose);
   }
 }
 
@@ -508,7 +506,7 @@ async function initializeAuthIfPossible() {
 
   span {
     border: 1px solid rgba(54, 95, 145, 0.2);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-pill);
     background: var(--color-primary-soft);
     color: var(--color-primary-dark);
     font-size: 13px;
@@ -529,7 +527,7 @@ async function initializeAuthIfPossible() {
   gap: 20px;
   align-items: center;
   border: 1px solid rgba(208, 213, 221, 0.9);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.94);
   box-shadow: var(--shadow-panel);
   padding: 24px;
@@ -539,6 +537,7 @@ async function initializeAuthIfPossible() {
     color: var(--color-heading);
     font-size: 22px;
     font-weight: 900;
+    line-height: var(--lh-snug);
   }
 
   p:not(.eyebrow):not(.form-message) {
@@ -576,7 +575,7 @@ async function initializeAuthIfPossible() {
 
 .recommendation-preview-state {
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--color-surface-muted);
   color: var(--color-muted);
   font-size: 14px;
@@ -597,7 +596,7 @@ async function initializeAuthIfPossible() {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   font-size: 14px;
   font-weight: 900;
   padding: 0 16px;

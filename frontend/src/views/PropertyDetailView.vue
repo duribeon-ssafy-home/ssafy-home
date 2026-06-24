@@ -484,7 +484,7 @@ function getReportErrorMessage(error) {
 .info-panel,
 .placeholder {
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
 }
@@ -524,7 +524,7 @@ function getReportErrorMessage(error) {
     color: var(--color-heading);
     font-size: 26px;
     font-weight: 900;
-    line-height: 1.28;
+    line-height: var(--lh-snug);
   }
 
   strong {
@@ -565,9 +565,9 @@ function getReportErrorMessage(error) {
   gap: 12px;
 }
 
-.risk--safe    { background: #ecfdf3; }
-.risk--caution { background: #fffbeb; }
-.risk--danger  { background: #fff1f0; }
+.risk--safe    { background: var(--color-success-bg); }
+.risk--caution { background: var(--color-warning-bg); }
+.risk--danger  { background: var(--color-danger-soft); }
 .risk--unknown { background: var(--color-surface-muted); }
 
 .risk-header {
@@ -582,8 +582,8 @@ function getReportErrorMessage(error) {
   font-weight: 900;
   padding: 4px 9px;
 
-  .risk--safe &    { background: #027a48; color: #fff; }
-  .risk--caution & { background: #b45309; color: #fff; }
+  .risk--safe &    { background: var(--color-success-text); color: #fff; }
+  .risk--caution & { background: var(--color-warning-text); color: #fff; }
   .risk--danger &  { background: var(--color-danger); color: #fff; }
   .risk--unknown & { background: var(--color-muted); color: #fff; }
 }
@@ -630,7 +630,7 @@ function getReportErrorMessage(error) {
 
   button {
     height: 46px;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-pill);
     background: var(--color-primary);
     color: var(--color-surface);
     font-weight: 900;
@@ -668,12 +668,12 @@ function getReportErrorMessage(error) {
 }
 
 .report-feedback--success {
-  background: #ecfdf3;
-  color: #027a48;
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
 }
 
 .report-feedback--error {
-  background: #fff1f0;
+  background: var(--color-danger-soft);
   color: var(--color-danger);
 }
 
@@ -692,7 +692,7 @@ function getReportErrorMessage(error) {
   width: min(560px, 100%);
   max-height: calc(100vh - 40px);
   overflow: auto;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-lg);
   background: var(--color-surface);
   box-shadow: 0 24px 70px rgb(15 23 42 / 28%);
 }
@@ -802,7 +802,7 @@ function getReportErrorMessage(error) {
   button {
     min-width: 104px;
     height: 44px;
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-pill);
     background: var(--color-primary);
     color: var(--color-surface);
     font-weight: 900;
@@ -852,7 +852,7 @@ function getReportErrorMessage(error) {
 
 .review-form {
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   padding: 20px;
   display: grid;
@@ -890,7 +890,7 @@ function getReportErrorMessage(error) {
 .review-form__submit {
   height: 40px;
   padding: 0 20px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: var(--color-primary);
   color: var(--color-surface);
   font-size: 14px;
@@ -933,8 +933,8 @@ function getReportErrorMessage(error) {
   font-weight: 800;
 }
 
-.review-feedback--success { background: #ecfdf3; color: #027a48; }
-.review-feedback--error   { background: #fff1f0; color: var(--color-danger); }
+.review-feedback--success { background: var(--color-success-bg); color: var(--color-success-text); }
+.review-feedback--error   { background: var(--color-danger-soft); color: var(--color-danger); }
 
 .review-list {
   display: flex;
@@ -947,7 +947,7 @@ function getReportErrorMessage(error) {
 
 .review-item {
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   padding: 16px 18px;
   display: grid;
@@ -977,7 +977,7 @@ function getReportErrorMessage(error) {
   color: var(--color-text);
   font-size: 14px;
   font-weight: 700;
-  line-height: 1.6;
+  line-height: var(--lh-relaxed);
   white-space: pre-wrap;
 }
 
@@ -996,7 +996,7 @@ function getReportErrorMessage(error) {
   height: 40px;
   padding: 0 28px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: var(--color-surface);
   color: var(--color-heading);
   font-size: 14px;

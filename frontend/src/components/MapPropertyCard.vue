@@ -97,7 +97,7 @@ async function onFavoriteClick(e) {
   display: flex;
   overflow: hidden;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   cursor: pointer;
   transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
@@ -133,7 +133,7 @@ async function onFavoriteClick(e) {
   font-size: 10px;
   font-weight: 800;
   padding: 2px 6px;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-pill);
 }
 
 .info {

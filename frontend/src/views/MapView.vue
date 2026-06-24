@@ -326,7 +326,7 @@ onMounted(() => {
   left: 24px;
   width: 220px;
   background: var(--color-surface);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
   overflow: hidden;
   z-index: 10;
@@ -412,7 +412,7 @@ onMounted(() => {
   margin-top: 6px;
   background: var(--color-primary);
   color: var(--color-surface);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   padding: 7px 0;
   text-align: center;
   font-size: 12px;

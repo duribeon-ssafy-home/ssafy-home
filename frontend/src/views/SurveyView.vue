@@ -495,8 +495,7 @@ async function initializeAuthIfPossible() {
     color: var(--color-heading);
     font-size: 42px;
     font-weight: 900;
-    letter-spacing: 0;
-    line-height: 1.18;
+    line-height: var(--lh-tight);
   }
 }
 
@@ -506,13 +505,13 @@ async function initializeAuthIfPossible() {
   color: var(--color-muted);
   font-size: 15px;
   font-weight: 700;
-  line-height: 1.6;
+  line-height: var(--lh-relaxed);
 }
 
 .step-counter {
   min-width: 96px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
   color: var(--color-muted);
@@ -565,7 +564,7 @@ async function initializeAuthIfPossible() {
 .question-panel {
   min-height: 440px;
   border: 1px solid rgba(208, 213, 221, 0.9);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: rgba(255, 255, 255, 0.92);
   box-shadow: var(--shadow-panel);
 }
@@ -614,8 +613,7 @@ async function initializeAuthIfPossible() {
     color: var(--color-heading);
     font-size: 34px;
     font-weight: 900;
-    letter-spacing: 0;
-    line-height: 1.25;
+    line-height: var(--lh-snug);
   }
 
   p {
@@ -637,7 +635,7 @@ async function initializeAuthIfPossible() {
   gap: 18px;
   min-height: 210px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   color: var(--color-heading);
   padding: 24px;
@@ -668,8 +666,7 @@ async function initializeAuthIfPossible() {
   strong {
     font-size: 21px;
     font-weight: 900;
-    letter-spacing: 0;
-    line-height: 1.42;
+    line-height: var(--lh-relaxed);
   }
 
   &:hover {
@@ -716,7 +713,7 @@ async function initializeAuthIfPossible() {
     color: var(--color-muted);
     font-size: 14px;
     font-weight: 800;
-    line-height: 1.55;
+    line-height: var(--lh-relaxed);
   }
 }
 
@@ -794,7 +791,7 @@ async function initializeAuthIfPossible() {
   display: grid;
   gap: 12px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   padding: 22px;
 
@@ -852,7 +849,7 @@ async function initializeAuthIfPossible() {
   min-width: 84px;
   height: 44px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: var(--color-surface);
   color: var(--color-heading);
   font-weight: 900;
@@ -875,7 +872,7 @@ async function initializeAuthIfPossible() {
   min-width: 120px;
   height: 44px;
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: var(--color-primary);
   color: var(--color-surface);
   font-weight: 900;
