@@ -3,6 +3,7 @@ import { ref, computed, onMounted, watch } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { getProperty, getPropertyRisk } from '@/api/propertyApi'
 import { createPropertyReport } from '@/api/reportApi'
+import { getReviews, createReview } from '@/api/reviewApi'
 import { roomTypeLabels } from '@/data/mockProperties'
 import { reportReasons } from '@/data/reportReasons'
 import { useFavorites } from '@/composables/useFavorites'
@@ -41,6 +42,67 @@ const isToggling = ref(false)
 
 const isFavorite = computed(() => property.value ? isFavorited(property.value.propertyId) : false)
 
+// reviews
+const reviews = ref([])
+const reviewsPage = ref(0)
+const reviewsTotalPages = ref(0)
+const isLoadingReviews = ref(false)
+const reviewNickname = ref('')
+const reviewContent = ref('')
+const isSubmittingReview = ref(false)
+const reviewErrorMessage = ref('')
+const reviewSuccessMessage = ref('')
+
+async function fetchReviews(page = 0) {
+  isLoadingReviews.value = true
+  try {
+    const data = await getReviews(props.id, page)
+    if (page === 0) {
+      reviews.value = data.content
+    } else {
+      reviews.value = [...reviews.value, ...data.content]
+    }
+    reviewsPage.value = data.number
+    reviewsTotalPages.value = data.totalPages
+  } finally {
+    isLoadingReviews.value = false
+  }
+}
+
+function loadMoreReviews() {
+  if (reviewsPage.value < reviewsTotalPages.value - 1) {
+    fetchReviews(reviewsPage.value + 1)
+  }
+}
+
+async function submitReview() {
+  if (!reviewNickname.value.trim() || !reviewContent.value.trim() || isSubmittingReview.value) return
+  isSubmittingReview.value = true
+  reviewErrorMessage.value = ''
+  reviewSuccessMessage.value = ''
+  try {
+    const result = await createReview(props.id, {
+      nickname: reviewNickname.value.trim(),
+      content: reviewContent.value.trim(),
+    })
+    reviews.value.unshift(result)
+    reviewNickname.value = ''
+    reviewContent.value = ''
+    reviewSuccessMessage.value = '후기가 등록되었습니다.'
+    setTimeout(() => { reviewSuccessMessage.value = '' }, 3000)
+  } catch {
+    reviewErrorMessage.value = '후기 등록에 실패했습니다. 잠시 후 다시 시도해 주세요.'
+  } finally {
+    isSubmittingReview.value = false
+  }
+}
+
+function formatDate(dateStr) {
+  if (!dateStr) return ''
+  const d = new Date(dateStr)
+  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
+}
+
 async function fetchProperty() {
   isLoading.value = true
   isError.value = false
@@ -59,9 +121,13 @@ async function fetchProperty() {
 
 onMounted(() => {
   fetchProperty()
+  fetchReviews(0)
   loadFavorites()
 })
-watch(() => props.id, fetchProperty)
+watch(() => props.id, () => {
+  fetchProperty()
+  fetchReviews(0)
+})
 
 async function handleFavorite() {
   if (!authStore.isAuthenticated) {
@@ -158,9 +224,7 @@ function getReportErrorMessage(error) {
 <template>
   <main class="page detail-page">
     <section class="section-container">
-      <RouterLink class="back-link" :to="{ name: 'home' }">매물 찾기로 돌아가기</RouterLink>
-
-      <div v-if="isLoading" class="placeholder">
+<div v-if="isLoading" class="placeholder">
         <strong>매물 정보를 불러오는 중입니다...</strong>
       </div>
 
@@ -169,112 +233,167 @@ function getReportErrorMessage(error) {
         <p>잠시 후 다시 시도해 주세요.</p>
       </div>
 
-      <div v-else-if="property" class="detail-layout">
-        <div class="gallery-shell">
-          <img v-if="imageUrl" :src="imageUrl" :alt="property.title" />
-          <div v-else class="gallery-placeholder">
-            <span>등록된 이미지가 없습니다</span>
+      <div v-else-if="property" class="detail-content">
+        <div class="detail-layout">
+          <div class="gallery-shell">
+            <img v-if="imageUrl" :src="imageUrl" :alt="property.title" />
+            <div v-else class="gallery-placeholder">
+              <span>등록된 이미지가 없습니다</span>
+            </div>
           </div>
-        </div>
 
-        <aside class="info-panel">
-          <p class="eyebrow">Property Detail</p>
-          <h1>{{ property.title }}</h1>
-          <strong>{{ priceLabel }}</strong>
-          <p>{{ property.roadAddress }}</p>
+          <aside class="info-panel">
+            <p class="eyebrow">Property Detail</p>
+            <h1>{{ property.title }}</h1>
+            <strong>{{ priceLabel }}</strong>
+            <p>{{ property.roadAddress }}</p>
 
-          <dl>
-            <div>
-              <dt>방 타입</dt>
-              <dd>{{ roomTypeLabels[property.roomType] }}</dd>
-            </div>
-            <div>
-              <dt>면적</dt>
-              <dd>{{ Number(property.area).toFixed(1) }}m2</dd>
-            </div>
-            <div>
-              <dt>층수</dt>
-              <dd>{{ property.floor }}층</dd>
-            </div>
-            <div>
-              <dt>연식</dt>
-              <dd>{{ property.buildYear }}년</dd>
-            </div>
-          </dl>
-
-          <div v-if="risk" class="risk-panel" :class="riskMeta[risk.label]?.class">
-            <div class="risk-header">
-              <span class="risk-badge">{{ riskMeta[risk.label]?.label }}</span>
-              <span v-if="risk.label !== 'UNKNOWN'" class="risk-score">위험 점수 {{ risk.score }}점</span>
-            </div>
-            <dl class="risk-detail">
-              <template v-if="property.rentType === 'JEONSE'">
-                <div v-if="risk.marketPriceAvg">
-                  <dt>주변 전세금 평균</dt>
-                  <dd>{{ Number(risk.marketPriceAvg).toLocaleString('ko-KR') }}만원</dd>
-                </div>
-              </template>
-              <template v-else>
-                <div v-if="risk.avgMonthlyRent != null">
-                  <dt>주변 평균 월세</dt>
-                  <dd>{{ Number(risk.avgMonthlyRent).toLocaleString('ko-KR') }}만원</dd>
-                </div>
-                <div v-if="risk.avgDeposit != null">
-                  <dt>주변 평균 보증금</dt>
-                  <dd>{{ Number(risk.avgDeposit).toLocaleString('ko-KR') }}만원</dd>
-                </div>
-              </template>
-              <div v-if="risk.priceGapRate != null">
-                <dt>시세 대비 차이</dt>
-                <dd>{{ risk.priceGapRate > 0 ? '+' : '' }}{{ risk.priceGapRate.toFixed(1) }}%</dd>
+            <dl>
+              <div>
+                <dt>방 타입</dt>
+                <dd>{{ roomTypeLabels[property.roomType] }}</dd>
               </div>
               <div>
-                <dt>신고 건수</dt>
-                <dd>{{ risk.reportCount }}건</dd>
+                <dt>면적</dt>
+                <dd>{{ Number(property.area).toFixed(1) }}m2</dd>
               </div>
               <div>
-                <dt>소유자 확인</dt>
-                <dd>{{ risk.ownerVerified ? '확인됨' : '미확인' }}</dd>
+                <dt>층수</dt>
+                <dd>{{ property.floor }}층</dd>
+              </div>
+              <div>
+                <dt>연식</dt>
+                <dd>{{ property.buildYear }}년</dd>
               </div>
             </dl>
-            <p v-if="risk.label === 'UNKNOWN'" class="risk-notice">
-              비교 가능한 주변 매물이 부족해 분석이 어렵습니다.
-            </p>
-          </div>
 
-          <div class="panel-actions">
-            <button
-              type="button"
-              :class="{ active: isFavorite }"
-              :disabled="isToggling"
-              @click="handleFavorite"
-            >
-              {{ isFavorite ? '♥ 찜 해제' : '♡ 찜하기' }}
-            </button>
-            <button
-              class="ghost"
-              type="button"
-              :class="{ 'compare-active': compareStore.has(property.propertyId) }"
-              :disabled="compareStore.isFull && !compareStore.has(property.propertyId)"
-              @click="compareStore.toggle(property)"
-            >
-              {{ compareStore.has(property.propertyId) ? '✓ 비교함에서 제거' : '+ 비교 추가' }}
-            </button>
-            <button
-              class="danger-ghost"
-              type="button"
-              @click="openReportModal"
-            >
-              의심 매물 신고
-            </button>
-          </div>
-          <p v-if="reportMessage" class="report-feedback report-feedback--success">
-            {{ reportMessage }}
-          </p>
-          <p v-if="reportErrorMessage && !isReportModalOpen" class="report-feedback report-feedback--error">
-            {{ reportErrorMessage }}
-          </p>
-        </aside>
+            <div v-if="risk" class="risk-panel" :class="riskMeta[risk.label]?.class">
+              <div class="risk-header">
+                <span class="risk-badge">{{ riskMeta[risk.label]?.label }}</span>
+                <span v-if="risk.label !== 'UNKNOWN'" class="risk-score">위험 점수 {{ risk.score }}점</span>
+              </div>
+              <dl class="risk-detail">
+                <template v-if="property.rentType === 'JEONSE'">
+                  <div v-if="risk.marketPriceAvg">
+                    <dt>주변 전세금 평균</dt>
+                    <dd>{{ Number(risk.marketPriceAvg).toLocaleString('ko-KR') }}만원</dd>
+                  </div>
+                </template>
+                <template v-else>
+                  <div v-if="risk.avgMonthlyRent != null">
+                    <dt>주변 평균 월세</dt>
+                    <dd>{{ Number(risk.avgMonthlyRent).toLocaleString('ko-KR') }}만원</dd>
+                  </div>
+                  <div v-if="risk.avgDeposit != null">
+                    <dt>주변 평균 보증금</dt>
+                    <dd>{{ Number(risk.avgDeposit).toLocaleString('ko-KR') }}만원</dd>
+                  </div>
+                </template>
+                <div v-if="risk.priceGapRate != null">
+                  <dt>시세 대비 차이</dt>
+                  <dd>{{ risk.priceGapRate > 0 ? '+' : '' }}{{ risk.priceGapRate.toFixed(1) }}%</dd>
+                </div>
+                <div>
+                  <dt>신고 건수</dt>
+                  <dd>{{ risk.reportCount }}건</dd>
+                </div>
+              </dl>
+              <p v-if="risk.label === 'UNKNOWN'" class="risk-notice">
+                비교 가능한 주변 매물이 부족해 분석이 어렵습니다.
+              </p>
+            </div>
+
+            <div class="panel-actions">
+              <button
+                type="button"
+                :class="{ active: isFavorite }"
+                :disabled="isToggling"
+                @click="handleFavorite"
+              >
+                {{ isFavorite ? '♥ 찜 해제' : '♡ 찜하기' }}
+              </button>
+              <button
+                class="ghost"
+                type="button"
+                :class="{ 'compare-active': compareStore.has(property.propertyId) }"
+                :disabled="compareStore.isFull && !compareStore.has(property.propertyId)"
+                @click="compareStore.toggle(property)"
+              >
+                {{ compareStore.has(property.propertyId) ? '✓ 비교함에서 제거' : '+ 비교 추가' }}
+              </button>
+              <button
+                class="danger-ghost"
+                type="button"
+                @click="openReportModal"
+              >
+                의심 매물 신고
+              </button>
+            </div>
+            <p v-if="reportMessage" class="report-feedback report-feedback--success">
+              {{ reportMessage }}
+            </p>
+            <p v-if="reportErrorMessage && !isReportModalOpen" class="report-feedback report-feedback--error">
+              {{ reportErrorMessage }}
+            </p>
+          </aside>
+        </div>
+
+        <section class="reviews-section">
+          <h2 class="reviews-section__title">거주 후기</h2>
+
+          <form class="review-form" @submit.prevent="submitReview">
+            <div class="review-form__row">
+              <input
+                v-model="reviewNickname"
+                class="review-form__nickname"
+                type="text"
+                placeholder="닉네임 (최대 20자)"
+                maxlength="20"
+              />
+              <button
+                class="review-form__submit"
+                type="submit"
+                :disabled="isSubmittingReview || !reviewNickname.trim() || !reviewContent.trim()"
+              >
+                {{ isSubmittingReview ? '등록 중...' : '후기 남기기' }}
+              </button>
+            </div>
+            <textarea
+              v-model="reviewContent"
+              class="review-form__textarea"
+              placeholder="이 건물에 살았던 경험을 자유롭게 남겨주세요. (최대 500자)"
+              maxlength="500"
+              rows="4"
+            />
+            <div class="review-form__footer">
+              <p class="review-form__count">{{ reviewContent.length }} / 500</p>
+              <p v-if="reviewSuccessMessage" class="review-feedback review-feedback--success">{{ reviewSuccessMessage }}</p>
+              <p v-if="reviewErrorMessage" class="review-feedback review-feedback--error">{{ reviewErrorMessage }}</p>
+            </div>
+          </form>
+
+          <div v-if="isLoadingReviews && reviews.length === 0" class="reviews-loading">불러오는 중...</div>
+          <p v-else-if="reviews.length === 0" class="reviews-empty">아직 후기가 없습니다. 첫 번째 후기를 남겨보세요!</p>
+          <ul v-else class="review-list">
+            <li v-for="review in reviews" :key="review.reviewId" class="review-item">
+              <div class="review-item__header">
+                <span class="review-item__nickname">{{ review.nickname }}</span>
+                <span class="review-item__date">{{ formatDate(review.createdAt) }}</span>
+              </div>
+              <p class="review-item__content">{{ review.content }}</p>
+            </li>
+          </ul>
+          <button
+            v-if="reviewsPage < reviewsTotalPages - 1"
+            class="reviews-load-more"
+            type="button"
+            :disabled="isLoadingReviews"
+            @click="loadMoreReviews"
+          >
+            더 보기
+          </button>
+        </section>
+
       </div>
 
       <div v-else class="placeholder">
@@ -350,22 +469,15 @@ function getReportErrorMessage(error) {
 
 <style lang="scss" scoped>
 .detail-page {
-  padding: 44px 0 76px;
+  padding: 28px 0 76px;
 }
 
-.back-link {
-  display: inline-flex;
-  margin-bottom: 18px;
-  color: var(--color-primary);
-  font-size: 14px;
-  font-weight: 900;
-}
 
 .detail-layout {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(320px, 0.8fr);
   gap: 24px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .gallery-shell,
@@ -380,9 +492,11 @@ function getReportErrorMessage(error) {
 .gallery-shell {
   position: relative;
   overflow: hidden;
-  aspect-ratio: 16 / 10;
+  min-height: 260px;
 
   img {
+    position: absolute;
+    inset: 0;
     width: 100%;
     height: 100%;
     object-fit: cover;
@@ -403,8 +517,8 @@ function getReportErrorMessage(error) {
 
 .info-panel {
   display: grid;
-  gap: 16px;
-  padding: 26px;
+  gap: 10px;
+  padding: 18px;
 
   h1 {
     color: var(--color-heading);
@@ -484,6 +598,10 @@ function getReportErrorMessage(error) {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
+
+  > div:last-child:nth-child(odd) {
+    grid-column: 1 / -1;
+  }
 
   dt {
     color: var(--color-muted);
@@ -710,6 +828,184 @@ function getReportErrorMessage(error) {
     font-size: 20px;
     font-weight: 900;
   }
+}
+
+.detail-content {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+.reviews-section {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding-top: 8px;
+  border-top: 2px solid var(--color-border);
+}
+
+.reviews-section__title {
+  color: var(--color-heading);
+  font-size: 18px;
+  font-weight: 900;
+}
+
+.review-form {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  padding: 20px;
+  display: grid;
+  gap: 12px;
+}
+
+.review-form__footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.review-form__row {
+  display: flex;
+  gap: 10px;
+}
+
+.review-form__nickname {
+  flex: 1;
+  height: 40px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 0 12px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--color-heading);
+  background: var(--color-bg-soft);
+  outline: none;
+
+  &:focus { border-color: var(--color-primary); background: var(--color-surface); }
+}
+
+.review-form__submit {
+  height: 40px;
+  padding: 0 20px;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: var(--color-surface);
+  font-size: 14px;
+  font-weight: 900;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover:not(:disabled) { background: var(--color-primary-dark); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.review-form__textarea {
+  width: 100%;
+  resize: vertical;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  font: inherit;
+  font-size: 14px;
+  color: var(--color-heading);
+  background: var(--color-bg-soft);
+  line-height: 1.6;
+  outline: none;
+
+  &:focus { border-color: var(--color-primary); background: var(--color-surface); }
+}
+
+.review-form__count {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.review-feedback {
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.review-feedback--success { background: #ecfdf3; color: #027a48; }
+.review-feedback--error   { background: #fff1f0; color: var(--color-danger); }
+
+.review-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.review-item {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  padding: 16px 18px;
+  display: grid;
+  gap: 8px;
+}
+
+.review-item__header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.review-item__nickname {
+  color: var(--color-heading);
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.review-item__date {
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.review-item__content {
+  color: var(--color-text);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.reviews-loading,
+.reviews-empty {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.reviews-load-more {
+  display: block;
+  margin: 0 auto;
+  height: 40px;
+  padding: 0 28px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-heading);
+  font-size: 14px;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 0.15s;
+
+  &:hover:not(:disabled) { background: var(--color-bg-soft); }
+  &:disabled { opacity: 0.5; cursor: not-allowed; }
 }
 
 @media (max-width: 900px) {
