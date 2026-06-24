@@ -1,5 +1,5 @@
 <script setup>
-import { reactive, ref, watch } from 'vue'
+import { computed, reactive, ref, watch } from 'vue'
 import RangeSlider from '@/components/RangeSlider.vue'
 
 const props = defineProps({
@@ -54,8 +54,25 @@ function resolveLocation(input) {
 }
 
 const DEPOSIT_MAX = 100000
+const DEPOSIT_LOG_STEPS = 100
+// k=2.6으로 500만원이 슬라이더 20% 지점에 위치
+const DEPOSIT_K = 2.6
 const RENT_MAX = 150
 const AREA_MAX = 200
+
+function depositToSlider(value) {
+  if (value <= 0) return 0
+  if (value >= DEPOSIT_MAX) return DEPOSIT_LOG_STEPS
+  const ratio = Math.log(value + 1) / Math.log(DEPOSIT_MAX + 1)
+  return Math.round(Math.pow(ratio, DEPOSIT_K) * DEPOSIT_LOG_STEPS)
+}
+
+function sliderToDeposit(pos) {
+  if (pos <= 0) return 0
+  if (pos >= DEPOSIT_LOG_STEPS) return DEPOSIT_MAX
+  const ratio = Math.pow(pos / DEPOSIT_LOG_STEPS, 1 / DEPOSIT_K)
+  return Math.round(Math.exp(ratio * Math.log(DEPOSIT_MAX + 1)) - 1)
+}
 
 const location = ref(props.initialLocation)
 const rentType = ref(null)
@@ -63,6 +80,11 @@ const roomType = ref(null)
 const depositRange = ref([0, DEPOSIT_MAX])
 const rentRange = ref([0, RENT_MAX])
 const areaRange = ref([0, AREA_MAX])
+
+const depositSliderRange = computed(() => [
+  depositToSlider(depositRange.value[0]),
+  depositToSlider(depositRange.value[1]),
+])
 
 const depositInputs = reactive({ min: '', max: '' })
 const rentInputs = reactive({ min: '', max: '' })
@@ -94,7 +116,9 @@ applyParams(props.initialParams)
 watch(() => props.initialLocation, (v) => { location.value = v })
 watch(() => props.initialParams, applyParams, { deep: true })
 
-function syncDepositSlider([min, max]) {
+function syncDepositSlider([posMin, posMax]) {
+  const min = sliderToDeposit(posMin)
+  const max = sliderToDeposit(posMax)
   depositRange.value = [min, max]
   depositInputs.min = min > 0 ? String(min) : ''
   depositInputs.max = max < DEPOSIT_MAX ? String(max) : ''
@@ -182,7 +206,6 @@ function handleSearch() {
               { value: 'ONE_ROOM', label: '원룸' },
               { value: 'TWO_ROOM', label: '투룸' },
               { value: 'OFFICETEL', label: '오피스텔' },
-              { value: 'APARTMENT', label: '아파트' },
             ]"
             :key="rt.value"
             type="button"
@@ -206,7 +229,7 @@ function handleSearch() {
           <input v-model="depositInputs.max" class="range-text" placeholder="최대" data-testid="deposit-max" @input="onDepositInput" />
         </div>
         <div @pointerup="handleSearch" @touchend="handleSearch">
-          <RangeSlider :min="0" :max="DEPOSIT_MAX" :step="100" :model-value="depositRange" @update:model-value="syncDepositSlider" />
+          <RangeSlider :min="0" :max="DEPOSIT_LOG_STEPS" :step="1" :model-value="depositSliderRange" @update:model-value="syncDepositSlider" />
         </div>
       </div>
 
