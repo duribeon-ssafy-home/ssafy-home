@@ -76,7 +76,12 @@ public class RecommendationService {
                 .toList();
         sw.stop();
 
-        log.info("\n[추천 정렬] 후보 {}건\n{}", candidates.size(), sw.prettyPrint());
+        StringBuilder sb = new StringBuilder();
+        for (StopWatch.TaskInfo task : sw.getTaskInfo()) {
+            sb.append(String.format("  %-30s %.3fs%n", task.getTaskName(), task.getTimeSeconds()));
+        }
+        log.info("[추천 정렬] 후보 {}건 | 총 {}s\n{}", candidates.size(),
+                String.format("%.3f", sw.getTotalTimeSeconds()), sb);
 
         return new PageImpl<>(content, pageable, scoredProperties.size());
     }

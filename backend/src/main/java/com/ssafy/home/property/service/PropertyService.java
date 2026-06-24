@@ -97,18 +97,9 @@ public class PropertyService {
     private PropertySearchCondition normalizeCondition(PropertySearchCondition condition) {
         if (condition == null) {
             return new PropertySearchCondition(
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
+                    null, null, null, null, null,
+                    null, null, null, null, null,
+                    null, null, null, null, null, null
             );
         }
 
@@ -124,7 +115,11 @@ public class PropertyService {
                 condition.maxMonthlyRent(),
                 condition.minArea(),
                 condition.maxArea(),
-                condition.facilityCountMin()
+                condition.facilityCountMin(),
+                condition.swLat(),
+                condition.swLng(),
+                condition.neLat(),
+                condition.neLng()
         );
     }
 
