@@ -1,13 +1,15 @@
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, nextTick, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import {
   getLifestyleQuestions,
   previewLifestyleResult,
   saveLifestyleResult,
 } from '@/api/lifestyleApi'
+import { searchLocations } from '@/api/locationApi'
 import { fallbackLifestyleQuestions, normalizeLifestyleQuestions } from '@/data/lifestyle'
 import { useAuthStore } from '@/stores/auth'
+import { resolveLocationParam } from '@/utils/locationFilter'
 import {
   createLifestyleAnswerPayload,
   createLifestyleResultSnapshot,
@@ -21,17 +23,27 @@ const questions = ref([])
 const currentIndex = ref(0)
 const answerMap = ref({})
 const selectedAnswer = ref('')
-const budgetMode = ref('custom')
 const monthlyRentInput = ref('')
 const depositInput = ref('')
+const preferredLocationInput = ref('')
+const selectedPreferredLocation = ref(null)
+const locationSuggestions = ref([])
+const isLocationMenuOpen = ref(false)
+const isLocationLoading = ref(false)
+const locationSearchTimer = ref(null)
+const activeLocationIndex = ref(-1)
+const locationMenuRef = ref(null)
 const isLoading = ref(true)
 const isAdvancing = ref(false)
 const isSubmittingResult = ref(false)
 const noticeMessage = ref('')
 const errorMessage = ref('')
+let locationRequestId = 0
 
 const currentQuestion = computed(() => questions.value[currentIndex.value])
-const isBudgetStep = computed(() => questions.value.length > 0 && currentIndex.value >= questions.value.length)
+const isBudgetStep = computed(
+  () => questions.value.length > 0 && currentIndex.value >= questions.value.length,
+)
 const totalSteps = computed(() => (questions.value.length || 6) + 1)
 const progress = computed(() => {
   if (!totalSteps.value) {
@@ -43,14 +55,21 @@ const progress = computed(() => {
 const answeredCount = computed(() => Object.keys(answerMap.value).length)
 const canGoPrevious = computed(() => currentIndex.value > 0 && !isAdvancing.value)
 const budgetValues = computed(() => {
-  if (budgetMode.value !== 'custom') {
-    return {}
+  const preferredLocation =
+    selectedPreferredLocation.value?.fullName === preferredLocationInput.value
+      ? selectedPreferredLocation.value
+      : resolveLocationParam(preferredLocationInput.value)
+  const values = {
+    preferredSido: preferredLocation.sido,
+    preferredGugun: preferredLocation.gugun,
+    preferredDong: preferredLocation.dong,
   }
 
   const monthlyRentMax = parseBudgetNumber(monthlyRentInput.value)
   const depositMax = parseBudgetNumber(depositInput.value)
 
   return {
+    ...values,
     monthlyRentMax,
     depositMax,
   }
@@ -122,7 +141,11 @@ async function finishSurvey() {
   try {
     await initializeAuthIfPossible()
 
-    const payload = createLifestyleAnswerPayload(questions.value, answerMap.value, budgetValues.value)
+    const payload = createLifestyleAnswerPayload(
+      questions.value,
+      answerMap.value,
+      budgetValues.value,
+    )
     const result = authStore.isAuthenticated
       ? await saveLifestyleResult(payload)
       : await previewLifestyleResult(payload)
@@ -131,6 +154,9 @@ async function finishSurvey() {
       budget: {
         monthlyRentMax: payload.monthlyRentMax,
         depositMax: payload.depositMax,
+        preferredSido: payload.preferredSido,
+        preferredGugun: payload.preferredGugun,
+        preferredDong: payload.preferredDong,
       },
     })
 
@@ -146,9 +172,115 @@ async function finishSurvey() {
   }
 }
 
-function selectBudgetMode(mode) {
-  budgetMode.value = mode
-  errorMessage.value = ''
+function selectPreferredLocation(location) {
+  selectedPreferredLocation.value = location
+  preferredLocationInput.value = location.fullName
+  locationSuggestions.value = []
+  isLocationMenuOpen.value = false
+  isLocationLoading.value = false
+  activeLocationIndex.value = -1
+  if (locationSearchTimer.value) {
+    window.clearTimeout(locationSearchTimer.value)
+  }
+  locationRequestId += 1
+}
+
+function closeLocationMenuSoon() {
+  window.setTimeout(() => {
+    isLocationMenuOpen.value = false
+  }, 120)
+}
+
+function handlePreferredLocationInput(event) {
+  const keyword = event.target.value
+  if (preferredLocationInput.value !== keyword) {
+    preferredLocationInput.value = keyword
+  }
+  scheduleLocationSearch(keyword)
+}
+
+function scheduleLocationSearch(keyword) {
+  if (selectedPreferredLocation.value?.fullName === keyword) {
+    locationSuggestions.value = []
+    isLocationMenuOpen.value = false
+    isLocationLoading.value = false
+    activeLocationIndex.value = -1
+    return
+  }
+
+  selectedPreferredLocation.value = null
+  activeLocationIndex.value = -1
+
+  if (locationSearchTimer.value) {
+    window.clearTimeout(locationSearchTimer.value)
+  }
+
+  const normalizedKeyword = String(keyword || '').trim()
+  if (normalizedKeyword.length < 2) {
+    locationSuggestions.value = []
+    isLocationMenuOpen.value = false
+    isLocationLoading.value = false
+    activeLocationIndex.value = -1
+    return
+  }
+
+  isLocationMenuOpen.value = true
+  isLocationLoading.value = true
+  const requestId = ++locationRequestId
+  locationSearchTimer.value = window.setTimeout(async () => {
+    try {
+      const suggestions = await searchLocations(normalizedKeyword)
+      if (requestId !== locationRequestId) return
+      locationSuggestions.value = suggestions
+      isLocationMenuOpen.value = true
+      isLocationLoading.value = false
+      activeLocationIndex.value = suggestions.length ? 0 : -1
+    } catch {
+      if (requestId !== locationRequestId) return
+      locationSuggestions.value = []
+      isLocationMenuOpen.value = true
+      isLocationLoading.value = false
+      activeLocationIndex.value = -1
+    }
+  }, 220)
+}
+
+function handlePreferredLocationKeydown(event) {
+  if (!isLocationMenuOpen.value) return
+
+  const lastIndex = locationSuggestions.value.length - 1
+  if (event.key === 'ArrowDown') {
+    event.preventDefault()
+    if (lastIndex < 0) return
+    activeLocationIndex.value =
+      activeLocationIndex.value >= lastIndex ? 0 : activeLocationIndex.value + 1
+    scrollActiveLocationIntoView()
+  }
+
+  if (event.key === 'ArrowUp') {
+    event.preventDefault()
+    if (lastIndex < 0) return
+    activeLocationIndex.value =
+      activeLocationIndex.value <= 0 ? lastIndex : activeLocationIndex.value - 1
+    scrollActiveLocationIntoView()
+  }
+
+  if (event.key === 'Enter' && activeLocationIndex.value >= 0) {
+    event.preventDefault()
+    selectPreferredLocation(locationSuggestions.value[activeLocationIndex.value])
+  }
+
+  if (event.key === 'Escape') {
+    isLocationMenuOpen.value = false
+    activeLocationIndex.value = -1
+  }
+}
+
+async function scrollActiveLocationIntoView() {
+  await nextTick()
+  locationMenuRef.value
+    ?.querySelector(`[data-location-index="${activeLocationIndex.value}"]`)
+    ?.scrollIntoView({ block: 'nearest' })
 }
 
 function parseBudgetNumber(value) {
@@ -198,32 +330,52 @@ async function initializeAuthIfPossible() {
         <section v-if="isBudgetStep" key="budget" class="question-panel budget-panel">
           <div class="question-copy">
             <span class="category">예산 기준</span>
-            <h2>원하는 월세와 보증금이 있나요?</h2>
-            <p>선택 사항이에요. 알고 있는 범위만 입력하면 그 금액을 추천순 점수에 먼저 반영합니다.</p>
+            <h2>선호 지역과 원하는 가격대가 있나요?</h2>
+            <p>
+              지역은 기본 검색 조건으로 저장하고, 알고 있는 예산은 추천순 점수에 먼저 반영합니다.
+            </p>
           </div>
 
-          <div class="budget-options" role="group" aria-label="예산 입력 방식">
-            <button
-              class="budget-mode"
-              :class="{ 'budget-mode--active': budgetMode === 'custom' }"
-              type="button"
-              @click="selectBudgetMode('custom')"
-            >
-              <strong>직접 입력할래요</strong>
-              <span>월세, 보증금을 알고 있어요</span>
-            </button>
-            <button
-              class="budget-mode"
-              :class="{ 'budget-mode--active': budgetMode === 'unknown' }"
-              type="button"
-              @click="selectBudgetMode('unknown')"
-            >
-              <strong>잘 모르겠어요</strong>
-              <span>기본 기준으로 바로 볼게요</span>
-            </button>
-          </div>
+          <label class="budget-field location-preference-field">
+            <span>선호 지역</span>
+            <div class="location-control">
+              <input
+                v-model="preferredLocationInput"
+                data-testid="preferred-location-input"
+                type="search"
+                autocomplete="off"
+                placeholder="예: 서울 강남구 역삼동"
+                @input="handlePreferredLocationInput"
+                @focus="isLocationMenuOpen = preferredLocationInput.trim().length >= 2"
+                @keydown="handlePreferredLocationKeydown"
+                @blur="closeLocationMenuSoon"
+              />
+              <div
+                v-if="isLocationMenuOpen"
+                ref="locationMenuRef"
+                class="location-menu"
+                data-testid="preferred-location-suggestions"
+              >
+                <p v-if="isLocationLoading">지역 후보를 찾고 있습니다</p>
+                <button
+                  v-for="(location, index) in locationSuggestions"
+                  :key="location.code"
+                  v-show="!isLocationLoading"
+                  type="button"
+                  :class="{ 'location-menu__item--active': activeLocationIndex === index }"
+                  :data-location-index="index"
+                  @mousedown.prevent="selectPreferredLocation(location)"
+                >
+                  <strong>{{ location.fullName }}</strong>
+                </button>
+                <p v-if="!isLocationLoading && !locationSuggestions.length">
+                  입력한 지역명으로 검색
+                </p>
+              </div>
+            </div>
+          </label>
 
-          <div v-if="budgetMode === 'custom'" class="budget-grid">
+          <div class="budget-grid">
             <label class="budget-field">
               <span>월세 상한</span>
               <div>
@@ -253,13 +405,11 @@ async function initializeAuthIfPossible() {
                 <em>만원 이하</em>
               </div>
             </label>
-
-            <p class="budget-empty-note">아직 예산이 애매하면 빈칸으로 두고 결과를 봐도 괜찮아요.</p>
           </div>
 
-          <div v-else class="budget-fallback">
-            <strong>기본 추천 기준으로 볼게요</strong>
-            <p>처음 자취하거나 예산이 아직 애매하면, 앞선 답변을 바탕으로 기존 기준을 적용합니다.</p>
+          <div class="budget-optional-note">
+            <strong>예산을 아직 몰라도 괜찮아요.</strong>
+            <span>월세나 보증금이 애매하면 빈칸으로 두고 바로 결과를 봐도 됩니다.</span>
           </div>
         </section>
 
@@ -545,67 +695,28 @@ async function initializeAuthIfPossible() {
 }
 
 .budget-panel {
-  grid-template-rows: auto auto 1fr;
+  grid-template-rows: auto auto auto 1fr;
 }
 
-.budget-options {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.budget-mode {
+.budget-optional-note {
   display: grid;
   gap: 6px;
-  min-height: 82px;
-  border: 1px solid var(--color-border);
+  border: 1px solid rgba(54, 95, 145, 0.2);
   border-radius: var(--radius-sm);
-  background: var(--color-surface);
-  color: var(--color-muted);
-  padding: 16px 18px;
-  text-align: left;
-  transition:
-    background-color var(--transition-fast),
-    border-color var(--transition-fast),
-    box-shadow var(--transition-fast),
-    color var(--transition-fast),
-    transform var(--transition-fast);
+  background: var(--color-primary-soft);
+  padding: 18px 20px;
 
   strong {
-    color: var(--color-heading);
-    font-size: 16px;
+    color: var(--color-primary-dark);
+    font-size: 17px;
     font-weight: 900;
   }
 
   span {
-    font-size: 13px;
+    color: var(--color-muted);
+    font-size: 14px;
     font-weight: 800;
-    line-height: 1.4;
-  }
-
-  &:hover {
-    border-color: rgba(54, 95, 145, 0.34);
-    box-shadow: 0 14px 28px rgba(54, 95, 145, 0.1);
-    transform: translateY(-1px);
-  }
-}
-
-.budget-mode--active {
-  border-color: var(--color-primary);
-  background: var(--color-primary-soft);
-  box-shadow: inset 0 0 0 1px rgba(54, 95, 145, 0.14);
-
-  strong {
-    color: var(--color-primary-dark);
-  }
-}
-
-.budget-mode--active:nth-child(2) {
-  border-color: rgba(34, 126, 91, 0.42);
-  background: rgba(231, 246, 238, 0.95);
-
-  strong {
-    color: #227e5b;
+    line-height: 1.55;
   }
 }
 
@@ -615,12 +726,68 @@ async function initializeAuthIfPossible() {
   gap: 18px;
 }
 
-.budget-empty-note {
-  grid-column: 1 / -1;
-  margin: -4px 0 0;
-  color: var(--color-muted);
-  font-size: 14px;
-  font-weight: 800;
+.location-preference-field {
+  > .location-control {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.location-control {
+  position: relative;
+}
+
+.location-menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 120;
+  display: grid;
+  grid-template-columns: 1fr;
+  width: 100%;
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, 0.14);
+  overscroll-behavior: contain;
+
+  button {
+    display: flex;
+    align-items: center;
+    grid-column: 1 / -1;
+    min-height: 46px;
+    background: var(--color-surface);
+    color: var(--color-heading);
+    text-align: left;
+    padding: 0 13px;
+    transition:
+      background-color var(--transition-fast),
+      color var(--transition-fast);
+
+    &:hover {
+      background: var(--color-primary-soft);
+      color: var(--color-primary-dark);
+    }
+  }
+
+  strong {
+    font-size: 14px;
+    font-weight: 900;
+  }
+
+  p {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 12px;
+    font-weight: 800;
+    padding: 14px;
+  }
+}
+
+.location-menu__item--active {
+  background: var(--color-primary-soft) !important;
+  color: var(--color-primary-dark) !important;
 }
 
 .budget-field {
@@ -637,7 +804,7 @@ async function initializeAuthIfPossible() {
     font-weight: 900;
   }
 
-  div {
+  > div {
     display: grid;
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;
@@ -668,29 +835,6 @@ async function initializeAuthIfPossible() {
     font-style: normal;
     font-weight: 900;
     white-space: nowrap;
-  }
-}
-
-.budget-fallback {
-  display: grid;
-  align-content: center;
-  gap: 8px;
-  min-height: 160px;
-  border: 1px solid rgba(54, 95, 145, 0.18);
-  border-radius: var(--radius-sm);
-  background: var(--color-primary-soft);
-  padding: 24px;
-
-  strong {
-    color: var(--color-primary-dark);
-    font-size: 18px;
-    font-weight: 900;
-  }
-
-  p {
-    color: var(--color-muted);
-    font-weight: 700;
-    line-height: 1.6;
   }
 }
 

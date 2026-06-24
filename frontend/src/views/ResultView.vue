@@ -2,8 +2,12 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { getMyLatestLifestyleResult, saveLifestyleResult } from '@/api/lifestyleApi'
+import { getRecommendations } from '@/api/recommendationApi'
+import PropertyCard from '@/components/PropertyCard.vue'
 import { createLifestylePresetChips, lifestyleTypeMeta } from '@/data/lifestyle'
+import { useSearchStore } from '@/stores/search'
 import { useAuthStore } from '@/stores/auth'
+import { buildLocationText, extractPreferredLocation } from '@/utils/locationFilter'
 import balancedCharacter from '@/assets/images/lifestyle/balanced.png'
 import carefulCharacter from '@/assets/images/lifestyle/careful.png'
 import cozyCharacter from '@/assets/images/lifestyle/cozy.png'
@@ -21,10 +25,13 @@ import {
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
+const searchStore = useSearchStore()
 
 const result = ref(null)
+const recommendedProperties = ref([])
 const isLoading = ref(true)
 const isSaving = ref(false)
+const isLoadingRecommendations = ref(false)
 const noticeMessage = ref('')
 const errorMessage = ref('')
 
@@ -74,6 +81,9 @@ const hasAnswers = computed(
 const presetChips = computed(() =>
   createLifestylePresetChips(result.value?.filterPreset, meta.value?.chips || []),
 )
+const preferredLocationText = computed(() =>
+  buildLocationText(extractPreferredLocation(result.value?.filterPreset)),
+)
 
 onMounted(loadResult)
 
@@ -97,6 +107,7 @@ async function loadResult() {
         await saveCurrentResult({ replaceQuery: true })
       }
 
+      await loadRecommendedPreview()
       return
     }
 
@@ -114,6 +125,7 @@ async function loadSavedResult() {
     const snapshot = createLifestyleResultSnapshot(savedResult, [], { saved: true })
     result.value = snapshot
     writeLifestyleResultSnapshot(snapshot)
+    await loadRecommendedPreview()
   } catch (error) {
     if (error.response?.data?.errorCode !== 'LIFESTYLE_RESULT_NOT_FOUND') {
       errorMessage.value =
@@ -157,6 +169,7 @@ async function saveCurrentResult(options = {}) {
     result.value = snapshot
     writeLifestyleResultSnapshot(snapshot)
     noticeMessage.value = '설문 결과가 내 선호 유형으로 저장되었습니다.'
+    await loadRecommendedPreview()
 
     if (replaceQuery && route.query.saveLifestyle) {
       await router.replace({ name: 'result' })
@@ -166,6 +179,49 @@ async function saveCurrentResult(options = {}) {
   } finally {
     isSaving.value = false
   }
+}
+
+function buildRecommendationParams(filterPreset = {}) {
+  const params = {}
+  const location = extractPreferredLocation(filterPreset)
+
+  if (location.sido) params.sido = location.sido
+  if (location.gugun) params.gugun = location.gugun
+  if (location.dong) params.dong = location.dong
+  if (filterPreset.depositMax != null) params.maxDeposit = filterPreset.depositMax
+  if (filterPreset.monthlyRentMax != null) params.maxMonthlyRent = filterPreset.monthlyRentMax
+  if (filterPreset.areaMin != null) params.minArea = filterPreset.areaMin
+  if (filterPreset.facilityCountMin != null) params.facilityCountMin = filterPreset.facilityCountMin
+
+  return params
+}
+
+async function loadRecommendedPreview() {
+  if (!isSaved.value || !authStore.isAuthenticated) {
+    recommendedProperties.value = []
+    return
+  }
+
+  isLoadingRecommendations.value = true
+
+  try {
+    const page = await getRecommendations({
+      ...buildRecommendationParams(result.value?.filterPreset),
+      page: 0,
+      size: 3,
+    })
+    recommendedProperties.value = page.content
+  } catch {
+    recommendedProperties.value = []
+  } finally {
+    isLoadingRecommendations.value = false
+  }
+}
+
+async function goToRecommendedProperties() {
+  const params = buildRecommendationParams(result.value?.filterPreset)
+  searchStore.setSearch(params, preferredLocationText.value)
+  await router.push({ name: 'home', query: { lifestyle: '1' } })
 }
 
 async function initializeAuthIfPossible() {
@@ -186,7 +242,8 @@ async function initializeAuthIfPossible() {
       <p class="eyebrow">자취TI</p>
       <h1>아직 분석된 자취TI 결과가 없습니다</h1>
       <p>
-        자취 성향 테스트를 완료하면 나에게 맞는 주거 유형과 우선 추천 기준을 바로 확인할 수 있습니다.
+        자취 성향 테스트를 완료하면 나에게 맞는 주거 유형과 우선 추천 기준을 바로 확인할 수
+        있습니다.
       </p>
       <RouterLink class="primary-link" :to="{ name: 'survey' }">자취TI 시작하기</RouterLink>
     </section>
@@ -226,22 +283,58 @@ async function initializeAuthIfPossible() {
     </section>
 
     <section v-if="hasResult" class="result-status-section">
-      <div class="section-container status-panel" :class="{ 'status-panel--saved': isSaved }">
-        <div>
-          <p class="eyebrow">{{ isSaved ? 'Saved Preference' : 'Temporary Preference' }}</p>
-          <h2>{{ isSaved ? '저장된 선호 유형입니다' : '현재 결과는 임시 저장 중입니다' }}</h2>
+      <div
+        v-if="isSaved"
+        class="section-container status-panel status-panel--saved recommendation-panel"
+      >
+        <div class="recommendation-panel__heading">
+          <p class="eyebrow">Recommended Homes</p>
+          <h2>자취TI 기준으로 먼저 볼 만한 매물</h2>
           <p>
-            {{
-              isSaved
-                ? '마이페이지에서 언제든 다시 확인할 수 있습니다.'
-                : '로그인하면 이 결과를 내 선호 유형으로 저장하고 나중에 다시 볼 수 있습니다.'
-            }}
+            {{ preferredLocationText || '저장된 선호 조건' }} 기준으로 어울리는 매물을 일부만
+            보여드려요.
           </p>
         </div>
 
         <div class="result-actions">
+          <button class="primary-link" type="button" @click="goToRecommendedProperties">
+            자세히 보기
+          </button>
+          <RouterLink class="secondary-link" :to="{ name: 'survey' }">자취TI 다시 하기</RouterLink>
+          <RouterLink class="secondary-link" :to="{ name: 'my-page' }"
+            >마이페이지에서 보기</RouterLink
+          >
+        </div>
+
+        <div v-if="isLoadingRecommendations" class="recommendation-preview-state">
+          추천 매물을 불러오는 중입니다...
+        </div>
+        <div v-else-if="recommendedProperties.length" class="recommendation-preview-grid">
+          <PropertyCard
+            v-for="property in recommendedProperties"
+            :key="property.propertyId"
+            :property="property"
+          />
+        </div>
+        <div v-else class="recommendation-preview-state">
+          지금 조건에 맞는 추천 매물이 없습니다. 자세히 보기에서 조건을 조금 넓혀볼 수 있어요.
+        </div>
+
+        <p v-if="noticeMessage" class="form-message form-message--success">{{ noticeMessage }}</p>
+        <p v-if="errorMessage" class="form-message form-message--error" role="alert">
+          {{ errorMessage }}
+        </p>
+      </div>
+
+      <div v-else class="section-container status-panel">
+        <div>
+          <p class="eyebrow">Temporary Preference</p>
+          <h2>현재 결과는 임시 저장 중입니다</h2>
+          <p>로그인하면 이 결과를 내 선호 유형으로 저장하고 나중에 다시 볼 수 있습니다.</p>
+        </div>
+
+        <div class="result-actions">
           <button
-            v-if="!isSaved"
             class="primary-link"
             type="button"
             :disabled="isSaving"
@@ -256,9 +349,6 @@ async function initializeAuthIfPossible() {
             }}
           </button>
           <RouterLink class="secondary-link" :to="{ name: 'survey' }">자취TI 다시 하기</RouterLink>
-          <RouterLink v-if="isSaved" class="secondary-link" :to="{ name: 'my-page' }">
-            마이페이지에서 보기
-          </RouterLink>
         </div>
 
         <p v-if="noticeMessage" class="form-message form-message--success">{{ noticeMessage }}</p>
@@ -463,6 +553,37 @@ async function initializeAuthIfPossible() {
   border-color: rgba(54, 95, 145, 0.24);
 }
 
+.recommendation-panel__heading,
+.recommendation-preview-grid,
+.recommendation-preview-state {
+  grid-column: 1 / -1;
+}
+
+.recommendation-panel {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: start;
+}
+
+.recommendation-panel__heading {
+  max-width: 720px;
+}
+
+.recommendation-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.recommendation-preview-state {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface-muted);
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 800;
+  padding: 18px;
+}
+
 .result-actions {
   display: flex;
   flex-wrap: wrap;
@@ -582,6 +703,10 @@ async function initializeAuthIfPossible() {
 
   .result-actions {
     justify-content: flex-start;
+  }
+
+  .recommendation-preview-grid {
+    grid-template-columns: 1fr;
   }
 
   .result-copy--with-character {

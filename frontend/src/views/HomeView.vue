@@ -6,13 +6,23 @@ import PropertyCard from '@/components/PropertyCard.vue'
 import { getMyLatestLifestyleResult } from '@/api/lifestyleApi'
 import { getProperties } from '@/api/propertyApi'
 import { getRecommendations } from '@/api/recommendationApi'
-import {
-  createLifestylePresetChips,
-  lifestyleTypeMeta,
-} from '@/data/lifestyle'
+import { createLifestylePresetChips, lifestyleTypeMeta } from '@/data/lifestyle'
 import { useFavorites } from '@/composables/useFavorites'
 import { useAuthStore } from '@/stores/auth'
 import { useSearchStore } from '@/stores/search'
+import {
+  buildLocationText,
+  extractPreferredLocation,
+  resolveLocationParam,
+} from '@/utils/locationFilter'
+import balancedCharacter from '@/assets/images/lifestyle/balanced.png'
+import carefulCharacter from '@/assets/images/lifestyle/careful.png'
+import cozyCharacter from '@/assets/images/lifestyle/cozy.png'
+import flexibleCharacter from '@/assets/images/lifestyle/flexible.png'
+import practicalCharacter from '@/assets/images/lifestyle/practical.png'
+import savingCharacter from '@/assets/images/lifestyle/saving.png'
+import spaciousCharacter from '@/assets/images/lifestyle/spacious.png'
+import thriftyCharacter from '@/assets/images/lifestyle/thrifty.png'
 
 const authStore = useAuthStore()
 const searchStore = useSearchStore()
@@ -41,6 +51,19 @@ const lifestyleMeta = computed(() =>
     ? lifestyleTypeMeta[lifestyleResult.value.lifestyleType]
     : null,
 )
+const lifestyleCharacters = {
+  LIVING_COST_HOME_BALANCED: balancedCharacter,
+  LIVING_COST_COMPACT: thriftyCharacter,
+  LIVING_FLEXIBLE_HOME: cozyCharacter,
+  LIVING_FLEXIBLE_COMPACT: practicalCharacter,
+  LOCATION_FLEXIBLE_COST_HOME: carefulCharacter,
+  LOCATION_FLEXIBLE_COST_COMPACT: savingCharacter,
+  LOCATION_FLEXIBLE_HOME: spaciousCharacter,
+  LOCATION_FLEXIBLE_COMPACT: flexibleCharacter,
+}
+const lifestyleCharacterImage = computed(
+  () => lifestyleCharacters[lifestyleResult.value?.lifestyleType] || '',
+)
 const recommendationChips = computed(() =>
   createLifestylePresetChips(lifestyleResult.value?.filterPreset, []).slice(0, 4),
 )
@@ -60,57 +83,6 @@ const recommendationNoticeDescription = computed(() => {
 })
 const activeFilters = ref({})
 const activeRentType = ref(null)
-
-const SIDO_ALIASES = {
-  '서울': '서울특별시', '서울시': '서울특별시',
-  '부산': '부산광역시', '부산시': '부산광역시',
-  '대구': '대구광역시', '대구시': '대구광역시',
-  '인천': '인천광역시', '인천시': '인천광역시',
-  '광주': '광주광역시', '광주시': '광주광역시',
-  '대전': '대전광역시', '대전시': '대전광역시',
-  '울산': '울산광역시', '울산시': '울산광역시',
-  '세종': '세종특별자치시', '세종시': '세종특별자치시',
-  '경기': '경기도',
-  '강원': '강원특별자치도', '강원도': '강원특별자치도',
-  '충북': '충청북도',
-  '충남': '충청남도',
-  '전남': '전라남도',
-  '전북': '전북특별자치도',
-  '경남': '경상남도',
-  '경북': '경상북도',
-  '제주': '제주특별자치도', '제주도': '제주특별자치도',
-}
-
-function resolveLocationParam(input) {
-  const v = input.trim()
-  if (!v) return {}
-
-  const parts = v.split(/\s+/)
-
-  if (parts.length === 1) {
-    const part = parts[0]
-    if (SIDO_ALIASES[part]) return { sido: SIDO_ALIASES[part] }
-    if (/(특별시|광역시|특별자치시|특별자치도|도)$/.test(part)) return { sido: part }
-    if (/[구군시]$/.test(part)) return { gugun: part }
-    return { dong: part }
-  }
-
-  const result = {}
-  let lastUnmatched = null
-  for (const part of parts) {
-    if (SIDO_ALIASES[part]) {
-      result.sido = SIDO_ALIASES[part]
-    } else if (/(특별시|광역시|특별자치시|특별자치도|도)$/.test(part)) {
-      result.sido = part
-    } else if (/[구군시]$/.test(part)) {
-      result.gugun = part
-    } else {
-      lastUnmatched = part
-    }
-  }
-  if (lastUnmatched) result.dong = lastUnmatched
-  return Object.keys(result).length ? result : { dong: v }
-}
 
 const visiblePages = computed(() => {
   if (totalPages.value <= 1) return []
@@ -195,6 +167,30 @@ function buildSearchParams(filters) {
   return params
 }
 
+function buildPresetSearchParams(filterPreset = {}) {
+  const params = {}
+  const location = extractPreferredLocation(filterPreset)
+
+  if (location.sido) params.sido = location.sido
+  if (location.gugun) params.gugun = location.gugun
+  if (location.dong) params.dong = location.dong
+  if (filterPreset.depositMax != null) params.maxDeposit = filterPreset.depositMax
+  if (filterPreset.monthlyRentMax != null) params.maxMonthlyRent = filterPreset.monthlyRentMax
+  if (filterPreset.areaMin != null) params.minArea = filterPreset.areaMin
+  if (filterPreset.facilityCountMin != null) params.facilityCountMin = filterPreset.facilityCountMin
+
+  return params
+}
+
+function createInitialFiltersFromParams(params = {}, locationText = '') {
+  return {
+    location: locationText,
+    deposit: params.maxDeposit != null ? String(params.maxDeposit) : '',
+    monthlyRent: params.maxMonthlyRent != null ? String(params.maxMonthlyRent) : '',
+    roomType: params.roomType || 'ALL',
+  }
+}
+
 async function handleSearch(filters) {
   const params = buildSearchParams(filters)
   activeFilters.value = params
@@ -240,22 +236,23 @@ function scrollToProperties() {
 }
 
 async function loadInitialProperties() {
-  const defaultParams = {}
+  let defaultParams = {}
+  let defaultLocationText = ''
 
   if (authStore.isAuthenticated) {
     try {
       const result = await getMyLatestLifestyleResult()
       lifestyleResult.value = result
       sortOrder.value = 'recommendation'
-      initialFilters.value = {
-        location: '',
-        deposit: '',
-        monthlyRent: '',
-        roomType: 'ALL',
-      }
+      defaultParams = Object.keys(searchStore.params).length
+        ? { ...searchStore.params }
+        : buildPresetSearchParams(result.filterPreset)
+      defaultLocationText =
+        searchStore.locationText || buildLocationText(extractPreferredLocation(result.filterPreset))
+      initialFilters.value = createInitialFiltersFromParams(defaultParams, defaultLocationText)
 
       activeFilters.value = defaultParams
-      searchStore.setSearch(defaultParams, '')
+      searchStore.setSearch(defaultParams, defaultLocationText)
       currentPage.value = 0
       await fetchProperties(defaultParams)
       return
@@ -265,8 +262,14 @@ async function loadInitialProperties() {
     }
   }
 
+  if (Object.keys(searchStore.params).length || searchStore.locationText) {
+    defaultParams = { ...searchStore.params }
+    defaultLocationText = searchStore.locationText
+    initialFilters.value = createInitialFiltersFromParams(defaultParams, defaultLocationText)
+  }
+
   activeFilters.value = defaultParams
-  searchStore.setSearch(defaultParams, '')
+  searchStore.setSearch(defaultParams, defaultLocationText)
   currentPage.value = 0
   await fetchProperties(defaultParams)
 }
@@ -286,7 +289,9 @@ onMounted(() => {
         <h1>내 예산과 조건에 맞는 집을 찾으세요</h1>
         <p>지역, 보증금, 월세, 방 타입부터 생활 패턴까지 고려해 더 잘 맞는 매물을 추천합니다.</p>
         <div class="hero__actions">
-          <button class="primary-action" type="button" @click="scrollToProperties">매물 살펴보기</button>
+          <button class="primary-action" type="button" @click="scrollToProperties">
+            매물 살펴보기
+          </button>
           <RouterLink class="secondary-action" :to="{ name: 'survey' }">자취TI 해보기</RouterLink>
         </div>
 
@@ -328,16 +333,42 @@ onMounted(() => {
         </div>
 
         <div
-          v-if="isRecommendationMode"
+          v-if="!lifestyleResult || isRecommendationMode"
           class="recommendation-notice"
           data-testid="recommendation-notice"
         >
-          <div class="recommendation-notice__content">
-            <strong>자취TI 기준 우선 정렬</strong>
-            <span>{{ recommendationNoticeDescription }}</span>
+          <div class="recommendation-notice__character" aria-hidden="true">
+            <img
+              v-if="lifestyleCharacterImage"
+              :src="lifestyleCharacterImage"
+              :alt="`${lifestyleResult.typeName || lifestyleMeta?.typeName} 캐릭터`"
+            />
+            <div v-else class="recommendation-notice__placeholder">
+              <span>?</span>
+            </div>
           </div>
-          <div v-if="recommendationChips.length" class="recommendation-notice__chips">
-            <span v-for="chip in recommendationChips" :key="chip">{{ chip }}</span>
+          <div class="recommendation-notice__body">
+            <div class="recommendation-notice__content">
+              <strong>
+                {{ isRecommendationMode ? '자취TI 기준 우선 정렬' : '자취TI 추천을 받아보세요' }}
+              </strong>
+              <span>
+                {{
+                  isRecommendationMode
+                    ? recommendationNoticeDescription
+                    : '검사를 완료하면 내 자취TI 캐릭터와 선호 조건을 반영해 매물을 추천합니다.'
+                }}
+              </span>
+            </div>
+            <div
+              v-if="isRecommendationMode && recommendationChips.length"
+              class="recommendation-notice__chips"
+            >
+              <span v-for="chip in recommendationChips" :key="chip">{{ chip }}</span>
+            </div>
+            <RouterLink v-else class="recommendation-notice__link" :to="{ name: 'survey' }">
+              자취TI 시작
+            </RouterLink>
           </div>
         </div>
 
@@ -346,33 +377,37 @@ onMounted(() => {
             class="rent-tab"
             :class="{ 'rent-tab--active': activeRentType === null }"
             @click="clearRentType()"
-          >전체</button>
+          >
+            전체
+          </button>
           <button
             class="rent-tab"
             :class="{ 'rent-tab--active': activeRentType === 'JEONSE' }"
             @click="setRentType('JEONSE')"
-          >전세</button>
+          >
+            전세
+          </button>
           <button
             class="rent-tab"
             :class="{ 'rent-tab--active': activeRentType === 'MONTHLY' }"
             @click="setRentType('MONTHLY')"
-          >월세</button>
+          >
+            월세
+          </button>
           <button
             class="rent-tab"
             :class="{ 'rent-tab--active': activeRentType === 'SEMI_JEONSE' }"
             @click="setRentType('SEMI_JEONSE')"
-          >반전세</button>
+          >
+            반전세
+          </button>
         </div>
 
         <div class="result-controls">
           <span class="result-count">총 {{ totalElements.toLocaleString() }}개</span>
           <div class="control-group">
-            <select
-              class="control-select"
-              v-model="sortOrder"
-              @change="handleSortChange"
-            >
-              <option v-if="lifestyleResult" value="recommendation">추천순</option>
+            <select class="control-select" v-model="sortOrder" @change="handleSortChange">
+              <option v-if="lifestyleResult" value="recommendation">자취TI 추천순</option>
               <option value="createdAt,desc">최신순</option>
               <option value="deposit,asc">가격 낮은순</option>
               <option value="deposit,desc">가격 높은순</option>
@@ -442,9 +477,7 @@ onMounted(() => {
         <div>
           <p class="eyebrow">자취TI</p>
           <h2>자취TI로 나에게 맞는 매물을 추천받아보세요</h2>
-          <p>
-            짧은 성향 테스트로 생활권, 예산, 집 컨디션 선호를 매물 조건에 반영합니다.
-          </p>
+          <p>짧은 성향 테스트로 생활권, 예산, 집 컨디션 선호를 매물 조건에 반영합니다.</p>
         </div>
         <RouterLink class="band-action" :to="{ name: 'survey' }">자취TI 시작</RouterLink>
       </div>
@@ -464,7 +497,12 @@ onMounted(() => {
   align-items: end;
   overflow: visible;
   background:
-    linear-gradient(90deg, rgba(10, 17, 28, 0.7) 0%, rgba(10, 17, 28, 0.38) 48%, rgba(10, 17, 28, 0.18) 100%),
+    linear-gradient(
+      90deg,
+      rgba(10, 17, 28, 0.7) 0%,
+      rgba(10, 17, 28, 0.38) 48%,
+      rgba(10, 17, 28, 0.18) 100%
+    ),
     url('https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=2000&q=80')
       center / cover;
 }
@@ -643,17 +681,50 @@ onMounted(() => {
 }
 
 .recommendation-notice {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr);
   align-items: center;
-  justify-content: space-between;
-  gap: 12px 18px;
+  gap: 16px;
   margin-bottom: 24px;
   border: 1px solid rgba(54, 95, 145, 0.18);
   border-left: 4px solid var(--color-primary);
   border-radius: var(--radius-sm);
   background: #f8fbff;
-  padding: 14px 16px;
+  padding: 14px 18px 14px 14px;
+}
+
+.recommendation-notice__character {
+  width: 78px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  justify-self: center;
+
+  img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    filter: drop-shadow(0 10px 14px rgba(54, 95, 145, 0.18));
+  }
+}
+
+.recommendation-notice__placeholder {
+  width: 70px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 1px dashed rgba(54, 95, 145, 0.34);
+  border-radius: 50%;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  font-size: 30px;
+  font-weight: 900;
+}
+
+.recommendation-notice__body {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
 }
 
 .recommendation-notice__content {
@@ -689,6 +760,20 @@ onMounted(() => {
     font-weight: 900;
     padding: 7px 9px;
   }
+}
+
+.recommendation-notice__link {
+  width: fit-content;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(54, 95, 145, 0.22);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-primary-dark);
+  font-size: 12px;
+  font-weight: 900;
+  padding: 0 12px;
 }
 
 .property-grid {
@@ -959,6 +1044,15 @@ onMounted(() => {
 
   .property-grid {
     grid-template-columns: 1fr;
+  }
+
+  .recommendation-notice {
+    grid-template-columns: 1fr;
+    justify-items: start;
+  }
+
+  .recommendation-notice__character {
+    justify-self: start;
   }
 }
 </style>

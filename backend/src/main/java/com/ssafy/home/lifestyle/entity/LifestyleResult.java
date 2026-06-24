@@ -55,6 +55,15 @@ public class LifestyleResult extends BaseTimeEntity {
 
     private Integer buildYearMin;
 
+    @Column(length = 50)
+    private String preferredSido;
+
+    @Column(length = 50)
+    private String preferredGugun;
+
+    @Column(length = 50)
+    private String preferredDong;
+
     @Builder
     private LifestyleResult(
             Long userId,
@@ -67,7 +76,10 @@ public class LifestyleResult extends BaseTimeEntity {
             Integer monthlyRentMax,
             Long depositMax,
             BigDecimal areaMin,
-            Integer buildYearMin
+            Integer buildYearMin,
+            String preferredSido,
+            String preferredGugun,
+            String preferredDong
     ) {
         this.userId = userId;
         this.lifestyleType = lifestyleType;
@@ -80,5 +92,8 @@ public class LifestyleResult extends BaseTimeEntity {
         this.depositMax = depositMax;
         this.areaMin = areaMin;
         this.buildYearMin = buildYearMin;
+        this.preferredSido = preferredSido;
+        this.preferredGugun = preferredGugun;
+        this.preferredDong = preferredDong;
     }
 }

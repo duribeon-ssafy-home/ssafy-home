@@ -51,7 +51,13 @@ public class RecommendationService {
         sw.stop();
 
         sw.start("후보 매물 전체 조회");
-        Specification<Property> spec = PropertySpecification.search(normalizeCondition(condition));
+        PropertySearchCondition normalizedCondition = normalizeCondition(condition);
+        Specification<Property> spec = PropertySpecification.search(normalizedCondition);
+        if (normalizedCondition.facilityCountMin() != null) {
+            List<AreaFacilityCount> qualifyingAreas =
+                    areaFacilityCountRepository.findWithMinTotalCount(normalizedCondition.facilityCountMin());
+            spec = spec.and(PropertySpecification.inAreas(qualifyingAreas));
+        }
         List<Property> candidates = propertyRepository.findAll(spec);
         sw.stop();
 
@@ -101,7 +107,11 @@ public class RecommendationService {
                 condition.maxMonthlyRent(),
                 condition.minArea(),
                 condition.maxArea(),
-                null, null, null, null, null
+                condition.facilityCountMin(),
+                condition.swLat(),
+                condition.swLng(),
+                condition.neLat(),
+                condition.neLng()
         );
     }
 
