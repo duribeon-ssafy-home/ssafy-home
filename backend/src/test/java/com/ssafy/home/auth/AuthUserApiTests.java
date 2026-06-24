@@ -20,6 +20,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 
@@ -44,6 +45,9 @@ class AuthUserApiTests {
 
 	@Autowired
 	private RefreshTokenRepository refreshTokenRepository;
+
+	@Autowired
+	private PasswordEncoder passwordEncoder;
 
 	@BeforeEach
 	void setUp() {
@@ -89,6 +93,24 @@ class AuthUserApiTests {
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.success").value(false))
 				.andExpect(jsonPath("$.errorCode").value("PHONE_NUMBER_REQUIRED"));
+	}
+
+	@Test
+	@DisplayName("회원가입 비밀번호는 8자 이상이어야 한다")
+	void signupPasswordRequiresAtLeastEightCharacters() throws Exception {
+		mockMvc.perform(post("/api/auth/signup")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "email": "short-password@example.com",
+								  "password": "short",
+								  "name": "Buyer",
+								  "nickname": "buyer",
+								  "role": "BUYER"
+								}
+								"""))
+				.andExpect(status().isBadRequest())
+				.andExpect(jsonPath("$.success").value(false));
 	}
 
 	@Test
@@ -181,6 +203,41 @@ class AuthUserApiTests {
 	}
 
 	@Test
+	@DisplayName("임시 비밀번호 발급은 이메일 존재 여부와 관계없이 성공 응답을 반환한다")
+	void forgotPasswordDoesNotExposeEmailExistence() throws Exception {
+		mockMvc.perform(post("/api/auth/password/forgot")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "email": "missing@example.com"
+								}
+								"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true));
+	}
+
+	@Test
+	@DisplayName("임시 비밀번호 발급 시 기존 비밀번호와 refresh token을 무효화한다")
+	void forgotPasswordReplacesPasswordAndDeletesRefreshTokens() throws Exception {
+		signupAndLogin("buyer@example.com");
+		assertThat(refreshTokenRepository.count()).isEqualTo(1);
+
+		mockMvc.perform(post("/api/auth/password/forgot")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "email": "buyer@example.com"
+								}
+								"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true));
+
+		var user = userRepository.findByEmail("buyer@example.com").orElseThrow();
+		assertThat(passwordEncoder.matches("password123!", user.getPassword())).isFalse();
+		assertThat(refreshTokenRepository.count()).isZero();
+	}
+
+	@Test
 	void inactiveUserCannotUseIssuedTokens() throws Exception {
 		signupBuyer("inactive@example.com");
 
@@ -243,6 +300,45 @@ class AuthUserApiTests {
 				.andExpect(jsonPath("$.data.name").value("Updated Buyer"))
 				.andExpect(jsonPath("$.data.nickname").value("updated"))
 				.andExpect(jsonPath("$.data.phoneNumber").value("01012345678"));
+	}
+
+	@Test
+	@DisplayName("사용자는 마이페이지에서 비밀번호를 변경할 수 있다")
+	void userCanChangePassword() throws Exception {
+		String accessToken = signupAndLogin("buyer@example.com");
+
+		mockMvc.perform(patch("/api/users/me/password")
+						.header("Authorization", "Bearer " + accessToken)
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "currentPassword": "password123!",
+								  "newPassword": "newPassword123!"
+								}
+								"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.success").value(true));
+
+		mockMvc.perform(post("/api/auth/login")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "email": "buyer@example.com",
+								  "password": "password123!"
+								}
+								"""))
+				.andExpect(status().isUnauthorized());
+
+		mockMvc.perform(post("/api/auth/login")
+						.contentType(MediaType.APPLICATION_JSON)
+						.content("""
+								{
+								  "email": "buyer@example.com",
+								  "password": "newPassword123!"
+								}
+								"""))
+				.andExpect(status().isOk())
+				.andExpect(jsonPath("$.data.user.email").value("buyer@example.com"));
 	}
 
 	@Test

@@ -2,6 +2,7 @@ package com.ssafy.home.user.controller;
 
 import com.ssafy.home.common.response.ApiResponse;
 import com.ssafy.home.common.security.CurrentUser;
+import com.ssafy.home.user.dto.request.PasswordChangeRequest;
 import com.ssafy.home.user.dto.request.UserRoleUpdateRequest;
 import com.ssafy.home.user.dto.request.UserStatusUpdateRequest;
 import com.ssafy.home.user.dto.request.UserUpdateRequest;
@@ -47,6 +48,16 @@ public class UserController {
 	)
 	public ApiResponse<UserResponse> updateMe(@Valid @RequestBody UserUpdateRequest request) {
 		return ApiResponse.success("내 정보 수정에 성공했습니다.", userService.updateMe(currentUser.getId(), request));
+	}
+
+	@PatchMapping("/me/password")
+	@Operation(
+			summary = "내 비밀번호 변경",
+			description = "현재 비밀번호를 확인한 뒤 새 비밀번호로 변경합니다."
+	)
+	public ApiResponse<Void> changeMyPassword(@Valid @RequestBody PasswordChangeRequest request) {
+		userService.changeMyPassword(currentUser.getId(), request);
+		return ApiResponse.success("비밀번호가 변경되었습니다.", null);
 	}
 
 	@PatchMapping("/me/status")

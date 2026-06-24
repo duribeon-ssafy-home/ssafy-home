@@ -15,6 +15,11 @@ export async function updateMyStatus(payload) {
   return response.data.data
 }
 
+export async function changeMyPassword(payload) {
+  const response = await api.patch('/users/me/password', payload)
+  return response.data.data
+}
+
 export async function updateMyRole(payload) {
   const response = await api.patch('/users/me/role', payload)
   return response.data.data

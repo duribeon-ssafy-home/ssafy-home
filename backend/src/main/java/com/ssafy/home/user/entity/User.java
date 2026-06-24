@@ -106,6 +106,10 @@ public class User extends BaseTimeEntity {
 		}
 	}
 
+	public void changePassword(String password) {
+		this.password = password;
+	}
+
 	public void recordLogin() {
 		this.lastLoginAt = LocalDateTime.now();
 	}

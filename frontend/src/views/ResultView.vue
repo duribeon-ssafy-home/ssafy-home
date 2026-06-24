@@ -585,10 +585,11 @@ async function initializeAuthIfPossible() {
 }
 
 .result-actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: flex-end;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 10px;
+  width: 100%;
+  grid-column: 1 / -1;
 }
 
 .primary-link,
@@ -702,7 +703,7 @@ async function initializeAuthIfPossible() {
   }
 
   .result-actions {
-    justify-content: flex-start;
+    grid-template-columns: 1fr;
   }
 
   .recommendation-preview-grid {
