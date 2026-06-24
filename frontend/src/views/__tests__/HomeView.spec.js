@@ -5,6 +5,7 @@ import { getMyLatestLifestyleResult } from '@/api/lifestyleApi'
 import { getProperties } from '@/api/propertyApi'
 import { getRecommendations } from '@/api/recommendationApi'
 import { useAuthStore } from '@/stores/auth'
+import FilterBar from '@/components/FilterBar.vue'
 import HomeView from '../HomeView.vue'
 
 vi.mock('@/api/lifestyleApi', () => ({
@@ -27,7 +28,7 @@ vi.mock('@/composables/useFavorites', () => ({
 
 const lifestyleResult = {
   lifestyleType: 'LIVING_COST_COMPACT',
-  typeName: '생활권 중심 실속형',
+  typeName: '알뜰이',
   filterPreset: {
     facilityScoreMin: 70,
     facilityCountMin: 20,
@@ -51,13 +52,12 @@ describe('HomeView', () => {
     })
   })
 
-  it('비로그인 사용자는 일반 매물 API로 조회한다', async () => {
+  it('비로그인 사용자는 조건 없이 전체 매물을 조회한다', async () => {
     mountHome()
     await flushPromises()
 
     expect(getMyLatestLifestyleResult).not.toHaveBeenCalled()
     expect(getProperties).toHaveBeenCalledWith({
-      dong: '하단동',
       page: 0,
       size: 6,
       sort: 'createdAt,desc',
@@ -65,28 +65,24 @@ describe('HomeView', () => {
     expect(getRecommendations).not.toHaveBeenCalled()
   })
 
-  it('로그인 사용자의 생활 성향 결과가 있으면 추천 API와 기본 필터를 사용한다', async () => {
+  it('로그인 사용자의 생활 성향 결과가 있으면 조건 없이 추천 API로 전체 매물을 정렬한다', async () => {
     getMyLatestLifestyleResult.mockResolvedValue(lifestyleResult)
 
     const { wrapper } = mountHome({ authenticated: true })
     await flushPromises()
 
     expect(getRecommendations).toHaveBeenCalledWith({
-      dong: '하단동',
-      maxDeposit: 1000,
-      maxMonthlyRent: 50,
-      roomType: 'ONE_ROOM',
       page: 0,
       size: 6,
     })
     expect(getProperties).not.toHaveBeenCalled()
-    expect(wrapper.get('[data-testid="deposit-select"]').element.value).toBe('1000')
-    expect(wrapper.get('[data-testid="monthly-rent-select"]').element.value).toBe('50')
-    expect(wrapper.get('[data-testid="room-type-ONE_ROOM"]').classes()).toContain(
+    expect(wrapper.get('[data-testid="deposit-select"]').element.value).toBe('')
+    expect(wrapper.get('[data-testid="monthly-rent-select"]').element.value).toBe('')
+    expect(wrapper.get('[data-testid="room-type-ALL"]').classes()).toContain(
       'filter-chip--active',
     )
     expect(wrapper.get('[data-testid="recommendation-notice"]').text()).toContain(
-      '생활권 중심 실속형 기준',
+      '알뜰이 기준',
     )
   })
 
@@ -102,11 +98,27 @@ describe('HomeView', () => {
     await flushPromises()
 
     expect(getRecommendations).toHaveBeenCalledWith({
-      maxDeposit: 1000,
       maxMonthlyRent: 80,
-      roomType: 'ONE_ROOM',
       page: 0,
       size: 6,
+    })
+  })
+
+  it('추천 API가 실패하면 같은 조건으로 일반 매물 API를 조회한다', async () => {
+    getMyLatestLifestyleResult.mockResolvedValue(lifestyleResult)
+    getRecommendations.mockRejectedValue(new Error('recommendation failed'))
+
+    mountHome({ authenticated: true })
+    await flushPromises()
+
+    expect(getRecommendations).toHaveBeenCalledWith({
+      page: 0,
+      size: 6,
+    })
+    expect(getProperties).toHaveBeenCalledWith({
+      page: 0,
+      size: 6,
+      sort: 'createdAt,desc',
     })
   })
 
@@ -131,13 +143,59 @@ describe('HomeView', () => {
     })
   })
 
+  it('전체 주소를 직접 입력하면 시도, 구군, 동으로 분리해 검색한다', async () => {
+    const { wrapper } = mountHome()
+    await flushPromises()
+    getProperties.mockClear()
+
+    await wrapper.get('[data-testid="location-input"]').setValue('부산광역시 사하구 하단동')
+    await wrapper.get('form.filter-bar').trigger('submit')
+    await flushPromises()
+
+    expect(getProperties).toHaveBeenCalledWith({
+      sido: '부산광역시',
+      gugun: '사하구',
+      dong: '하단동',
+      page: 0,
+      size: 6,
+      sort: 'createdAt,desc',
+    })
+  })
+
+  it('자동완성으로 선택한 지역 값으로 검색한다', async () => {
+    const { wrapper } = mountHome()
+    await flushPromises()
+    getProperties.mockClear()
+
+    wrapper.findComponent(FilterBar).vm.$emit('search', {
+      location: '부산광역시 사하구 하단동',
+      locationParts: {
+        sido: '부산광역시',
+        gugun: '사하구',
+        dong: '하단동',
+      },
+      deposit: '',
+      monthlyRent: '',
+      roomType: 'ALL',
+    })
+    await flushPromises()
+
+    expect(getProperties).toHaveBeenCalledWith({
+      sido: '부산광역시',
+      gugun: '사하구',
+      dong: '하단동',
+      page: 0,
+      size: 6,
+      sort: 'createdAt,desc',
+    })
+  })
+
   it('로그인 사용자라도 생활 성향 결과가 없으면 일반 매물 API로 조회한다', async () => {
     mountHome({ authenticated: true })
     await flushPromises()
 
     expect(getMyLatestLifestyleResult).toHaveBeenCalled()
     expect(getProperties).toHaveBeenCalledWith({
-      dong: '하단동',
       page: 0,
       size: 6,
       sort: 'createdAt,desc',

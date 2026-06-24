@@ -39,18 +39,44 @@ describe('lifestyleResultSession', () => {
     })
   })
 
+  it('예산 입력값이 있으면 payload에 함께 담는다', () => {
+    const questions = [{ questionId: 1 }, { questionId: 2 }]
+    const answerMap = {
+      1: 'A',
+      2: 'B',
+    }
+
+    expect(
+      createLifestyleAnswerPayload(questions, answerMap, {
+        monthlyRentMax: 65,
+        depositMax: 2000,
+      }),
+    ).toEqual({
+      answers: [
+        { questionId: 1, selectedOption: 'A' },
+        { questionId: 2, selectedOption: 'B' },
+      ],
+      monthlyRentMax: 65,
+      depositMax: 2000,
+    })
+  })
+
   it('결과와 답변을 저장 상태가 포함된 스냅샷으로 만든다', () => {
     const result = {
       lifestyleType: 'LIVING_COST_HOME_BALANCED',
       filterPreset: { monthlyRentMax: 50 },
     }
     const answers = [{ questionId: 1, selectedOption: 'A' }]
-    const snapshot = createLifestyleResultSnapshot(result, answers, { saved: false })
+    const snapshot = createLifestyleResultSnapshot(result, answers, {
+      saved: false,
+      budget: { monthlyRentMax: 50 },
+    })
 
     expect(snapshot).toMatchObject({
       lifestyleType: 'LIVING_COST_HOME_BALANCED',
       filterPreset: { monthlyRentMax: 50 },
       answers,
+      budget: { monthlyRentMax: 50 },
       saved: false,
       savedAt: null,
     })

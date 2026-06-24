@@ -21,6 +21,9 @@ const questions = ref([])
 const currentIndex = ref(0)
 const answerMap = ref({})
 const selectedAnswer = ref('')
+const budgetMode = ref('custom')
+const monthlyRentInput = ref('')
+const depositInput = ref('')
 const isLoading = ref(true)
 const isAdvancing = ref(false)
 const isSubmittingResult = ref(false)
@@ -28,15 +31,30 @@ const noticeMessage = ref('')
 const errorMessage = ref('')
 
 const currentQuestion = computed(() => questions.value[currentIndex.value])
+const isBudgetStep = computed(() => questions.value.length > 0 && currentIndex.value >= questions.value.length)
+const totalSteps = computed(() => (questions.value.length || 6) + 1)
 const progress = computed(() => {
-  if (!questions.value.length) {
+  if (!totalSteps.value) {
     return 0
   }
 
-  return ((currentIndex.value + 1) / questions.value.length) * 100
+  return (Math.min(currentIndex.value + 1, totalSteps.value) / totalSteps.value) * 100
 })
 const answeredCount = computed(() => Object.keys(answerMap.value).length)
 const canGoPrevious = computed(() => currentIndex.value > 0 && !isAdvancing.value)
+const budgetValues = computed(() => {
+  if (budgetMode.value !== 'custom') {
+    return {}
+  }
+
+  const monthlyRentMax = parseBudgetNumber(monthlyRentInput.value)
+  const depositMax = parseBudgetNumber(depositInput.value)
+
+  return {
+    monthlyRentMax,
+    depositMax,
+  }
+})
 
 onMounted(() => {
   loadQuestions()
@@ -74,7 +92,9 @@ function selectOption(option) {
 
   window.setTimeout(() => {
     if (currentIndex.value === questions.value.length - 1) {
-      finishSurvey()
+      currentIndex.value += 1
+      selectedAnswer.value = ''
+      isAdvancing.value = false
       return
     }
 
@@ -90,7 +110,9 @@ function goPrevious() {
   }
 
   currentIndex.value -= 1
-  selectedAnswer.value = answerMap.value[currentQuestion.value.questionId] || ''
+  selectedAnswer.value = currentQuestion.value
+    ? answerMap.value[currentQuestion.value.questionId] || ''
+    : ''
 }
 
 async function finishSurvey() {
@@ -100,12 +122,16 @@ async function finishSurvey() {
   try {
     await initializeAuthIfPossible()
 
-    const payload = createLifestyleAnswerPayload(questions.value, answerMap.value)
+    const payload = createLifestyleAnswerPayload(questions.value, answerMap.value, budgetValues.value)
     const result = authStore.isAuthenticated
       ? await saveLifestyleResult(payload)
       : await previewLifestyleResult(payload)
     const snapshot = createLifestyleResultSnapshot(result, payload.answers, {
       saved: authStore.isAuthenticated,
+      budget: {
+        monthlyRentMax: payload.monthlyRentMax,
+        depositMax: payload.depositMax,
+      },
     })
 
     writeLifestyleResultSnapshot(snapshot)
@@ -120,6 +146,16 @@ async function finishSurvey() {
   }
 }
 
+function selectBudgetMode(mode) {
+  budgetMode.value = mode
+  errorMessage.value = ''
+}
+
+function parseBudgetNumber(value) {
+  const parsed = Number(String(value).replace(/,/g, '').trim())
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : null
+}
+
 async function initializeAuthIfPossible() {
   if (authStore.accessToken && !authStore.isInitialized) {
     await authStore.initializeAuth()
@@ -132,12 +168,15 @@ async function initializeAuthIfPossible() {
     <section class="section-container survey-shell">
       <div class="survey-top">
         <div>
-          <p class="eyebrow">Lifestyle Survey</p>
-          <h1>생활 방식에 맞는 집을 찾아볼게요</h1>
+          <p class="eyebrow">자취TI</p>
+          <h1>나의 자취 성향을 찾아볼게요</h1>
+          <p class="survey-description">
+            6개의 선택과 예산 기준으로 생활권, 집 컨디션 선호를 분석해 매물 추천 기준을 만듭니다.
+          </p>
         </div>
         <div class="step-counter">
-          <strong>{{ Math.min(currentIndex + 1, questions.length || 1) }}</strong>
-          <span>/ {{ questions.length || 6 }}</span>
+          <strong>{{ Math.min(currentIndex + 1, totalSteps) }}</strong>
+          <span>/ {{ totalSteps }}</span>
         </div>
       </div>
 
@@ -156,7 +195,75 @@ async function initializeAuthIfPossible() {
       </div>
 
       <Transition v-else name="question-slide" mode="out-in">
-        <section :key="currentQuestion?.questionId" class="question-panel">
+        <section v-if="isBudgetStep" key="budget" class="question-panel budget-panel">
+          <div class="question-copy">
+            <span class="category">예산 기준</span>
+            <h2>원하는 월세와 보증금이 있나요?</h2>
+            <p>선택 사항이에요. 알고 있는 범위만 입력하면 그 금액을 추천순 점수에 먼저 반영합니다.</p>
+          </div>
+
+          <div class="budget-options" role="group" aria-label="예산 입력 방식">
+            <button
+              class="budget-mode"
+              :class="{ 'budget-mode--active': budgetMode === 'custom' }"
+              type="button"
+              @click="selectBudgetMode('custom')"
+            >
+              <strong>직접 입력할래요</strong>
+              <span>월세, 보증금을 알고 있어요</span>
+            </button>
+            <button
+              class="budget-mode"
+              :class="{ 'budget-mode--active': budgetMode === 'unknown' }"
+              type="button"
+              @click="selectBudgetMode('unknown')"
+            >
+              <strong>잘 모르겠어요</strong>
+              <span>기본 기준으로 바로 볼게요</span>
+            </button>
+          </div>
+
+          <div v-if="budgetMode === 'custom'" class="budget-grid">
+            <label class="budget-field">
+              <span>월세 상한</span>
+              <div>
+                <input
+                  v-model="monthlyRentInput"
+                  type="number"
+                  min="1"
+                  step="1"
+                  inputmode="numeric"
+                  placeholder="예: 60"
+                />
+                <em>만원 이하</em>
+              </div>
+            </label>
+
+            <label class="budget-field">
+              <span>보증금 상한</span>
+              <div>
+                <input
+                  v-model="depositInput"
+                  type="number"
+                  min="1"
+                  step="100"
+                  inputmode="numeric"
+                  placeholder="예: 1000"
+                />
+                <em>만원 이하</em>
+              </div>
+            </label>
+
+            <p class="budget-empty-note">아직 예산이 애매하면 빈칸으로 두고 결과를 봐도 괜찮아요.</p>
+          </div>
+
+          <div v-else class="budget-fallback">
+            <strong>기본 추천 기준으로 볼게요</strong>
+            <p>처음 자취하거나 예산이 아직 애매하면, 앞선 답변을 바탕으로 기존 기준을 적용합니다.</p>
+          </div>
+        </section>
+
+        <section v-else :key="currentQuestion?.questionId" class="question-panel">
           <div class="question-copy">
             <span class="category">{{ currentQuestion.category }}</span>
             <h2>{{ currentQuestion.title }}</h2>
@@ -199,7 +306,16 @@ async function initializeAuthIfPossible() {
         <button class="ghost-button" type="button" :disabled="!canGoPrevious" @click="goPrevious">
           이전
         </button>
-        <p>선택하면 다음 질문으로 넘어갑니다</p>
+        <button
+          v-if="isBudgetStep"
+          class="submit-button"
+          type="button"
+          :disabled="isSubmittingResult"
+          @click="finishSurvey"
+        >
+          결과 보기
+        </button>
+        <p v-else>선택하면 다음 질문으로 넘어갑니다</p>
       </div>
     </section>
   </main>
@@ -232,6 +348,15 @@ async function initializeAuthIfPossible() {
     letter-spacing: 0;
     line-height: 1.18;
   }
+}
+
+.survey-description {
+  max-width: 640px;
+  margin-top: 12px;
+  color: var(--color-muted);
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.6;
 }
 
 .step-counter {
@@ -419,6 +544,156 @@ async function initializeAuthIfPossible() {
   opacity: 0.52;
 }
 
+.budget-panel {
+  grid-template-rows: auto auto 1fr;
+}
+
+.budget-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.budget-mode {
+  display: grid;
+  gap: 6px;
+  min-height: 82px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  color: var(--color-muted);
+  padding: 16px 18px;
+  text-align: left;
+  transition:
+    background-color var(--transition-fast),
+    border-color var(--transition-fast),
+    box-shadow var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast);
+
+  strong {
+    color: var(--color-heading);
+    font-size: 16px;
+    font-weight: 900;
+  }
+
+  span {
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.4;
+  }
+
+  &:hover {
+    border-color: rgba(54, 95, 145, 0.34);
+    box-shadow: 0 14px 28px rgba(54, 95, 145, 0.1);
+    transform: translateY(-1px);
+  }
+}
+
+.budget-mode--active {
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
+  box-shadow: inset 0 0 0 1px rgba(54, 95, 145, 0.14);
+
+  strong {
+    color: var(--color-primary-dark);
+  }
+}
+
+.budget-mode--active:nth-child(2) {
+  border-color: rgba(34, 126, 91, 0.42);
+  background: rgba(231, 246, 238, 0.95);
+
+  strong {
+    color: #227e5b;
+  }
+}
+
+.budget-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+
+.budget-empty-note {
+  grid-column: 1 / -1;
+  margin: -4px 0 0;
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 800;
+}
+
+.budget-field {
+  display: grid;
+  gap: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-surface);
+  padding: 22px;
+
+  > span {
+    color: var(--color-heading);
+    font-size: 16px;
+    font-weight: 900;
+  }
+
+  div {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+  }
+
+  input {
+    width: 100%;
+    min-width: 0;
+    height: 54px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-surface-muted);
+    color: var(--color-heading);
+    font-size: 24px;
+    font-weight: 900;
+    padding: 0 14px;
+
+    &:focus {
+      outline: 3px solid rgba(54, 95, 145, 0.16);
+      border-color: var(--color-primary);
+      background: var(--color-surface);
+    }
+  }
+
+  em {
+    color: var(--color-muted);
+    font-style: normal;
+    font-weight: 900;
+    white-space: nowrap;
+  }
+}
+
+.budget-fallback {
+  display: grid;
+  align-content: center;
+  gap: 8px;
+  min-height: 160px;
+  border: 1px solid rgba(54, 95, 145, 0.18);
+  border-radius: var(--radius-sm);
+  background: var(--color-primary-soft);
+  padding: 24px;
+
+  strong {
+    color: var(--color-primary-dark);
+    font-size: 18px;
+    font-weight: 900;
+  }
+
+  p {
+    color: var(--color-muted);
+    font-weight: 700;
+    line-height: 1.6;
+  }
+}
+
 .survey-actions {
   display: flex;
   align-items: center;
@@ -449,6 +724,28 @@ async function initializeAuthIfPossible() {
   &:disabled {
     color: var(--color-subtle);
     opacity: 0.58;
+  }
+}
+
+.submit-button {
+  min-width: 120px;
+  height: 44px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: var(--color-surface);
+  font-weight: 900;
+  transition:
+    background-color var(--transition-fast),
+    transform var(--transition-fast);
+
+  &:hover:not(:disabled) {
+    background: var(--color-primary-dark);
+    transform: translateY(-1px);
+  }
+
+  &:disabled {
+    background: var(--color-subtle);
   }
 }
 
@@ -494,6 +791,10 @@ async function initializeAuthIfPossible() {
   }
 
   .option-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .budget-grid {
     grid-template-columns: 1fr;
   }
 

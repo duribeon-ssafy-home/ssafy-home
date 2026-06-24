@@ -66,24 +66,7 @@ public class PropertyService {
     }
 
     public Page<PropertyResponse> getProperties(PropertySearchCondition condition, Pageable pageable) {
-        condition = new PropertySearchCondition(
-                normalizeSido(condition.sido()),
-                condition.gugun(),
-                condition.dong(),
-                condition.rentType(),
-                condition.roomType(),
-                condition.minDeposit(),
-                condition.maxDeposit(),
-                condition.minMonthlyRent(),
-                condition.maxMonthlyRent(),
-                condition.minArea(),
-                condition.maxArea(),
-                condition.facilityCountMin(),
-                condition.swLat(),
-                condition.swLng(),
-                condition.neLat(),
-                condition.neLng()
-        );
+        condition = normalizeCondition(condition);
 
         Specification<Property> spec = PropertySpecification.search(condition);
 
@@ -109,6 +92,47 @@ public class PropertyService {
         }
 
         return page.map(PropertyResponse::from);
+    }
+
+    private PropertySearchCondition normalizeCondition(PropertySearchCondition condition) {
+        if (condition == null) {
+            return new PropertySearchCondition(
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
+            );
+        }
+
+        return new PropertySearchCondition(
+                normalizeSido(condition.sido()),
+                normalizeText(condition.gugun()),
+                normalizeText(condition.dong()),
+                condition.rentType(),
+                condition.roomType(),
+                condition.minDeposit(),
+                condition.maxDeposit(),
+                condition.minMonthlyRent(),
+                condition.maxMonthlyRent(),
+                condition.minArea(),
+                condition.maxArea(),
+                condition.facilityCountMin()
+        );
+    }
+
+    private String normalizeText(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     public PropertyResponse getProperty(Long id) {
@@ -193,8 +217,9 @@ public class PropertyService {
     }
 
     private String normalizeSido(String sido) {
-        if (sido == null) return null;
-        return switch (sido.trim()) {
+        String value = normalizeText(sido);
+        if (value == null) return null;
+        return switch (value) {
             case "서울", "서울시" -> "서울특별시";
             case "부산", "부산시" -> "부산광역시";
             case "대구", "대구시" -> "대구광역시";
@@ -212,7 +237,7 @@ public class PropertyService {
             case "경남" -> "경상남도";
             case "경북" -> "경상북도";
             case "제주", "제주도" -> "제주특별자치도";
-            default -> sido;
+            default -> value;
         };
     }
 }

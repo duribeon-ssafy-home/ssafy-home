@@ -365,8 +365,8 @@ function getApiErrorMessage(error, fallbackMessage) {
 
           <section class="preference-panel">
             <div class="panel-heading">
-              <p class="eyebrow">Preference</p>
-              <h2>저장된 선호 유형</h2>
+              <p class="eyebrow">자취TI</p>
+              <h2>저장된 자취TI 유형</h2>
             </div>
 
             <div v-if="lifestyleResult && lifestyleMeta" class="preference-summary">
@@ -378,13 +378,13 @@ function getApiErrorMessage(error, fallbackMessage) {
                 <span v-for="chip in presetChips" :key="chip">{{ chip }}</span>
               </div>
 
-              <RouterLink class="secondary-link" :to="{ name: 'survey' }">다시 설문하기</RouterLink>
+              <RouterLink class="secondary-link" :to="{ name: 'survey' }">자취TI 다시 하기</RouterLink>
             </div>
 
             <div v-else class="empty-preference">
-              <h3>아직 저장된 설문 결과가 없습니다</h3>
-              <p>생활성향 설문을 완료하고 결과를 저장하면 여기에서 다시 확인할 수 있습니다.</p>
-              <RouterLink class="primary-link" :to="{ name: 'survey' }">설문 시작하기</RouterLink>
+              <h3>아직 저장된 자취TI 결과가 없습니다</h3>
+              <p>자취 성향 테스트를 완료하고 결과를 저장하면 여기에서 다시 확인할 수 있습니다.</p>
+              <RouterLink class="primary-link" :to="{ name: 'survey' }">자취TI 시작하기</RouterLink>
             </div>
           </section>
 

@@ -126,7 +126,7 @@ function onListScroll() {
 }
 
 onMounted(() => {
-  const initParams = Object.keys(searchStore.params).length ? searchStore.params : { dong: '하단동' }
+  const initParams = Object.keys(searchStore.params).length ? searchStore.params : {}
   activeFilters.value = initParams
   Promise.all([fetchMapMarkers(initParams), fetchListPage(initParams, 0), loadFavorites()])
 })

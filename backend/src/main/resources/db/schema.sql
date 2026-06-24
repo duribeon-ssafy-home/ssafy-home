@@ -175,7 +175,27 @@ CREATE TABLE IF NOT EXISTS area_facility_counts (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 8. PROPERTY_RISK_SCORES
+-- 8. LEGAL_DONGS
+-- 법정동 코드 기반 지역 자동완성 후보
+-- code: 행정표준코드관리시스템 법정동코드 10자리
+-- =============================================
+CREATE TABLE IF NOT EXISTS legal_dongs (
+    id        BIGINT       NOT NULL AUTO_INCREMENT,
+    code      VARCHAR(10)  NOT NULL,
+    sido      VARCHAR(30)  NOT NULL,
+    gugun     VARCHAR(50)  NULL,
+    dong      VARCHAR(50)  NULL,
+    full_name VARCHAR(120) NOT NULL,
+    active    BOOLEAN      NOT NULL DEFAULT TRUE,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_legal_dongs_code (code),
+    INDEX idx_legal_dongs_full_name (full_name),
+    INDEX idx_legal_dongs_region (sido, gugun, dong),
+    INDEX idx_legal_dongs_active (active)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =============================================
+-- 9. PROPERTY_RISK_SCORES
 -- risk_label: SAFE | CAUTION | DANGER | UNKNOWN
 -- property_id UNIQUE → PROPERTIES 1:1 관계
 -- =============================================
@@ -195,7 +215,7 @@ CREATE TABLE IF NOT EXISTS property_risk_scores (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 8. REPORTS
+-- 10. REPORTS
 -- reason: FAKE_LISTING | PRICE_MISMATCH | PHOTO_MISMATCH | NO_CONTACT | FRAUD_SUSPECTED | ETC
 -- status: PENDING | RESOLVED | CAUTION | DANGER | HIDDEN
 -- 같은 사용자가 같은 매물을 중복 신고할 수 없다.
@@ -221,7 +241,7 @@ CREATE TABLE IF NOT EXISTS reports (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 9. BLACKLISTS
+-- 11. BLACKLISTS
 -- status: ACTIVE | RELEASED
 -- =============================================
 CREATE TABLE IF NOT EXISTS blacklists (

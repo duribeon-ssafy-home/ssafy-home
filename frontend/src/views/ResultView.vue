@@ -4,6 +4,14 @@ import { RouterLink, useRoute, useRouter } from 'vue-router'
 import { getMyLatestLifestyleResult, saveLifestyleResult } from '@/api/lifestyleApi'
 import { createLifestylePresetChips, lifestyleTypeMeta } from '@/data/lifestyle'
 import { useAuthStore } from '@/stores/auth'
+import balancedCharacter from '@/assets/images/lifestyle/balanced.png'
+import carefulCharacter from '@/assets/images/lifestyle/careful.png'
+import cozyCharacter from '@/assets/images/lifestyle/cozy.png'
+import flexibleCharacter from '@/assets/images/lifestyle/flexible.png'
+import practicalCharacter from '@/assets/images/lifestyle/practical.png'
+import savingCharacter from '@/assets/images/lifestyle/saving.png'
+import spaciousCharacter from '@/assets/images/lifestyle/spacious.png'
+import thriftyCharacter from '@/assets/images/lifestyle/thrifty.png'
 import {
   createLifestyleResultSnapshot,
   readLifestyleResultSnapshot,
@@ -25,6 +33,41 @@ const meta = computed(() =>
   hasResult.value ? lifestyleTypeMeta[result.value.lifestyleType] : null,
 )
 const isSaved = computed(() => result.value?.saved === true)
+const lifestyleCharacters = {
+  LIVING_COST_HOME_BALANCED: {
+    label: '균형 잡힌 주거 성향 캐릭터',
+    image: balancedCharacter,
+  },
+  LIVING_COST_COMPACT: {
+    label: '알뜰한 생활권 성향 캐릭터',
+    image: thriftyCharacter,
+  },
+  LIVING_FLEXIBLE_HOME: {
+    label: '포근한 공간 성향 캐릭터',
+    image: cozyCharacter,
+  },
+  LIVING_FLEXIBLE_COMPACT: {
+    label: '실용적인 생활 성향 캐릭터',
+    image: practicalCharacter,
+  },
+  LOCATION_FLEXIBLE_COST_HOME: {
+    label: '꼼꼼한 조건 확인 성향 캐릭터',
+    image: carefulCharacter,
+  },
+  LOCATION_FLEXIBLE_COST_COMPACT: {
+    label: '절약 중심 성향 캐릭터',
+    image: savingCharacter,
+  },
+  LOCATION_FLEXIBLE_HOME: {
+    label: '공간 만족 성향 캐릭터',
+    image: spaciousCharacter,
+  },
+  LOCATION_FLEXIBLE_COMPACT: {
+    label: '유연한 탐색 성향 캐릭터',
+    image: flexibleCharacter,
+  },
+}
+const resultCharacter = computed(() => lifestyleCharacters[result.value?.lifestyleType] || null)
 const hasAnswers = computed(
   () => Array.isArray(result.value?.answers) && result.value.answers.length > 0,
 )
@@ -102,9 +145,13 @@ async function saveCurrentResult(options = {}) {
   errorMessage.value = ''
 
   try {
-    const savedResult = await saveLifestyleResult({ answers: result.value.answers })
+    const savedResult = await saveLifestyleResult({
+      answers: result.value.answers,
+      ...result.value.budget,
+    })
     const snapshot = createLifestyleResultSnapshot(savedResult, result.value.answers, {
       saved: true,
+      budget: result.value.budget || {},
     })
 
     result.value = snapshot
@@ -136,25 +183,34 @@ async function initializeAuthIfPossible() {
     </section>
 
     <section v-else-if="!hasResult" class="section-container empty-state">
-      <p class="eyebrow">Lifestyle Result</p>
-      <h1>아직 분석된 설문 결과가 없습니다</h1>
+      <p class="eyebrow">자취TI</p>
+      <h1>아직 분석된 자취TI 결과가 없습니다</h1>
       <p>
-        라이프스타일 설문을 완료하면 나에게 맞는 주거 유형과 추천 조건을 바로 확인할 수 있습니다.
+        자취 성향 테스트를 완료하면 나에게 맞는 주거 유형과 우선 추천 기준을 바로 확인할 수 있습니다.
       </p>
-      <RouterLink class="primary-link" :to="{ name: 'survey' }">설문 시작하기</RouterLink>
+      <RouterLink class="primary-link" :to="{ name: 'survey' }">자취TI 시작하기</RouterLink>
     </section>
 
     <section v-else class="result-hero">
       <div class="section-container result-hero__inner">
-        <div class="result-copy">
-          <p class="eyebrow">Lifestyle Result</p>
-          <span>당신의 주거 타입은</span>
-          <h1>{{ meta.typeName }}</h1>
-          <p>{{ meta.headline }}</p>
+        <div class="result-copy result-copy--with-character">
+          <div class="result-copy__text">
+            <p class="eyebrow">자취TI 결과</p>
+            <span>당신의 주거 타입은</span>
+            <h1>{{ meta.typeName }}</h1>
+            <p>{{ meta.headline }}</p>
+          </div>
+
+          <img
+            v-if="resultCharacter"
+            class="result-character"
+            :src="resultCharacter.image"
+            :alt="resultCharacter.label"
+          />
         </div>
 
         <div class="summary-panel">
-          <strong>추천 조건</strong>
+          <strong>우선 추천 기준</strong>
           <div class="chip-list">
             <span
               v-for="(chip, index) in presetChips"
@@ -199,7 +255,7 @@ async function initializeAuthIfPossible() {
                   : '로그인하고 결과 저장하기'
             }}
           </button>
-          <RouterLink class="secondary-link" :to="{ name: 'survey' }">다시 설문하기</RouterLink>
+          <RouterLink class="secondary-link" :to="{ name: 'survey' }">자취TI 다시 하기</RouterLink>
           <RouterLink v-if="isSaved" class="secondary-link" :to="{ name: 'my-page' }">
             마이페이지에서 보기
           </RouterLink>
@@ -286,10 +342,20 @@ async function initializeAuthIfPossible() {
 
 .result-copy {
   display: grid;
-  align-content: center;
+  align-items: center;
+  gap: 24px;
   min-height: 370px;
   padding: 42px;
   animation: fadeUp 520ms ease both;
+}
+
+.result-copy--with-character {
+  grid-template-columns: minmax(0, 1fr) 210px;
+}
+
+.result-copy__text {
+  display: grid;
+  align-content: center;
 
   span {
     margin-top: 22px;
@@ -315,6 +381,14 @@ async function initializeAuthIfPossible() {
     font-weight: 700;
     line-height: 1.7;
   }
+}
+
+.result-character {
+  width: min(210px, 100%);
+  aspect-ratio: 1;
+  justify-self: end;
+  filter: drop-shadow(0 18px 24px rgba(54, 95, 145, 0.16));
+  animation: characterFloat 3.8s ease-in-out infinite;
 }
 
 .summary-panel {
@@ -489,6 +563,17 @@ async function initializeAuthIfPossible() {
   }
 }
 
+@keyframes characterFloat {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+
+  50% {
+    transform: translateY(-7px);
+  }
+}
+
 @media (max-width: 940px) {
   .result-hero__inner,
   .status-panel {
@@ -499,8 +584,17 @@ async function initializeAuthIfPossible() {
     justify-content: flex-start;
   }
 
-  .result-copy h1 {
+  .result-copy--with-character {
+    grid-template-columns: 1fr;
+  }
+
+  .result-copy__text h1 {
     font-size: 38px;
+  }
+
+  .result-character {
+    width: 176px;
+    justify-self: start;
   }
 
   .empty-state h1 {

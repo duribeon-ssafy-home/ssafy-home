@@ -1,20 +1,31 @@
 export const LIFESTYLE_RESULT_STORAGE_KEY = 'lifestyleResult'
 
-export function createLifestyleAnswerPayload(questions, answerMap) {
-  return {
+export function createLifestyleAnswerPayload(questions, answerMap, budget = {}) {
+  const payload = {
     answers: questions.map((question) => ({
       questionId: question.questionId,
       selectedOption: answerMap[question.questionId],
     })),
   }
+
+  if (budget.monthlyRentMax != null) {
+    payload.monthlyRentMax = budget.monthlyRentMax
+  }
+
+  if (budget.depositMax != null) {
+    payload.depositMax = budget.depositMax
+  }
+
+  return payload
 }
 
 export function createLifestyleResultSnapshot(result, answers = [], options = {}) {
-  const { saved = false } = options
+  const { saved = false, budget = {} } = options
 
   return {
     ...result,
     answers,
+    budget,
     saved,
     savedAt: saved ? new Date().toISOString() : null,
   }
