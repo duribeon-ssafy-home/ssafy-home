@@ -1,5 +1,5 @@
 <script setup>
-import { computed, nextTick, ref, onMounted } from 'vue'
+import { computed, nextTick, ref, onMounted, onBeforeUnmount } from 'vue'
 import { RouterLink } from 'vue-router'
 import FilterBar from '@/components/FilterBar.vue'
 import PropertyCard from '@/components/PropertyCard.vue'
@@ -83,6 +83,11 @@ const recommendationNoticeDescription = computed(() => {
 })
 const activeFilters = ref({})
 const activeRentType = ref(null)
+const parallaxY = ref(0)
+
+function handleScroll() {
+  parallaxY.value = window.scrollY * 0.4
+}
 
 const visiblePages = computed(() => {
   if (totalPages.value <= 1) return []
@@ -275,18 +280,30 @@ async function loadInitialProperties() {
 }
 
 onMounted(() => {
+  window.addEventListener('scroll', handleScroll, { passive: true })
   loadInitialProperties()
   loadFavorites()
+})
+
+onBeforeUnmount(() => {
+  window.removeEventListener('scroll', handleScroll)
 })
 </script>
 
 <template>
   <main class="page home-page">
     <section class="hero">
+      <div class="hero__bg" aria-hidden="true">
+        <img
+          src="https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=2000&q=80"
+          alt=""
+          :style="{ transform: `translateY(${parallaxY}px)` }"
+        />
+      </div>
       <div class="hero__overlay"></div>
       <div class="section-container hero__content">
         <p class="eyebrow">SSAFY HOME</p>
-        <h1>내 예산과 조건에 맞는 집을 찾으세요</h1>
+        <h1>내 예산과 조건에 맞는<br />집을 찾으세요</h1>
         <p>지역, 보증금, 월세, 방 타입부터 생활 패턴까지 고려해 더 잘 맞는 매물을 추천합니다.</p>
         <div class="hero__actions">
           <button class="primary-action" type="button" @click="scrollToProperties">
@@ -328,7 +345,7 @@ onMounted(() => {
             <h2 class="section-title">추천 매물</h2>
           </div>
           <p class="section-copy">
-            밝고 현실적인 원룸/오피스텔 중심으로, 핵심 조건을 빠르게 비교할 수 있게 정리했습니다.
+            밝고 현실적인 원룸/오피스텔 중심으로,<br />핵심 조건을 빠르게 비교할 수 있게 정리했습니다.
           </p>
         </div>
 
@@ -492,32 +509,42 @@ onMounted(() => {
 
 .hero {
   position: relative;
-  min-height: min(820px, calc(100vh - 72px));
+  height: 100vh;
+  height: 100dvh;
   display: grid;
   align-items: end;
-  overflow: visible;
-  background:
-    linear-gradient(
-      90deg,
-      rgba(10, 17, 28, 0.7) 0%,
-      rgba(10, 17, 28, 0.38) 48%,
-      rgba(10, 17, 28, 0.18) 100%
-    ),
-    url('https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=2000&q=80')
-      center / cover;
+}
+
+.hero__bg {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+
+  img {
+    position: absolute;
+    top: -15%;
+    left: 0;
+    width: 100%;
+    height: 130%;
+    object-fit: cover;
+    will-change: transform;
+  }
 }
 
 .hero__overlay {
   position: absolute;
   inset: 0;
-  background: linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(15, 23, 42, 0.16));
+  z-index: 1;
+  background:
+    linear-gradient(90deg, rgba(10, 17, 28, 0.7) 0%, rgba(10, 17, 28, 0.38) 48%, rgba(10, 17, 28, 0.18) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.06), rgba(15, 23, 42, 0.16));
 }
 
 .hero__content {
   position: relative;
-  z-index: 1;
+  z-index: 2;
   color: var(--color-surface);
-  padding: 210px 0 76px;
+  padding: 48px 0 108px;
 
   .eyebrow {
     color: rgba(255, 255, 255, 0.78);
@@ -529,8 +556,7 @@ onMounted(() => {
     color: var(--color-surface);
     font-size: 56px;
     font-weight: 900;
-    letter-spacing: 0;
-    line-height: 1.12;
+    line-height: var(--lh-tight);
   }
 
   p:not(.eyebrow) {
@@ -556,7 +582,7 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   min-height: 48px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   font-size: 14px;
   font-weight: 900;
   padding: 0 18px;
@@ -592,9 +618,9 @@ onMounted(() => {
 .hero__search-panel {
   position: relative;
   z-index: 30;
-  width: min(100%, 1120px);
+  width: 100%;
   margin-top: 32px;
-  border-radius: 18px;
+  border-radius: var(--radius-lg);
   background: rgba(255, 255, 255, 0.94);
   padding: 18px;
   box-shadow: 0 28px 70px rgba(15, 23, 42, 0.26);
@@ -635,12 +661,17 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
-  width: min(100%, 860px);
+  width: 100%;
   margin-top: 20px;
 
   article {
     border-left: 1px solid rgba(255, 255, 255, 0.35);
-    padding: 2px 0 2px 14px;
+    padding: 2px 14px;
+    text-align: center;
+
+    &:last-child {
+      border-right: 1px solid rgba(255, 255, 255, 0.35);
+    }
   }
 
   strong,
@@ -742,7 +773,7 @@ onMounted(() => {
     color: var(--color-muted);
     font-size: 13px;
     font-weight: 700;
-    line-height: 1.45;
+    line-height: var(--lh-relaxed);
   }
 }
 
@@ -753,7 +784,7 @@ onMounted(() => {
 
   span {
     border: 1px solid rgba(54, 95, 145, 0.18);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-pill);
     background: var(--color-surface);
     color: var(--color-primary-dark);
     font-size: 12px;
@@ -768,7 +799,7 @@ onMounted(() => {
   display: inline-flex;
   align-items: center;
   border: 1px solid rgba(54, 95, 145, 0.22);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: var(--color-surface);
   color: var(--color-primary-dark);
   font-size: 12px;
@@ -792,7 +823,7 @@ onMounted(() => {
   height: 36px;
   padding: 0 18px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: var(--color-surface);
   color: var(--color-muted);
   font-size: 13px;
@@ -867,7 +898,7 @@ onMounted(() => {
   min-width: 40px;
   height: 40px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: var(--color-surface);
   color: var(--color-heading);
   font-size: 14px;
@@ -951,8 +982,7 @@ onMounted(() => {
     color: var(--color-surface);
     font-size: 32px;
     font-weight: 900;
-    letter-spacing: 0;
-    line-height: 1.25;
+    line-height: var(--lh-snug);
   }
 
   p:not(.eyebrow) {
@@ -974,10 +1004,6 @@ onMounted(() => {
 }
 
 @media (max-width: 940px) {
-  .hero {
-    min-height: auto;
-  }
-
   .hero__content h1 {
     font-size: 42px;
   }
@@ -1008,16 +1034,13 @@ onMounted(() => {
 }
 
 @media (max-width: 640px) {
-  .hero {
-    min-height: auto;
+  .hero__overlay {
     background:
-      linear-gradient(180deg, rgba(10, 17, 28, 0.76) 0%, rgba(10, 17, 28, 0.42) 100%),
-      url('https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=1400&q=80')
-        center / cover;
+      linear-gradient(180deg, rgba(10, 17, 28, 0.76) 0%, rgba(10, 17, 28, 0.42) 100%);
   }
 
   .hero__content {
-    padding: 56px 0 42px;
+    padding: 40px 0 36px;
 
     h1 {
       font-size: 34px;
@@ -1034,7 +1057,7 @@ onMounted(() => {
 
   .hero__search-panel {
     margin-top: 26px;
-    border-radius: 14px;
+    border-radius: var(--radius-md);
     padding: 14px;
   }
 

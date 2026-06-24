@@ -120,7 +120,7 @@ async function toggleFavorite(e) {
   position: relative;
   overflow: hidden;
   border: 1px solid rgba(229, 231, 235, 0.9);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--color-surface);
   box-shadow: var(--shadow-card);
   transition:
@@ -168,7 +168,7 @@ async function toggleFavorite(e) {
   position: absolute;
   left: 14px;
   bottom: 14px;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-pill);
   background: rgba(17, 24, 39, 0.72);
   color: var(--color-surface);
   font-size: 12px;
@@ -180,7 +180,7 @@ async function toggleFavorite(e) {
   position: absolute;
   right: 14px;
   bottom: 14px;
-  border-radius: var(--radius-xs);
+  border-radius: var(--radius-pill);
   background: rgba(217, 119, 6, 0.88);
   color: #fff;
   font-size: 11px;
@@ -203,16 +203,19 @@ async function toggleFavorite(e) {
     color: var(--color-heading);
     font-size: 19px;
     font-weight: 900;
-    letter-spacing: 0;
+    letter-spacing: var(--ls-tight);
   }
 }
 
 h3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
   color: var(--color-heading);
   font-size: 16px;
   font-weight: 800;
-  letter-spacing: 0;
-  line-height: 1.35;
+  line-height: var(--lh-snug);
 }
 
 .spec,
@@ -230,7 +233,7 @@ h3 {
 
   span {
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-xs);
+    border-radius: var(--radius-pill);
     background: var(--color-surface-muted);
     color: var(--color-muted);
     font-size: 12px;
@@ -246,7 +249,7 @@ h3 {
   width: 38px;
   height: 38px;
   border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.88);
   color: var(--color-heading);
   font-size: 19px;
@@ -274,7 +277,7 @@ h3 {
   width: 38px;
   height: 38px;
   border: 1px solid rgba(255, 255, 255, 0.72);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: rgba(255, 255, 255, 0.88);
   color: var(--color-heading);
   font-size: 18px;

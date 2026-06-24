@@ -189,7 +189,7 @@ onBeforeUnmount(() => {
   min-width: 0;
 
   a {
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-pill);
     color: var(--color-muted);
     font-size: 14px;
     font-weight: 700;
@@ -242,7 +242,6 @@ onBeforeUnmount(() => {
     font-size: 13px;
     font-weight: 800;
     text-overflow: ellipsis;
-    white-space: nowrap;
   }
 
   strong {
@@ -269,7 +268,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: var(--color-surface);
   color: var(--color-heading);
   font-size: 14px;

@@ -63,8 +63,8 @@ const lifestyleCharacterImage = computed(
 )
 const helperTitle = computed(() =>
   lifestyleResult.value?.typeName
-    ? `${lifestyleResult.value.typeName} 캐릭터가 기다리는 중`
-    : '자취TI 캐릭터가 기다리는 중',
+    ? `${lifestyleResult.value.typeName}가 기다리는 중`
+    : '자취TI가 기다리는 중',
 )
 
 function getAnswerParts(result) {
@@ -545,13 +545,15 @@ onBeforeUnmount(() => {
   button {
     min-height: 42px;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
+    border-radius: var(--radius-pill);
     background: var(--color-surface);
     color: var(--color-heading);
     padding: 10px 12px;
     text-align: left;
     font-size: 13px;
     font-weight: 800;
+    word-break: keep-all;
+    line-height: var(--lh-relaxed);
     cursor: pointer;
 
     &.active,
@@ -578,7 +580,7 @@ onBeforeUnmount(() => {
 
 .analyze-button {
   height: 44px;
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: var(--color-primary);
   color: white;
   font-weight: 900;
@@ -636,6 +638,7 @@ onBeforeUnmount(() => {
   box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
   padding: 12px 14px;
   text-align: center;
+  animation: bubbleFloat 3.2s ease-in-out infinite;
 
   &::after {
     content: '';
@@ -654,13 +657,15 @@ onBeforeUnmount(() => {
     color: var(--color-heading);
     font-size: 13px;
     font-weight: 900;
+    word-break: keep-all;
   }
 
   span {
     color: var(--color-muted);
     font-size: 12px;
     font-weight: 800;
-    line-height: 1.45;
+    line-height: var(--lh-relaxed);
+    word-break: keep-all;
   }
 }
 
@@ -669,6 +674,7 @@ onBeforeUnmount(() => {
   aspect-ratio: 1;
   object-fit: contain;
   filter: drop-shadow(0 16px 18px rgba(54, 95, 145, 0.18));
+  animation: characterFloat 3.8s ease-in-out infinite;
 }
 
 .empty-helper__placeholder {
@@ -700,7 +706,7 @@ onBeforeUnmount(() => {
   justify-self: end;
   max-width: 85%;
   padding: 10px 14px;
-  border-radius: 16px 16px 4px 16px;
+  border-radius: 20px 20px 4px 20px;
   background: var(--color-primary);
   color: white;
   font-size: 13px;
@@ -729,7 +735,7 @@ onBeforeUnmount(() => {
   min-width: 0;
   min-height: 78px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   background: var(--color-surface-muted);
   padding: 12px;
 
@@ -764,20 +770,20 @@ onBeforeUnmount(() => {
 }
 
 .summary-card--risk-safe {
-  background: #ecfdf3;
+  background: var(--color-success-bg);
   border-color: rgba(2, 122, 72, 0.18);
 
   strong {
-    color: #027a48;
+    color: var(--color-success-text);
   }
 }
 
 .summary-card--risk-caution {
-  background: #fffbeb;
+  background: var(--color-warning-bg);
   border-color: rgba(180, 83, 9, 0.2);
 
   strong {
-    color: #b45309;
+    color: var(--color-warning-text);
   }
 }
 
@@ -795,11 +801,11 @@ onBeforeUnmount(() => {
 }
 
 .summary-card--score-high {
-  background: #ecfdf3;
+  background: var(--color-success-bg);
   border-color: rgba(2, 122, 72, 0.18);
 
   strong {
-    color: #027a48;
+    color: var(--color-success-text);
   }
 }
 
@@ -825,7 +831,7 @@ onBeforeUnmount(() => {
   color: var(--color-text);
   font-size: 14px;
   font-weight: 700;
-  line-height: 1.7;
+  line-height: var(--lh-loose);
   white-space: pre-line;
 }
 
@@ -843,8 +849,8 @@ onBeforeUnmount(() => {
 
 .answer-highlight--score-high,
 .answer-highlight--risk-safe {
-  background: #ecfdf3;
-  color: #027a48;
+  background: var(--color-success-bg);
+  color: var(--color-success-text);
 }
 
 .answer-highlight--score-mid {
@@ -859,8 +865,8 @@ onBeforeUnmount(() => {
 }
 
 .answer-highlight--risk-caution {
-  background: #fffbeb;
-  color: #b45309;
+  background: var(--color-warning-bg);
+  color: var(--color-warning-text);
 }
 
 .answer-highlight--risk-unknown {
@@ -886,7 +892,7 @@ onBeforeUnmount(() => {
   button {
     justify-self: start;
     height: 36px;
-    border-radius: var(--radius-xs);
+    border-radius: var(--radius-pill);
     background: var(--color-primary);
     color: white;
     padding: 0 14px;
@@ -924,7 +930,7 @@ onBeforeUnmount(() => {
     color: var(--color-heading);
     font-size: 15px;
     font-weight: 900;
-    line-height: 1.4;
+    line-height: var(--lh-snug);
   }
 
   strong {
@@ -991,6 +997,16 @@ onBeforeUnmount(() => {
     margin-top: 10px;
     padding-left: 18px;
   }
+}
+
+@keyframes characterFloat {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-8px); }
+}
+
+@keyframes bubbleFloat {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-5px); }
 }
 
 .warning-list {

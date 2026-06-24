@@ -316,7 +316,7 @@ function handleSearch() {
   height: 34px;
   padding: 0 12px;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   background: var(--color-surface);
   color: var(--color-muted);
   font-size: 12px;
@@ -360,7 +360,7 @@ function handleSearch() {
   padding: 0 20px;
   background: var(--color-primary);
   color: var(--color-surface);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-pill);
   font-size: 13px;
   font-weight: 900;
   cursor: pointer;

@@ -70,19 +70,30 @@ a {
   margin: 0 auto;
 }
 
+/* 한글 자연 줄바꿈 */
+h1, h2, h3, p, li, dt, dd, strong, label {
+  word-break: keep-all;
+  overflow-wrap: break-word;
+}
+
+h1 { line-height: var(--lh-tight);   letter-spacing: var(--ls-tight); }
+h2 { line-height: var(--lh-snug);    letter-spacing: var(--ls-snug); }
+h3 { line-height: var(--lh-snug);    letter-spacing: var(--ls-snug); }
+p  { line-height: var(--lh-relaxed); }
+
 .eyebrow {
   color: var(--color-primary);
   font-size: 13px;
   font-weight: 700;
-  letter-spacing: 0;
+  letter-spacing: var(--ls-wide);
 }
 
 .section-title {
   color: var(--color-heading);
   font-size: 30px;
   font-weight: 800;
-  letter-spacing: 0;
-  line-height: 1.2;
+  letter-spacing: var(--ls-snug);
+  line-height: var(--lh-snug);
 }
 
 .section-copy {
@@ -101,6 +112,13 @@ a {
 .page-fade-leave-to {
   opacity: 0;
   transform: translateY(8px);
+}
+
+.card {
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  background: var(--color-surface);
+  box-shadow: var(--shadow-card);
 }
 
 @media (max-width: 720px) {
