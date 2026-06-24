@@ -87,14 +87,14 @@ class LocationApiTests {
     ) {
         entityManager.createNativeQuery("""
                         INSERT INTO legal_dongs (code, sido, gugun, dong, full_name, active)
-                        VALUES (:code, :sido, :gugun, :dong, :fullName, :active)
+                        VALUES (?1, ?2, ?3, ?4, ?5, ?6)
                         """)
-                .setParameter("code", code)
-                .setParameter("sido", sido)
-                .setParameter("gugun", gugun)
-                .setParameter("dong", dong)
-                .setParameter("fullName", fullName)
-                .setParameter("active", active)
+                .setParameter(1, code)
+                .setParameter(2, sido)
+                .setParameter(3, gugun)
+                .setParameter(4, dong)
+                .setParameter(5, fullName)
+                .setParameter(6, active)
                 .executeUpdate();
         entityManager.flush();
         entityManager.clear();
