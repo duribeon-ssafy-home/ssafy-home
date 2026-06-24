@@ -27,7 +27,10 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StopWatch;
 
+@Slf4j
 @RequiredArgsConstructor
 @Service
 @Transactional(readOnly = true)
@@ -39,14 +42,24 @@ public class RecommendationService {
     private final RecommendationScorer recommendationScorer;
 
     public Page<PropertyResponse> recommend(Long userId, PropertySearchCondition condition, Pageable pageable) {
+        StopWatch sw = new StopWatch("추천 정렬");
+
+        sw.start("라이프스타일 조회");
         LifestyleResult lifestyle = lifestyleResultRepository
                 .findTopByUserIdOrderByCreatedAtDescIdDesc(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.LIFESTYLE_RESULT_NOT_FOUND));
+        sw.stop();
 
+        sw.start("후보 매물 전체 조회");
         Specification<Property> spec = PropertySpecification.search(normalizeCondition(condition));
         List<Property> candidates = propertyRepository.findAll(spec);
-        Map<String, AreaFacilityCount> facilityMap = buildFacilityMap(candidates);
+        sw.stop();
 
+        sw.start("시설 정보 조회 (N+1 구간)");
+        Map<String, AreaFacilityCount> facilityMap = buildFacilityMap(candidates);
+        sw.stop();
+
+        sw.start("채점 및 정렬");
         List<ScoredProperty> scoredProperties = candidates.stream()
                 .map(property -> {
                     AreaFacilityCount area = facilityMap.get(areaKey(property));
@@ -55,10 +68,15 @@ public class RecommendationService {
                 })
                 .sorted(scoredPropertyComparator())
                 .toList();
+        sw.stop();
 
+        sw.start("페이지 변환");
         List<PropertyResponse> content = pageContent(scoredProperties, pageable).stream()
                 .map(scored -> PropertyResponse.from(scored.property(), scored.area()))
                 .toList();
+        sw.stop();
+
+        log.info("\n[추천 정렬] 후보 {}건\n{}", candidates.size(), sw.prettyPrint());
 
         return new PageImpl<>(content, pageable, scoredProperties.size());
     }

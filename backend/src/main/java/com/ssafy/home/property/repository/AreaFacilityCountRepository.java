@@ -1,6 +1,7 @@
 package com.ssafy.home.property.repository;
 
 import com.ssafy.home.property.entity.AreaFacilityCount;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -10,6 +11,7 @@ import java.util.Optional;
 
 public interface AreaFacilityCountRepository extends JpaRepository<AreaFacilityCount, Long> {
 
+    @Cacheable(value = "areaFacility", key = "#sido + '|' + #gugun + '|' + #dong")
     Optional<AreaFacilityCount> findBySidoAndGugunAndDong(String sido, String gugun, String dong);
 
     @Query("""
