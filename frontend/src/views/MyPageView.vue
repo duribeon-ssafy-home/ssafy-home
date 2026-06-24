@@ -6,6 +6,14 @@ import { changeMyPassword, getMyProfile, updateMyProfile, updateMyStatus } from 
 import PasswordField from '@/components/PasswordField.vue'
 import { createLifestylePresetChips, lifestyleTypeMeta } from '@/data/lifestyle'
 import { useAuthStore } from '@/stores/auth'
+import balancedCharacter from '@/assets/images/lifestyle/balanced.png'
+import carefulCharacter from '@/assets/images/lifestyle/careful.png'
+import cozyCharacter from '@/assets/images/lifestyle/cozy.png'
+import flexibleCharacter from '@/assets/images/lifestyle/flexible.png'
+import practicalCharacter from '@/assets/images/lifestyle/practical.png'
+import savingCharacter from '@/assets/images/lifestyle/saving.png'
+import spaciousCharacter from '@/assets/images/lifestyle/spacious.png'
+import thriftyCharacter from '@/assets/images/lifestyle/thrifty.png'
 
 const router = useRouter()
 const authStore = useAuthStore()
@@ -53,6 +61,16 @@ const statusToneLabels = {
   BANNED: 'status-badge--danger',
   DELETED: 'status-badge--danger',
 }
+const lifestyleCharacters = {
+  LIVING_COST_HOME_BALANCED: balancedCharacter,
+  LIVING_COST_COMPACT: thriftyCharacter,
+  LIVING_FLEXIBLE_HOME: cozyCharacter,
+  LIVING_FLEXIBLE_COMPACT: practicalCharacter,
+  LOCATION_FLEXIBLE_COST_HOME: carefulCharacter,
+  LOCATION_FLEXIBLE_COST_COMPACT: savingCharacter,
+  LOCATION_FLEXIBLE_HOME: spaciousCharacter,
+  LOCATION_FLEXIBLE_COMPACT: flexibleCharacter,
+}
 
 const displayProfile = computed(() => profile.value || authStore.user || {})
 const roleLabel = computed(
@@ -86,6 +104,9 @@ const lifestyleMeta = computed(() =>
 )
 const presetChips = computed(() =>
   createLifestylePresetChips(lifestyleResult.value?.filterPreset, lifestyleMeta.value?.chips || []),
+)
+const lifestyleCharacterImage = computed(
+  () => lifestyleCharacters[lifestyleResult.value?.lifestyleType] || '',
 )
 const isNewPasswordLengthValid = computed(() => passwordForm.newPassword.length >= 8)
 const passwordRuleClass = computed(() => ({
@@ -425,15 +446,24 @@ function getApiErrorMessage(error, fallbackMessage) {
             </div>
 
             <div v-if="lifestyleResult && lifestyleMeta" class="preference-summary">
-              <span>나의 유형</span>
-              <h3>{{ lifestyleMeta.typeName }}</h3>
-              <p>{{ lifestyleMeta.headline }}</p>
+              <div class="preference-summary__content">
+                <span>나의 유형</span>
+                <h3>{{ lifestyleMeta.typeName }}</h3>
+                <p>{{ lifestyleMeta.headline }}</p>
 
-              <div class="chip-list">
-                <span v-for="chip in presetChips" :key="chip">{{ chip }}</span>
+                <div class="chip-list">
+                  <span v-for="chip in presetChips" :key="chip">{{ chip }}</span>
+                </div>
+
+                <RouterLink class="secondary-link" :to="{ name: 'survey' }">자취TI 다시 하기</RouterLink>
               </div>
 
-              <RouterLink class="secondary-link" :to="{ name: 'survey' }">자취TI 다시 하기</RouterLink>
+              <img
+                v-if="lifestyleCharacterImage"
+                class="preference-character"
+                :src="lifestyleCharacterImage"
+                :alt="`${lifestyleMeta.typeName} 자취TI 이미지`"
+              />
             </div>
 
             <div v-else class="empty-preference">
@@ -962,6 +992,9 @@ function getApiErrorMessage(error, fallbackMessage) {
 }
 
 .preference-summary {
+  grid-template-columns: minmax(0, 1fr) minmax(150px, 210px);
+  align-items: center;
+
   span {
     color: var(--color-muted);
     font-size: 14px;
@@ -981,6 +1014,20 @@ function getApiErrorMessage(error, fallbackMessage) {
     font-weight: 700;
     line-height: 1.7;
   }
+}
+
+.preference-summary__content {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.preference-character {
+  width: min(210px, 100%);
+  aspect-ratio: 1;
+  justify-self: end;
+  object-fit: contain;
+  filter: drop-shadow(0 18px 24px rgba(54, 95, 145, 0.16));
 }
 
 .empty-preference {
@@ -1109,6 +1156,15 @@ function getApiErrorMessage(error, fallbackMessage) {
   .preference-summary h3,
   .empty-preference h3 {
     font-size: 25px;
+  }
+
+  .preference-summary {
+    grid-template-columns: 1fr;
+  }
+
+  .preference-character {
+    width: 160px;
+    justify-self: start;
   }
 }
 </style>
