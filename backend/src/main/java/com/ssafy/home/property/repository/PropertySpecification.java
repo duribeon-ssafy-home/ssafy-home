@@ -50,6 +50,13 @@ public class PropertySpecification {
             if (condition.maxArea() != null) {
                 predicates.add(cb.lessThanOrEqualTo(root.get("area"), condition.maxArea()));
             }
+            if (condition.swLat() != null && condition.swLng() != null &&
+                condition.neLat() != null && condition.neLng() != null) {
+                predicates.add(cb.greaterThanOrEqualTo(root.get("latitude"), condition.swLat()));
+                predicates.add(cb.lessThanOrEqualTo(root.get("latitude"), condition.neLat()));
+                predicates.add(cb.greaterThanOrEqualTo(root.get("longitude"), condition.swLng()));
+                predicates.add(cb.lessThanOrEqualTo(root.get("longitude"), condition.neLng()));
+            }
 
             return cb.and(predicates.toArray(new Predicate[0]));
         };

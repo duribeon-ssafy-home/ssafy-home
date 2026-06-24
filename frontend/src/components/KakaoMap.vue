@@ -5,13 +5,24 @@ const props = defineProps({
   properties: { type: Array, default: () => [] },
   selectedId: { type: [Number, null], default: null },
 })
-const emit = defineEmits(['select'])
+const emit = defineEmits(['select', 'bounds-changed'])
 
 const mapContainer = ref(null)
 const mapError = ref('')
 let map = null
 const overlayMap = {}  // propertyId -> { overlay, el }
+let clusterer = null
+let invisibleImage = null
+let suppressMapClick = false
 
+// 클러스터 모드로 전환되는 줌 레벨 기준 (이 값 이상이면 클러스터, 미만이면 개별 오버레이)
+const CLUSTER_LEVEL = 6
+
+const clusterCircleSvg = encodeURIComponent(
+  '<svg xmlns="http://www.w3.org/2000/svg" width="44" height="44">' +
+  '<circle cx="22" cy="22" r="20" fill="%231f344f"/>' +
+  '</svg>',
+)
 
 function formatPrice(property) {
   if (property.rentType === 'JEONSE') {
@@ -29,6 +40,7 @@ function makeOverlayEl(property) {
   el.textContent = formatPrice(property)
   el.addEventListener('click', (e) => {
     e.stopPropagation()
+    suppressMapClick = true
     emit('select', property.propertyId)
   })
   return el
@@ -39,34 +51,59 @@ function clearOverlays() {
   Object.keys(overlayMap).forEach((k) => delete overlayMap[k])
 }
 
-function jitteredPos(p) {
-  // 동 단위 중심 좌표가 같은 매물들을 나선형으로 분산 (약 200~700m 반경)
-  const angle = ((p.propertyId * 137.508) % 360) * (Math.PI / 180)
-  const radius = 0.002 + (p.propertyId % 10) * 0.0005
-  return new kakao.maps.LatLng(
-    Number(p.latitude) + Math.sin(angle) * radius,
-    Number(p.longitude) + Math.cos(angle) * radius,
-  )
+function exactPos(p) {
+  return new kakao.maps.LatLng(Number(p.latitude), Number(p.longitude))
 }
 
-function renderMarkers(properties) {
+function emitBounds() {
+  if (!map) return
+  const bounds = map.getBounds()
+  const sw = bounds.getSouthWest()
+  const ne = bounds.getNorthEast()
+  emit('bounds-changed', { swLat: sw.getLat(), swLng: sw.getLng(), neLat: ne.getLat(), neLng: ne.getLng() })
+}
+
+function updateOverlayVisibility() {
+  if (!map) return
+  const showIndividual = map.getLevel() < CLUSTER_LEVEL
+  Object.values(overlayMap).forEach(({ overlay }) => {
+    overlay.setMap(showIndividual ? map : null)
+  })
+  clusterer?.setMap(showIndividual ? null : map)
+}
+
+function renderMarkers(properties, fitBounds = true) {
   if (!map) return
   clearOverlays()
+  clusterer.clear()
+
   const bounds = new kakao.maps.LatLngBounds()
+  const markers = []
+
   properties.forEach((p) => {
     if (p.latitude == null || p.longitude == null) return
-    const pos = jitteredPos(p)
+    const pos = exactPos(p)
+
+    // 클러스터러용 투명 마커 (위치만 제공, 렌더링은 CustomOverlay가 담당)
+    markers.push(new kakao.maps.Marker({ position: pos, image: invisibleImage }))
+
     const el = makeOverlayEl(p)
     const overlay = new kakao.maps.CustomOverlay({ position: pos, content: el, yAnchor: 1.2 })
-    overlay.setMap(map)
     overlayMap[p.propertyId] = { overlay, el }
     bounds.extend(pos)
   })
-  if (!bounds.isEmpty()) {
+
+  clusterer.addMarkers(markers)
+  updateOverlayVisibility()
+
+  if (fitBounds && !bounds.isEmpty()) {
     map.setBounds(bounds, 80)
-    // 너무 가까이 확대되지 않도록 최소 레벨 유지 (레벨 숫자가 클수록 넓게 보임)
-    if (map.getLevel() < 6) map.setLevel(6)
+    if (map.getLevel() < CLUSTER_LEVEL) map.setLevel(CLUSTER_LEVEL)
   }
+}
+
+function updateMarkers(properties) {
+  renderMarkers(properties, false)
 }
 
 function applySelectedStyle(id) {
@@ -81,9 +118,9 @@ function applySelectedStyle(id) {
 
 function loadKakaoScript() {
   return new Promise((resolve, reject) => {
-    if (window.kakao?.maps) { resolve(); return }
+    if (window.kakao?.maps?.MarkerClusterer) { resolve(); return }
     const s = document.createElement('script')
-    s.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${import.meta.env.VITE_KAKAO_MAP_KEY}&autoload=false`
+    s.src = `//dapi.kakao.com/v2/maps/sdk.js?appkey=${import.meta.env.VITE_KAKAO_MAP_KEY}&autoload=false&libraries=clusterer`
     s.onload = () => window.kakao.maps.load(resolve)
     s.onerror = () => reject(new Error('카카오맵 SDK 로드 실패'))
     document.head.appendChild(s)
@@ -93,9 +130,38 @@ function loadKakaoScript() {
 onMounted(async () => {
   try {
     await loadKakaoScript()
+
+    invisibleImage = new kakao.maps.MarkerImage(
+      'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7',
+      new kakao.maps.Size(1, 1),
+    )
+
     const center = new kakao.maps.LatLng(37.5665, 126.9780)
     map = new kakao.maps.Map(mapContainer.value, { center, level: 7 })
-    kakao.maps.event.addListener(map, 'click', () => emit('select', null))
+
+    clusterer = new kakao.maps.MarkerClusterer({
+      map,
+      averageCenter: true,
+      gridSize: 120,
+      styles: [{
+        width: '44px',
+        height: '44px',
+        background: `url("data:image/svg+xml,${clusterCircleSvg}") no-repeat center`,
+        color: '#fff',
+        textAlign: 'center',
+        lineHeight: '44px',
+        fontSize: '13px',
+        fontWeight: '800',
+      }],
+    })
+
+    kakao.maps.event.addListener(map, 'click', () => {
+      if (suppressMapClick) { suppressMapClick = false; return }
+      emit('select', null)
+    })
+    kakao.maps.event.addListener(map, 'zoom_changed', updateOverlayVisibility)
+    kakao.maps.event.addListener(map, 'dragend', emitBounds)
+
     if (props.properties.length) renderMarkers(props.properties)
   } catch (e) {
     console.error(e)
@@ -103,10 +169,15 @@ onMounted(async () => {
   }
 })
 
-onUnmounted(clearOverlays)
+onUnmounted(() => {
+  clearOverlays()
+  clusterer?.clear()
+})
 
 watch(() => props.properties, renderMarkers)
 watch(() => props.selectedId, applySelectedStyle)
+
+defineExpose({ updateMarkers })
 </script>
 
 <template>
@@ -144,15 +215,15 @@ watch(() => props.selectedId, applySelectedStyle)
 
 .map-price-marker {
   background: #1f344f;
-  color: white;
+  color: #ffffff;
   border-radius: 20px;
-  padding: 6px 12px;
-  font-size: 12px;
-  font-weight: 800;
+  padding: 7px 13px;
+  font-size: 13px;
+  font-weight: 700;
   cursor: pointer;
   white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.28);
-  transition: background 0.15s, transform 0.15s;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.22);
+  transition: background 0.12s, box-shadow 0.12s, transform 0.12s;
   position: relative;
   user-select: none;
 }
@@ -160,23 +231,25 @@ watch(() => props.selectedId, applySelectedStyle)
 .map-price-marker::after {
   content: '';
   position: absolute;
-  bottom: -6px;
+  bottom: -7px;
   left: 50%;
   transform: translateX(-50%);
-  border: 6px solid transparent;
+  border: 7px solid transparent;
   border-top-color: #1f344f;
   border-bottom: none;
 }
 
 .map-price-marker:hover {
-  background: #2563eb;
+  background: #2d4a6e;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
   transform: scale(1.08);
 }
 
-.map-price-marker:hover::after { border-top-color: #2563eb; }
+.map-price-marker:hover::after { border-top-color: #2d4a6e; }
 
 .map-price-marker--active {
   background: #2563eb;
+  box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45);
   transform: scale(1.12);
   z-index: 10;
 }

@@ -16,5 +16,9 @@ public record PropertySearchCondition(
         Integer maxMonthlyRent,
         BigDecimal minArea,
         BigDecimal maxArea,
-        Integer facilityCountMin
+        Integer facilityCountMin,
+        BigDecimal swLat,
+        BigDecimal swLng,
+        BigDecimal neLat,
+        BigDecimal neLng
 ) {}

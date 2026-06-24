@@ -78,7 +78,11 @@ public class PropertyService {
                 condition.maxMonthlyRent(),
                 condition.minArea(),
                 condition.maxArea(),
-                condition.facilityCountMin()
+                condition.facilityCountMin(),
+                condition.swLat(),
+                condition.swLng(),
+                condition.neLat(),
+                condition.neLng()
         );
 
         Specification<Property> spec = PropertySpecification.search(condition);
