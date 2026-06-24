@@ -1,43 +1,29 @@
 <script setup>
 import { ref } from 'vue'
-import { RouterLink, useRoute, useRouter } from 'vue-router'
-import PasswordField from '@/components/PasswordField.vue'
-import { useAuthStore } from '@/stores/auth'
-
-const router = useRouter()
-const route = useRoute()
-const authStore = useAuthStore()
+import { RouterLink } from 'vue-router'
+import { requestTemporaryPassword } from '@/api/authApi'
 
 const email = ref('')
-const password = ref('')
-const errorMessage = ref('')
 const isSubmitting = ref(false)
+const successMessage = ref('')
+const errorMessage = ref('')
 
-async function submitLogin() {
+async function submitRequest() {
+  successMessage.value = ''
   errorMessage.value = ''
   isSubmitting.value = true
 
   try {
-    await authStore.loginWithPassword({
+    await requestTemporaryPassword({
       email: email.value,
-      password: password.value,
     })
-    router.push(resolveRedirect())
+    successMessage.value = '입력한 이메일로 임시 비밀번호를 발송했습니다.'
   } catch (error) {
-    errorMessage.value = error.response?.data?.message || '로그인에 실패했습니다.'
+    errorMessage.value =
+      error.response?.data?.message || '임시 비밀번호 발급 요청에 실패했습니다.'
   } finally {
     isSubmitting.value = false
   }
-}
-
-function resolveRedirect() {
-  const redirect = route.query.redirect
-
-  if (typeof redirect === 'string' && redirect.startsWith('/')) {
-    return redirect
-  }
-
-  return { name: 'home' }
 }
 </script>
 
@@ -47,13 +33,17 @@ function resolveRedirect() {
       <div class="auth-visual">
         <div>
           <p>SSAFY HOME</p>
-          <h1>내 조건에 맞는 집을 더 빠르게 찾으세요</h1>
+          <h1>임시 비밀번호로 다시 로그인하세요</h1>
         </div>
       </div>
 
-      <form class="auth-form" @submit.prevent="submitLogin">
-        <p class="eyebrow">Welcome Back</p>
-        <h2>로그인</h2>
+      <form class="auth-form" @submit.prevent="submitRequest">
+        <p class="eyebrow">Password Help</p>
+        <h2>비밀번호 찾기</h2>
+        <p class="helper-text">
+          가입한 이메일을 입력하면 임시 비밀번호를 보내드립니다.
+        </p>
+
         <label>
           이메일
           <input
@@ -64,17 +54,18 @@ function resolveRedirect() {
             placeholder="you@example.com"
           />
         </label>
-        <PasswordField id="login-password" v-model="password" required />
+
+        <p v-if="successMessage" class="form-message form-message--success" role="status">
+          {{ successMessage }}
+        </p>
         <p v-if="errorMessage" class="form-message form-message--error" role="alert">
           {{ errorMessage }}
         </p>
+
         <button type="submit" :disabled="isSubmitting">
-          {{ isSubmitting ? '로그인 중...' : '로그인' }}
+          {{ isSubmitting ? '발송 중...' : '임시 비밀번호 받기' }}
         </button>
-        <div class="auth-links">
-          <RouterLink :to="{ name: 'forgot-password' }">비밀번호를 잊으셨나요?</RouterLink>
-          <RouterLink :to="{ name: 'signup' }">회원가입으로 이동</RouterLink>
-        </div>
+        <RouterLink :to="{ name: 'login' }">로그인으로 돌아가기</RouterLink>
       </form>
     </section>
   </main>
@@ -104,7 +95,7 @@ function resolveRedirect() {
   align-items: end;
   background:
     linear-gradient(180deg, rgba(15, 23, 42, 0.1) 0%, rgba(15, 23, 42, 0.62) 100%),
-    url('https://images.unsplash.com/photo-1522708323590-d24dbb6b0267?auto=format&fit=crop&w=1200&q=80')
+    url('https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?auto=format&fit=crop&w=1200&q=80')
       center / cover;
   color: var(--color-surface);
   padding: 34px;
@@ -171,13 +162,6 @@ function resolveRedirect() {
       background: var(--color-subtle);
     }
   }
-}
-
-.auth-links {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: space-between;
-  gap: 10px;
 
   a {
     color: var(--color-primary);
@@ -186,11 +170,23 @@ function resolveRedirect() {
   }
 }
 
+.helper-text {
+  color: var(--color-muted);
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.6;
+}
+
 .form-message {
   border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 800;
   padding: 11px 12px;
+}
+
+.form-message--success {
+  background: var(--color-primary-soft);
+  color: var(--color-primary-dark);
 }
 
 .form-message--error {

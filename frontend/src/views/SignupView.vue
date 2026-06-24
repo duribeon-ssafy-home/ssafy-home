@@ -18,9 +18,20 @@ const errorMessage = ref('')
 const isSubmitting = ref(false)
 
 const isAgent = computed(() => role.value === 'AGENT')
+const isPasswordLengthValid = computed(() => password.value.length >= 8)
+const passwordRuleClass = computed(() => ({
+  'password-rule--valid': isPasswordLengthValid.value,
+  'password-rule--invalid': password.value.length > 0 && !isPasswordLengthValid.value,
+}))
 
 async function submitSignup() {
   errorMessage.value = ''
+
+  if (!isPasswordLengthValid.value) {
+    errorMessage.value = '비밀번호는 8자 이상 입력해주세요.'
+    return
+  }
+
   isSubmitting.value = true
 
   try {
@@ -88,6 +99,10 @@ function resolveRedirect() {
           autocomplete="new-password"
           required
         />
+        <p class="password-rule" :class="passwordRuleClass" data-testid="password-rule">
+          <span aria-hidden="true">{{ isPasswordLengthValid ? '✓' : '!' }}</span>
+          비밀번호는 8자 이상이어야 합니다.
+        </p>
         <label>
           역할
           <select v-model="role">
@@ -228,6 +243,47 @@ function resolveRedirect() {
   color: var(--color-subtle);
   font-size: 12px;
   font-weight: 800;
+}
+
+.password-rule {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: -6px;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 900;
+
+  span {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--color-surface-muted);
+    color: var(--color-muted);
+    font-size: 12px;
+    line-height: 1;
+  }
+}
+
+.password-rule--valid {
+  color: #027a48;
+
+  span {
+    background: #ecfdf3;
+    color: #027a48;
+  }
+}
+
+.password-rule--invalid {
+  color: var(--color-danger);
+
+  span {
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
+  }
 }
 
 .form-message {

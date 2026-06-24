@@ -1,6 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import api from '@/api/axios'
-import { getMyProfile, updateMyProfile, updateMyRole, updateMyStatus } from '../userApi'
+import {
+  changeMyPassword,
+  getMyProfile,
+  updateMyProfile,
+  updateMyRole,
+  updateMyStatus,
+} from '../userApi'
 
 vi.mock('@/api/axios', () => ({
   default: {
@@ -44,6 +50,18 @@ describe('userApi', () => {
     await expect(updateMyStatus({ status: 'INACTIVE' })).resolves.toBe(result)
 
     expect(api.patch).toHaveBeenCalledWith('/users/me/status', { status: 'INACTIVE' })
+  })
+
+  it('내 비밀번호 변경 요청을 보낸다', async () => {
+    const payload = {
+      currentPassword: 'old-password',
+      newPassword: 'new-password123',
+    }
+    api.patch.mockResolvedValue({ data: { data: null } })
+
+    await expect(changeMyPassword(payload)).resolves.toBeNull()
+
+    expect(api.patch).toHaveBeenCalledWith('/users/me/password', payload)
   })
 
   it('BUYER에서 AGENT로 역할 변경 요청을 보낸다', async () => {

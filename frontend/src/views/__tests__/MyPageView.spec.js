@@ -2,7 +2,7 @@ import { flushPromises, mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { getMyLatestLifestyleResult } from '@/api/lifestyleApi'
-import { getMyProfile, updateMyProfile, updateMyStatus } from '@/api/userApi'
+import { changeMyPassword, getMyProfile, updateMyProfile, updateMyStatus } from '@/api/userApi'
 import { useAuthStore } from '@/stores/auth'
 import MyPageView from '../MyPageView.vue'
 
@@ -27,6 +27,7 @@ vi.mock('vue-router', () => ({
 }))
 
 vi.mock('@/api/userApi', () => ({
+  changeMyPassword: vi.fn(),
   getMyProfile: vi.fn(),
   updateMyProfile: vi.fn(),
   updateMyStatus: vi.fn(),
@@ -105,6 +106,36 @@ describe('MyPageView', () => {
     expect(wrapper.text()).toContain('저장된 선호 유형')
     expect(wrapper.text()).not.toContain('권한 기반 기능')
     expect(wrapper.find('[data-testid="role-phone-input"]').exists()).toBe(false)
+  })
+
+  it('마이페이지에서 비밀번호를 변경할 수 있다', async () => {
+    const { wrapper } = mountMyPage()
+    await flushPromises()
+
+    changeMyPassword.mockResolvedValue(null)
+
+    await wrapper.find('#current-password').setValue('temporary123!')
+    await wrapper.find('#new-password').setValue('short')
+
+    expect(wrapper.get('[data-testid="password-rule"]').classes()).toContain(
+      'password-rule--invalid',
+    )
+
+    await wrapper.find('#new-password').setValue('newPassword123!')
+
+    expect(wrapper.get('[data-testid="password-rule"]').classes()).toContain(
+      'password-rule--valid',
+    )
+
+    await wrapper.find('#confirm-password').setValue('newPassword123!')
+    await wrapper.find('form.password-form').trigger('submit')
+    await flushPromises()
+
+    expect(changeMyPassword).toHaveBeenCalledWith({
+      currentPassword: 'temporary123!',
+      newPassword: 'newPassword123!',
+    })
+    expect(wrapper.find('.security-panel').text()).toContain('비밀번호가 변경되었습니다.')
   })
 
   it('ADMIN은 관리자 페이지 버튼이 admin-dashboard 라우트로 연결된다', async () => {

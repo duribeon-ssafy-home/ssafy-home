@@ -1,6 +1,7 @@
 package com.ssafy.home.auth.controller;
 
 import com.ssafy.home.auth.dto.request.LoginRequest;
+import com.ssafy.home.auth.dto.request.ForgotPasswordRequest;
 import com.ssafy.home.auth.dto.request.RefreshTokenRequest;
 import com.ssafy.home.auth.dto.request.SignupRequest;
 import com.ssafy.home.auth.dto.response.AuthUserResponse;
@@ -47,6 +48,16 @@ public class AuthController {
 	)
 	public ApiResponse<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
 		return ApiResponse.success("로그인에 성공했습니다.", authService.login(request));
+	}
+
+	@PostMapping("/password/forgot")
+	@Operation(
+			summary = "임시 비밀번호 발급",
+			description = "이메일로 임시 비밀번호를 발급합니다. 이메일 존재 여부는 응답에 노출하지 않습니다."
+	)
+	public ApiResponse<Void> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+		authService.issueTemporaryPassword(request);
+		return ApiResponse.success("입력한 이메일로 임시 비밀번호 안내를 발송했습니다.", null);
 	}
 
 	@PostMapping("/logout")

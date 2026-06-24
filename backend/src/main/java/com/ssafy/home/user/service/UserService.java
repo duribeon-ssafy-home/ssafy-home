@@ -2,6 +2,7 @@ package com.ssafy.home.user.service;
 
 import com.ssafy.home.common.exception.BusinessException;
 import com.ssafy.home.common.exception.ErrorCode;
+import com.ssafy.home.user.dto.request.PasswordChangeRequest;
 import com.ssafy.home.user.dto.request.UserRoleUpdateRequest;
 import com.ssafy.home.user.dto.request.UserStatusUpdateRequest;
 import com.ssafy.home.user.dto.request.UserUpdateRequest;
@@ -12,6 +13,7 @@ import com.ssafy.home.user.entity.User;
 import com.ssafy.home.user.repository.UserRepository;
 import com.ssafy.home.user.type.Role;
 import com.ssafy.home.user.type.UserStatus;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -21,9 +23,11 @@ import org.springframework.util.StringUtils;
 public class UserService {
 
 	private final UserRepository userRepository;
+	private final PasswordEncoder passwordEncoder;
 
-	public UserService(UserRepository userRepository) {
+	public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
 		this.userRepository = userRepository;
+		this.passwordEncoder = passwordEncoder;
 	}
 
 	public UserResponse getMe(Long userId) {
@@ -35,6 +39,16 @@ public class UserService {
 		User user = findUser(userId);
 		user.updateProfile(request.name(), request.nickname(), request.phoneNumber());
 		return UserResponse.from(user);
+	}
+
+	@Transactional
+	public void changeMyPassword(Long userId, PasswordChangeRequest request) {
+		User user = findUser(userId);
+		if (!passwordEncoder.matches(request.currentPassword(), user.getPassword())) {
+			throw new BusinessException(ErrorCode.INVALID_CREDENTIALS);
+		}
+
+		user.changePassword(passwordEncoder.encode(request.newPassword()));
 	}
 
 	@Transactional

@@ -24,3 +24,8 @@ export async function logout(payload) {
   const response = await api.post('/auth/logout', payload)
   return response.data.data
 }
+
+export async function requestTemporaryPassword(payload) {
+  const response = await api.post('/auth/password/forgot', payload)
+  return response.data.data
+}

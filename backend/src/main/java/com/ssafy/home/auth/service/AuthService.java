@@ -1,6 +1,7 @@
 package com.ssafy.home.auth.service;
 
 import com.ssafy.home.auth.dto.request.LoginRequest;
+import com.ssafy.home.auth.dto.request.ForgotPasswordRequest;
 import com.ssafy.home.auth.dto.request.RefreshTokenRequest;
 import com.ssafy.home.auth.dto.request.SignupRequest;
 import com.ssafy.home.auth.dto.response.AuthUserResponse;
@@ -30,6 +31,8 @@ import org.springframework.util.StringUtils;
 public class AuthService {
 
 	private static final String TOKEN_TYPE = "Bearer";
+	private static final char[] TEMPORARY_PASSWORD_CHARS =
+			"ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%".toCharArray();
 	private static final SecureRandom SECURE_RANDOM = new SecureRandom();
 
 	private final UserRepository userRepository;
@@ -37,19 +40,22 @@ public class AuthService {
 	private final PasswordEncoder passwordEncoder;
 	private final JwtTokenProvider jwtTokenProvider;
 	private final JwtProperties jwtProperties;
+	private final TemporaryPasswordMailService temporaryPasswordMailService;
 
 	public AuthService(
 			UserRepository userRepository,
 			RefreshTokenRepository refreshTokenRepository,
 			PasswordEncoder passwordEncoder,
 			JwtTokenProvider jwtTokenProvider,
-			JwtProperties jwtProperties
+			JwtProperties jwtProperties,
+			TemporaryPasswordMailService temporaryPasswordMailService
 	) {
 		this.userRepository = userRepository;
 		this.refreshTokenRepository = refreshTokenRepository;
 		this.passwordEncoder = passwordEncoder;
 		this.jwtTokenProvider = jwtTokenProvider;
 		this.jwtProperties = jwtProperties;
+		this.temporaryPasswordMailService = temporaryPasswordMailService;
 	}
 
 	@Transactional
@@ -124,6 +130,18 @@ public class AuthService {
 		return AuthUserResponse.from(findUser(userId));
 	}
 
+	@Transactional
+	public void issueTemporaryPassword(ForgotPasswordRequest request) {
+		userRepository.findByEmail(request.email())
+				.filter(user -> user.getStatus() == UserStatus.ACTIVE)
+				.ifPresent(user -> {
+					String temporaryPassword = createTemporaryPassword();
+					user.changePassword(passwordEncoder.encode(temporaryPassword));
+					refreshTokenRepository.deleteAllByUser(user);
+					temporaryPasswordMailService.send(user, temporaryPassword);
+				});
+	}
+
 	private void validateSignup(SignupRequest request) {
 		if (request.role() == Role.ADMIN) {
 			throw new BusinessException(ErrorCode.INVALID_ROLE);
@@ -162,6 +180,14 @@ public class AuthService {
 		LocalDateTime expiresAt = LocalDateTime.now().plusSeconds(jwtProperties.refreshTokenExpirationSeconds());
 		refreshTokenRepository.save(new RefreshToken(user, token, expiresAt));
 		return token;
+	}
+
+	private String createTemporaryPassword() {
+		StringBuilder password = new StringBuilder(12);
+		for (int i = 0; i < 12; i++) {
+			password.append(TEMPORARY_PASSWORD_CHARS[SECURE_RANDOM.nextInt(TEMPORARY_PASSWORD_CHARS.length)]);
+		}
+		return password.toString();
 	}
 
 	private User findUser(Long userId) {

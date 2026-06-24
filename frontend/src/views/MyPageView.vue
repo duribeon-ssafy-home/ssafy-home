@@ -2,7 +2,8 @@
 import { computed, onMounted, reactive, ref } from 'vue'
 import { RouterLink, useRouter } from 'vue-router'
 import { getMyLatestLifestyleResult } from '@/api/lifestyleApi'
-import { getMyProfile, updateMyProfile, updateMyStatus } from '@/api/userApi'
+import { changeMyPassword, getMyProfile, updateMyProfile, updateMyStatus } from '@/api/userApi'
+import PasswordField from '@/components/PasswordField.vue'
 import { createLifestylePresetChips, lifestyleTypeMeta } from '@/data/lifestyle'
 import { useAuthStore } from '@/stores/auth'
 
@@ -14,14 +15,23 @@ const lifestyleResult = ref(null)
 const isLoading = ref(true)
 const isEditingProfile = ref(false)
 const isSavingProfile = ref(false)
+const isChangingPassword = ref(false)
 const isChangingStatus = ref(false)
 const errorMessage = ref('')
 const successMessage = ref('')
+const passwordErrorMessage = ref('')
+const passwordSuccessMessage = ref('')
 
 const profileForm = reactive({
   name: '',
   nickname: '',
   phoneNumber: '',
+})
+
+const passwordForm = reactive({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
 })
 
 const roleLabels = {
@@ -77,6 +87,11 @@ const lifestyleMeta = computed(() =>
 const presetChips = computed(() =>
   createLifestylePresetChips(lifestyleResult.value?.filterPreset, lifestyleMeta.value?.chips || []),
 )
+const isNewPasswordLengthValid = computed(() => passwordForm.newPassword.length >= 8)
+const passwordRuleClass = computed(() => ({
+  'password-rule--valid': isNewPasswordLengthValid.value,
+  'password-rule--invalid': passwordForm.newPassword.length > 0 && !isNewPasswordLengthValid.value,
+}))
 
 onMounted(loadMyPage)
 
@@ -152,6 +167,35 @@ async function submitProfileUpdate() {
   }
 }
 
+async function submitPasswordChange() {
+  clearPasswordFeedback()
+
+  if (!isNewPasswordLengthValid.value) {
+    passwordErrorMessage.value = '새 비밀번호는 8자 이상 입력해주세요.'
+    return
+  }
+
+  if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+    passwordErrorMessage.value = '새 비밀번호 확인이 일치하지 않습니다.'
+    return
+  }
+
+  isChangingPassword.value = true
+
+  try {
+    await changeMyPassword({
+      currentPassword: passwordForm.currentPassword,
+      newPassword: passwordForm.newPassword,
+    })
+    resetPasswordForm()
+    passwordSuccessMessage.value = '비밀번호가 변경되었습니다. 다음 로그인부터 새 비밀번호를 사용해 주세요.'
+  } catch (error) {
+    passwordErrorMessage.value = getApiErrorMessage(error, '비밀번호를 변경하지 못했습니다.')
+  } finally {
+    isChangingPassword.value = false
+  }
+}
+
 async function requestAccountStatusChange(status) {
   const confirmMessage =
     status === 'DELETED'
@@ -185,6 +229,12 @@ function resetProfileForm() {
   profileForm.phoneNumber = displayProfile.value.phoneNumber || ''
 }
 
+function resetPasswordForm() {
+  passwordForm.currentPassword = ''
+  passwordForm.newPassword = ''
+  passwordForm.confirmPassword = ''
+}
+
 function syncProfile(nextProfile) {
   profile.value = nextProfile
   authStore.setUser({
@@ -196,6 +246,11 @@ function syncProfile(nextProfile) {
 function clearFeedback() {
   errorMessage.value = ''
   successMessage.value = ''
+}
+
+function clearPasswordFeedback() {
+  passwordErrorMessage.value = ''
+  passwordSuccessMessage.value = ''
 }
 
 function normalizeOptionalValue(value) {
@@ -388,6 +443,66 @@ function getApiErrorMessage(error, fallbackMessage) {
             </div>
           </section>
 
+          <section class="security-panel">
+            <div class="panel-heading">
+              <p class="eyebrow">Security</p>
+              <h2>비밀번호 변경</h2>
+            </div>
+
+            <p
+              v-if="passwordSuccessMessage"
+              class="form-message form-message--success"
+              role="status"
+            >
+              {{ passwordSuccessMessage }}
+            </p>
+            <p
+              v-if="passwordErrorMessage"
+              class="form-message form-message--error"
+              role="alert"
+            >
+              {{ passwordErrorMessage }}
+            </p>
+
+            <form class="password-form" @submit.prevent="submitPasswordChange">
+              <PasswordField
+                id="current-password"
+                v-model="passwordForm.currentPassword"
+                data-testid="current-password-input"
+                label="현재 비밀번호"
+                required
+              />
+              <PasswordField
+                id="new-password"
+                v-model="passwordForm.newPassword"
+                data-testid="new-password-input"
+                autocomplete="new-password"
+                label="새 비밀번호"
+                placeholder="새 비밀번호"
+                required
+              />
+              <p class="password-rule" :class="passwordRuleClass" data-testid="password-rule">
+                <span aria-hidden="true">{{ isNewPasswordLengthValid ? '✓' : '!' }}</span>
+                새 비밀번호는 8자 이상이어야 합니다.
+              </p>
+              <PasswordField
+                id="confirm-password"
+                v-model="passwordForm.confirmPassword"
+                data-testid="confirm-password-input"
+                autocomplete="new-password"
+                label="새 비밀번호 확인"
+                placeholder="새 비밀번호 다시 입력"
+                required
+              />
+
+              <div class="form-actions">
+                <button class="primary-button" type="submit" :disabled="isChangingPassword">
+                  {{ isChangingPassword ? '변경 중...' : '비밀번호 변경' }}
+                </button>
+              </div>
+            </form>
+          </section>
+
           <section v-if="!isAdmin" class="danger-panel">
             <div>
               <p class="eyebrow">Account Status</p>
@@ -460,6 +575,7 @@ function getApiErrorMessage(error, fallbackMessage) {
 .account-sidebar,
 .profile-panel,
 .preference-panel,
+.security-panel,
 .danger-panel {
   border: 1px solid rgba(208, 213, 221, 0.9);
   border-radius: var(--radius-sm);
@@ -638,6 +754,7 @@ function getApiErrorMessage(error, fallbackMessage) {
 
 .profile-panel,
 .preference-panel,
+.security-panel,
 .danger-panel {
   padding: 28px;
 }
@@ -689,7 +806,8 @@ function getApiErrorMessage(error, fallbackMessage) {
   }
 }
 
-.profile-form {
+.profile-form,
+.password-form {
   display: grid;
   gap: 14px;
 
@@ -717,6 +835,51 @@ function getApiErrorMessage(error, fallbackMessage) {
       border-color: var(--color-primary);
       box-shadow: 0 0 0 4px rgba(54, 95, 145, 0.12);
     }
+  }
+}
+
+.security-panel .form-message {
+  margin-bottom: 16px;
+}
+
+.password-rule {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: -6px;
+  color: var(--color-muted);
+  font-size: 12px;
+  font-weight: 900;
+
+  span {
+    width: 18px;
+    height: 18px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    background: var(--color-surface-muted);
+    color: var(--color-muted);
+    font-size: 12px;
+    line-height: 1;
+  }
+}
+
+.password-rule--valid {
+  color: #027a48;
+
+  span {
+    background: #ecfdf3;
+    color: #027a48;
+  }
+}
+
+.password-rule--invalid {
+  color: var(--color-danger);
+
+  span {
+    background: var(--color-danger-soft);
+    color: var(--color-danger);
   }
 }
 
@@ -929,6 +1092,7 @@ function getApiErrorMessage(error, fallbackMessage) {
 
   .profile-panel,
   .preference-panel,
+  .security-panel,
   .danger-panel,
   .account-sidebar {
     padding: 22px;
