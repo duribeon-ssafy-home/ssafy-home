@@ -108,6 +108,10 @@ public class PropertyService {
                     null,
                     null,
                     null,
+                    null,
+                    null,
+                    null,
+                    null,
                     null
             );
         }
@@ -124,7 +128,11 @@ public class PropertyService {
                 condition.maxMonthlyRent(),
                 condition.minArea(),
                 condition.maxArea(),
-                condition.facilityCountMin()
+                condition.facilityCountMin(),
+                condition.swLat(),
+                condition.swLng(),
+                condition.neLat(),
+                condition.neLng()
         );
     }
 
