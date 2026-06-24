@@ -105,9 +105,9 @@ onBeforeUnmount(() => {
 }
 
 .app-header__inner {
-  width: min(100% - 40px, var(--content-width));
+  width: 100%;
   height: 100%;
-  margin: 0 auto;
+  padding: 0 28px;
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -298,7 +298,7 @@ onBeforeUnmount(() => {
 
 @media (max-width: 1180px) {
   .app-header__inner {
-    width: min(100% - 28px, var(--content-width));
+    padding: 0 20px;
     gap: 14px;
   }
 
@@ -361,7 +361,7 @@ onBeforeUnmount(() => {
   }
 
   .app-header__inner {
-    width: min(100% - 28px, var(--content-width));
+    padding: 0 16px;
     min-height: var(--header-height);
     flex-wrap: wrap;
     gap: 12px;

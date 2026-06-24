@@ -61,7 +61,9 @@ public class SecurityConfig {
                         .requestMatchers(HttpMethod.GET,
                                 "/api/properties",
                                 "/api/properties/*",
-                                "/api/properties/*/risk").permitAll()
+                                "/api/properties/*/risk",
+                                "/api/properties/*/reviews").permitAll()
+                        .requestMatchers(HttpMethod.POST, "/api/properties/*/reviews").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/properties").hasRole("AGENT")
                         .requestMatchers(HttpMethod.PATCH, "/api/properties/*").hasRole("AGENT")
                         .requestMatchers(HttpMethod.DELETE, "/api/properties/*").hasRole("AGENT")

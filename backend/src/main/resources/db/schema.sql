@@ -246,7 +246,24 @@ CREATE TABLE IF NOT EXISTS reports (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
--- 11. BLACKLISTS
+-- 11. PROPERTY_REVIEWS
+-- 인증 없이 누구나 후기를 남길 수 있는 간단한 코멘트 기능
+-- =============================================
+CREATE TABLE IF NOT EXISTS property_reviews (
+    review_id   BIGINT       NOT NULL AUTO_INCREMENT,
+    property_id BIGINT       NOT NULL,
+    nickname    VARCHAR(20)  NOT NULL,
+    content     TEXT         NOT NULL,
+    created_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at  DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (review_id),
+    CONSTRAINT fk_property_reviews_property
+        FOREIGN KEY (property_id) REFERENCES properties (property_id) ON DELETE CASCADE,
+    INDEX idx_property_reviews_property (property_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =============================================
+-- 12. BLACKLISTS
 -- status: ACTIVE | RELEASED
 -- =============================================
 CREATE TABLE IF NOT EXISTS blacklists (

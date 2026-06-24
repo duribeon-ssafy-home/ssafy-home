@@ -5,6 +5,7 @@ import DetailedFilterBar from '@/components/DetailedFilterBar.vue'
 import MapPropertyCard from '@/components/MapPropertyCard.vue'
 import KakaoMap from '@/components/KakaoMap.vue'
 import { getProperties } from '@/api/propertyApi'
+import { getRecommendations } from '@/api/recommendationApi'
 import { useFavorites } from '@/composables/useFavorites'
 import { useSearchStore } from '@/stores/search'
 import { useCompareStore } from '@/stores/compare'
@@ -51,7 +52,10 @@ async function handleBoundsChanged(bounds) {
 async function fetchListPage(params, page) {
   isLoading.value = true
   try {
-    const result = await getProperties({ ...params, page, size: 20, sort: sortOrder.value })
+    const isRecommend = sortOrder.value === 'recommend'
+    const result = isRecommend
+      ? await getRecommendations({ ...params, page, size: 20 })
+      : await getProperties({ ...params, page, size: 20, sort: sortOrder.value })
     if (page === 0) {
       listProperties.value = result.content
     } else {
@@ -148,6 +152,7 @@ onMounted(() => {
             <option value="createdAt,desc">최신순</option>
             <option value="deposit,asc">가격 낮은순</option>
             <option value="deposit,desc">가격 높은순</option>
+            <option value="recommend">추천순</option>
           </select>
         </div>
 
