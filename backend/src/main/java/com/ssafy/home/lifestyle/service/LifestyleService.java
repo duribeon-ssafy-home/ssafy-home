@@ -68,6 +68,9 @@ public class LifestyleService {
                 .depositMax(analysis.depositMax())
                 .areaMin(analysis.areaMin())
                 .buildYearMin(analysis.buildYearMin())
+                .preferredSido(analysis.preferredSido())
+                .preferredGugun(analysis.preferredGugun())
+                .preferredDong(analysis.preferredDong())
                 .build());
 
         return LifestyleResultResponse.from(result);
@@ -103,7 +106,10 @@ public class LifestyleService {
                 resolveMonthlyRentMax(request, answers),
                 resolveDepositMax(request, answers),
                 isSelectedA(answers, LifestyleQuestion.AREA) ? AREA_MIN : null,
-                isSelectedA(answers, LifestyleQuestion.BUILD_YEAR) ? BUILD_YEAR_MIN : null
+                isSelectedA(answers, LifestyleQuestion.BUILD_YEAR) ? BUILD_YEAR_MIN : null,
+                normalizeText(request.preferredSido()),
+                normalizeText(request.preferredGugun()),
+                normalizeText(request.preferredDong())
         );
     }
 
@@ -117,7 +123,10 @@ public class LifestyleService {
                         analysis.monthlyRentMax(),
                         analysis.depositMax(),
                         analysis.areaMin(),
-                        analysis.buildYearMin()
+                        analysis.buildYearMin(),
+                        analysis.preferredSido(),
+                        analysis.preferredGugun(),
+                        analysis.preferredDong()
                 )
         );
     }
@@ -188,6 +197,13 @@ public class LifestyleService {
         return isSelectedA(answers, LifestyleQuestion.DEPOSIT) ? DEPOSIT_MAX : null;
     }
 
+    private String normalizeText(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
+    }
+
     private boolean isSelectedA(Map<Integer, String> answers, LifestyleQuestion question) {
         return OPTION_A.equals(answers.get(question.getQuestionId()));
     }
@@ -202,7 +218,10 @@ public class LifestyleService {
             Integer monthlyRentMax,
             Long depositMax,
             BigDecimal areaMin,
-            Integer buildYearMin
+            Integer buildYearMin,
+            String preferredSido,
+            String preferredGugun,
+            String preferredDong
     ) {
     }
 }

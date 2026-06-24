@@ -15,6 +15,15 @@ public record LifestyleResultRequest(
         Integer monthlyRentMax,
 
         @Positive
-        Long depositMax
+        Long depositMax,
+
+        @Size(max = 50)
+        String preferredSido,
+
+        @Size(max = 50)
+        String preferredGugun,
+
+        @Size(max = 50)
+        String preferredDong
 ) {
 }

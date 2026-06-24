@@ -36,6 +36,9 @@ const lifestyleResult = {
     depositMax: 1000,
     areaMin: null,
     buildYearMin: null,
+    preferredSido: '부산광역시',
+    preferredGugun: '사하구',
+    preferredDong: '하단동',
   },
 }
 
@@ -65,25 +68,30 @@ describe('HomeView', () => {
     expect(getRecommendations).not.toHaveBeenCalled()
   })
 
-  it('로그인 사용자의 생활 성향 결과가 있으면 조건 없이 추천 API로 전체 매물을 정렬한다', async () => {
+  it('로그인 사용자의 생활 성향 결과가 있으면 저장된 선호 조건으로 추천 API를 조회한다', async () => {
     getMyLatestLifestyleResult.mockResolvedValue(lifestyleResult)
 
     const { wrapper } = mountHome({ authenticated: true })
     await flushPromises()
 
     expect(getRecommendations).toHaveBeenCalledWith({
+      sido: '부산광역시',
+      gugun: '사하구',
+      dong: '하단동',
+      facilityCountMin: 20,
+      maxMonthlyRent: 50,
+      maxDeposit: 1000,
       page: 0,
       size: 6,
     })
     expect(getProperties).not.toHaveBeenCalled()
-    expect(wrapper.get('[data-testid="deposit-select"]').element.value).toBe('')
-    expect(wrapper.get('[data-testid="monthly-rent-select"]').element.value).toBe('')
-    expect(wrapper.get('[data-testid="room-type-ALL"]').classes()).toContain(
-      'filter-chip--active',
+    expect(wrapper.get('[data-testid="location-input"]').element.value).toBe(
+      '부산광역시 사하구 하단동',
     )
-    expect(wrapper.get('[data-testid="recommendation-notice"]').text()).toContain(
-      '알뜰이 기준',
-    )
+    expect(wrapper.get('[data-testid="deposit-select"]').element.value).toBe('1000')
+    expect(wrapper.get('[data-testid="monthly-rent-select"]').element.value).toBe('50')
+    expect(wrapper.get('[data-testid="room-type-ALL"]').classes()).toContain('filter-chip--active')
+    expect(wrapper.get('[data-testid="recommendation-notice"]').text()).toContain('알뜰이 기준')
   })
 
   it('추천 모드에서 사용자가 필터를 바꾸면 추천 API를 다시 호출한다', async () => {
@@ -98,7 +106,11 @@ describe('HomeView', () => {
     await flushPromises()
 
     expect(getRecommendations).toHaveBeenCalledWith({
+      sido: '부산광역시',
+      gugun: '사하구',
+      dong: '하단동',
       maxMonthlyRent: 80,
+      maxDeposit: 1000,
       page: 0,
       size: 6,
     })
@@ -112,10 +124,22 @@ describe('HomeView', () => {
     await flushPromises()
 
     expect(getRecommendations).toHaveBeenCalledWith({
+      sido: '부산광역시',
+      gugun: '사하구',
+      dong: '하단동',
+      facilityCountMin: 20,
+      maxMonthlyRent: 50,
+      maxDeposit: 1000,
       page: 0,
       size: 6,
     })
     expect(getProperties).toHaveBeenCalledWith({
+      sido: '부산광역시',
+      gugun: '사하구',
+      dong: '하단동',
+      facilityCountMin: 20,
+      maxMonthlyRent: 50,
+      maxDeposit: 1000,
       page: 0,
       size: 6,
       sort: 'createdAt,desc',
@@ -207,7 +231,10 @@ describe('HomeView', () => {
     const { wrapper } = mountHome()
     await flushPromises()
 
-    await wrapper.findAll('button').find((button) => button.text() === '매물 살펴보기').trigger('click')
+    await wrapper
+      .findAll('button')
+      .find((button) => button.text() === '매물 살펴보기')
+      .trigger('click')
 
     expect(Element.prototype.scrollIntoView).toHaveBeenCalledWith({
       behavior: 'smooth',

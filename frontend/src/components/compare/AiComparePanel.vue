@@ -2,6 +2,16 @@
 import { computed, onBeforeUnmount, ref, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { compareWithAi } from '@/api/aiApi'
+import { getMyLatestLifestyleResult } from '@/api/lifestyleApi'
+import { useAuthStore } from '@/stores/auth'
+import balancedCharacter from '@/assets/images/lifestyle/balanced.png'
+import carefulCharacter from '@/assets/images/lifestyle/careful.png'
+import cozyCharacter from '@/assets/images/lifestyle/cozy.png'
+import flexibleCharacter from '@/assets/images/lifestyle/flexible.png'
+import practicalCharacter from '@/assets/images/lifestyle/practical.png'
+import savingCharacter from '@/assets/images/lifestyle/saving.png'
+import spaciousCharacter from '@/assets/images/lifestyle/spacious.png'
+import thriftyCharacter from '@/assets/images/lifestyle/thrifty.png'
 
 const props = defineProps({
   open: {
@@ -20,6 +30,7 @@ const props = defineProps({
 
 const emit = defineEmits(['close', 'resize'])
 const router = useRouter()
+const authStore = useAuthStore()
 
 const presets = [
   '내 생활패턴 기준으로 어디가 제일 나아?',
@@ -29,11 +40,32 @@ const presets = [
 
 const question = ref('')
 const history = ref([]) // { question, result, error }[]
+const lifestyleResult = ref(null)
+const hasLoadedLifestyle = ref(false)
 const isLoading = ref(false)
 const isResizing = ref(false)
 
 const hasCompareContext = computed(() => props.propertyIds.length >= 2)
 const canSubmit = computed(() => question.value.trim().length > 0)
+const hasChatHistory = computed(() => history.value.length > 0)
+const lifestyleCharacters = {
+  LIVING_COST_HOME_BALANCED: balancedCharacter,
+  LIVING_COST_COMPACT: thriftyCharacter,
+  LIVING_FLEXIBLE_HOME: cozyCharacter,
+  LIVING_FLEXIBLE_COMPACT: practicalCharacter,
+  LOCATION_FLEXIBLE_COST_HOME: carefulCharacter,
+  LOCATION_FLEXIBLE_COST_COMPACT: savingCharacter,
+  LOCATION_FLEXIBLE_HOME: spaciousCharacter,
+  LOCATION_FLEXIBLE_COMPACT: flexibleCharacter,
+}
+const lifestyleCharacterImage = computed(
+  () => lifestyleCharacters[lifestyleResult.value?.lifestyleType] || '',
+)
+const helperTitle = computed(() =>
+  lifestyleResult.value?.typeName
+    ? `${lifestyleResult.value.typeName} 캐릭터가 기다리는 중`
+    : '자취TI 캐릭터가 기다리는 중',
+)
 
 function getAnswerParts(result) {
   if (!result?.answer) return []
@@ -57,7 +89,11 @@ watch(
     if (isOpen && hasContext && !question.value) {
       question.value = presets[0]
     }
+    if (isOpen) {
+      loadLifestyleResult()
+    }
   },
+  { immediate: true },
 )
 
 function selectPreset(preset) {
@@ -78,9 +114,33 @@ async function submit() {
     })
     history.value.push({ question: submittedQuestion, result, error: null })
   } catch {
-    history.value.push({ question: submittedQuestion, result: null, error: '분석 결과를 불러오지 못했어요. 잠시 후 다시 시도해주세요.' })
+    history.value.push({
+      question: submittedQuestion,
+      result: null,
+      error: '분석 결과를 불러오지 못했어요. 잠시 후 다시 시도해주세요.',
+    })
   } finally {
     isLoading.value = false
+  }
+}
+
+async function loadLifestyleResult() {
+  if (hasLoadedLifestyle.value) return
+  hasLoadedLifestyle.value = true
+
+  if (authStore.accessToken && !authStore.isInitialized) {
+    await authStore.initializeAuth()
+  }
+
+  if (!authStore.isAuthenticated) {
+    lifestyleResult.value = null
+    return
+  }
+
+  try {
+    lifestyleResult.value = await getMyLatestLifestyleResult()
+  } catch {
+    lifestyleResult.value = null
   }
 }
 
@@ -96,7 +156,10 @@ function createHighlight(text, tone) {
 
 function splitHighlights(text, highlights) {
   const uniqueHighlights = highlights
-    .filter((item, index, array) => array.findIndex((candidate) => candidate.text === item.text) === index)
+    .filter(
+      (item, index, array) =>
+        array.findIndex((candidate) => candidate.text === item.text) === index,
+    )
     .sort((a, b) => b.text.length - a.text.length)
   const parts = []
   let remaining = text
@@ -184,7 +247,9 @@ onBeforeUnmount(() => {
             <p>AI Compare</p>
             <h2>AI 비교 상담</h2>
           </div>
-          <button class="ai-panel__close" type="button" aria-label="닫기" @click="emit('close')">×</button>
+          <button class="ai-panel__close" type="button" aria-label="닫기" @click="emit('close')">
+            ×
+          </button>
         </header>
 
         <section class="ai-panel__section">
@@ -194,9 +259,18 @@ onBeforeUnmount(() => {
             v-model="question"
             rows="4"
             maxlength="500"
-            :placeholder="hasCompareContext ? '비교 매물에 대해 궁금한 점을 입력하세요.' : '부동산 계약이나 용어에 대해 궁금한 점을 입력하세요.'"
+            :placeholder="
+              hasCompareContext
+                ? '비교 매물에 대해 궁금한 점을 입력하세요.'
+                : '부동산 계약이나 용어에 대해 궁금한 점을 입력하세요.'
+            "
           />
-          <button class="analyze-button" type="button" :disabled="!canSubmit || isLoading" @click="submit">
+          <button
+            class="analyze-button"
+            type="button"
+            :disabled="!canSubmit || isLoading"
+            @click="submit"
+          >
             {{ isLoading ? '답변 생성 중...' : hasCompareContext ? '분석하기' : '질문하기' }}
           </button>
         </section>
@@ -224,6 +298,26 @@ onBeforeUnmount(() => {
 
         <div v-if="isLoading" class="chat-loading">AI가 분석 중입니다...</div>
 
+        <section
+          v-if="!hasChatHistory && !isLoading"
+          class="empty-helper"
+          aria-label="AI 상담 대기 안내"
+        >
+          <div class="empty-helper__bubble">
+            <strong>{{ helperTitle }}</strong>
+            <span>궁금한 걸 적으면 옆에서 같이 살펴볼게요.</span>
+          </div>
+          <img
+            v-if="lifestyleCharacterImage"
+            class="empty-helper__character"
+            :src="lifestyleCharacterImage"
+            :alt="`${lifestyleResult.typeName} 자취TI 캐릭터`"
+          />
+          <div v-else class="empty-helper__placeholder" aria-hidden="true">
+            <span>?</span>
+          </div>
+        </section>
+
         <div class="chat-history">
           <div v-for="(item, index) in history" :key="index" class="chat-entry">
             <div class="chat-question">{{ item.question }}</div>
@@ -237,11 +331,17 @@ onBeforeUnmount(() => {
                   <strong>{{ item.result.recommendedTitle }}</strong>
                   <small>#{{ item.result.recommendedPropertyId }}</small>
                 </div>
-                <div class="summary-card" :class="`summary-card--${scoreTone(item.result.recommendedTotalScore)}`">
+                <div
+                  class="summary-card"
+                  :class="`summary-card--${scoreTone(item.result.recommendedTotalScore)}`"
+                >
                   <span>총점</span>
                   <strong>{{ item.result.recommendedTotalScore }}점</strong>
                 </div>
-                <div class="summary-card" :class="`summary-card--${riskTone(item.result.recommendedRiskLabelText)}`">
+                <div
+                  class="summary-card"
+                  :class="`summary-card--${riskTone(item.result.recommendedRiskLabelText)}`"
+                >
                   <span>위험도</span>
                   <strong>{{ item.result.recommendedRiskLabelText }}</strong>
                 </div>
@@ -252,7 +352,8 @@ onBeforeUnmount(() => {
                   v-for="(part, pIdx) in getAnswerParts(item.result)"
                   :key="`${part.text}-${pIdx}`"
                   :class="part.tone ? ['answer-highlight', `answer-highlight--${part.tone}`] : null"
-                >{{ part.text }}</span>
+                  >{{ part.text }}</span
+                >
               </p>
 
               <div v-if="item.result.requiresLifestyleSurvey" class="survey-guide">
@@ -261,7 +362,11 @@ onBeforeUnmount(() => {
               </div>
 
               <div v-if="Array.isArray(item.result.propertyAnalyses)" class="analysis-list">
-                <article v-for="analysis in item.result.propertyAnalyses" :key="analysis.propertyId" class="analysis-item">
+                <article
+                  v-for="analysis in item.result.propertyAnalyses"
+                  :key="analysis.propertyId"
+                  class="analysis-item"
+                >
                   <div class="analysis-item__head">
                     <div>
                       <span>#{{ analysis.propertyId }}</span>
@@ -272,7 +377,14 @@ onBeforeUnmount(() => {
 
                   <div class="score-grid">
                     <span>위험도 {{ analysis.riskLabelText }} · {{ analysis.riskScore }}점</span>
-                    <span>생활 적합도 {{ analysis.lifestyleFitScore != null ? `${analysis.lifestyleFitScore}점` : '설문 필요' }}</span>
+                    <span
+                      >생활 적합도
+                      {{
+                        analysis.lifestyleFitScore != null
+                          ? `${analysis.lifestyleFitScore}점`
+                          : '설문 필요'
+                      }}</span
+                    >
                     <span>비용 조건 {{ analysis.costScore }}점</span>
                   </div>
 
@@ -296,7 +408,10 @@ onBeforeUnmount(() => {
               <details v-if="item.result.sources?.length" class="sources">
                 <summary>근거 보기</summary>
                 <ul>
-                  <li v-for="source in item.result.sources" :key="`${source.type}-${source.id}-${source.title}`">
+                  <li
+                    v-for="source in item.result.sources"
+                    :key="`${source.type}-${source.id}-${source.title}`"
+                  >
                     {{ source.type }} · {{ source.id }} · {{ source.title }}
                   </li>
                 </ul>
@@ -499,6 +614,75 @@ onBeforeUnmount(() => {
   font-size: 13px;
   font-weight: 700;
   text-align: center;
+}
+
+.empty-helper {
+  min-height: 330px;
+  display: grid;
+  align-content: end;
+  justify-items: center;
+  gap: 10px;
+  padding: 28px 10px 8px;
+}
+
+.empty-helper__bubble {
+  position: relative;
+  display: grid;
+  gap: 5px;
+  max-width: 250px;
+  border: 1px solid rgba(54, 95, 145, 0.2);
+  border-radius: 14px;
+  background: #fffef8;
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.08);
+  padding: 12px 14px;
+  text-align: center;
+
+  &::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: -8px;
+    width: 14px;
+    height: 14px;
+    border-right: 1px solid rgba(54, 95, 145, 0.2);
+    border-bottom: 1px solid rgba(54, 95, 145, 0.2);
+    background: #fffef8;
+    transform: translateX(-50%) rotate(45deg);
+  }
+
+  strong {
+    color: var(--color-heading);
+    font-size: 13px;
+    font-weight: 900;
+  }
+
+  span {
+    color: var(--color-muted);
+    font-size: 12px;
+    font-weight: 800;
+    line-height: 1.45;
+  }
+}
+
+.empty-helper__character {
+  width: min(150px, 56%);
+  aspect-ratio: 1;
+  object-fit: contain;
+  filter: drop-shadow(0 16px 18px rgba(54, 95, 145, 0.18));
+}
+
+.empty-helper__placeholder {
+  width: 116px;
+  aspect-ratio: 1;
+  display: grid;
+  place-items: center;
+  border: 2px dashed rgba(54, 95, 145, 0.3);
+  border-radius: 50%;
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+  font-size: 46px;
+  font-weight: 900;
+  box-shadow: 0 16px 18px rgba(54, 95, 145, 0.1);
 }
 
 .chat-history {

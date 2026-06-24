@@ -11,7 +11,10 @@ public record LifestyleFilterPresetResponse(
         Integer monthlyRentMax,
         Long depositMax,
         BigDecimal areaMin,
-        Integer buildYearMin
+        Integer buildYearMin,
+        String preferredSido,
+        String preferredGugun,
+        String preferredDong
 ) {
 
     public static LifestyleFilterPresetResponse from(LifestyleResult result) {
@@ -21,7 +24,10 @@ public record LifestyleFilterPresetResponse(
                 result.getMonthlyRentMax(),
                 result.getDepositMax(),
                 result.getAreaMin(),
-                result.getBuildYearMin()
+                result.getBuildYearMin(),
+                result.getPreferredSido(),
+                result.getPreferredGugun(),
+                result.getPreferredDong()
         );
     }
 }

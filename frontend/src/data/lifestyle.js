@@ -63,8 +63,7 @@ export const lifestyleTypeMeta = {
   LIVING_COST_COMPACT: {
     typeName: '알뜰이',
     headline: '편리한 동네와 합리적인 비용을 우선하는 타입입니다.',
-    summary:
-      '집의 크기보다 교통, 편의시설, 매달 나가는 비용을 더 현실적으로 비교하는 성향이에요.',
+    summary: '집의 크기보다 교통, 편의시설, 매달 나가는 비용을 더 현실적으로 비교하는 성향이에요.',
     chips: ['역세권', '생활 편의시설', '월세 50 이하', '보증금 낮음', '즉시입주'],
     recommendedRoomTypes: ['ONE_ROOM', 'OFFICETEL'],
   },
@@ -79,8 +78,7 @@ export const lifestyleTypeMeta = {
   LIVING_FLEXIBLE_COMPACT: {
     typeName: '실용이',
     headline: '주변 편의와 빠른 이동을 중시하는 실용적인 타입입니다.',
-    summary:
-      '집은 필요한 만큼이면 충분하고, 대신 매일 쓰는 동선이 짧고 편한 환경을 선호해요.',
+    summary: '집은 필요한 만큼이면 충분하고, 대신 매일 쓰는 동선이 짧고 편한 환경을 선호해요.',
     chips: ['생활권 우수', '역 도보권', '풀옵션', '관리비 낮음', '원룸'],
     recommendedRoomTypes: ['ONE_ROOM', 'OFFICETEL'],
   },
@@ -103,8 +101,7 @@ export const lifestyleTypeMeta = {
   LOCATION_FLEXIBLE_HOME: {
     typeName: '공간이',
     headline: '동네보다 집 안에서 느끼는 쾌적함을 더 중요하게 보는 타입입니다.',
-    summary:
-      '채광, 면적, 건물 상태처럼 매일 머무는 공간의 품질이 만족도를 크게 좌우해요.',
+    summary: '채광, 면적, 건물 상태처럼 매일 머무는 공간의 품질이 만족도를 크게 좌우해요.',
     chips: ['넓은 면적', '신축급', '채광 좋음', '수납 넉넉', '조용함'],
     recommendedRoomTypes: ['TWO_ROOM', 'APARTMENT', 'OFFICETEL'],
   },
@@ -119,10 +116,13 @@ export const lifestyleTypeMeta = {
 }
 
 export function normalizeLifestyleQuestions(questions) {
-  const source = Array.isArray(questions) && questions.length ? questions : fallbackLifestyleQuestions
+  const source =
+    Array.isArray(questions) && questions.length ? questions : fallbackLifestyleQuestions
 
   return source.map((question) => {
-    const fallback = fallbackLifestyleQuestions.find((item) => item.questionId === question.questionId)
+    const fallback = fallbackLifestyleQuestions.find(
+      (item) => item.questionId === question.questionId,
+    )
 
     if (!fallback) {
       return question
@@ -167,6 +167,17 @@ export function buildLifestyleResult(questions, answerMap) {
 
 export function createLifestylePresetChips(filterPreset = {}, fallbackChips = []) {
   const chips = []
+  const preferredLocation = [
+    filterPreset.preferredSido,
+    filterPreset.preferredGugun,
+    filterPreset.preferredDong,
+  ]
+    .filter(Boolean)
+    .join(' ')
+
+  if (preferredLocation) {
+    chips.push(`${preferredLocation} 선호`)
+  }
 
   if (filterPreset.facilityScoreMin) {
     chips.push(`생활 편의 점수 ${filterPreset.facilityScoreMin}+ 선호`)

@@ -16,6 +16,18 @@ export function createLifestyleAnswerPayload(questions, answerMap, budget = {}) 
     payload.depositMax = budget.depositMax
   }
 
+  if (budget.preferredSido) {
+    payload.preferredSido = budget.preferredSido
+  }
+
+  if (budget.preferredGugun) {
+    payload.preferredGugun = budget.preferredGugun
+  }
+
+  if (budget.preferredDong) {
+    payload.preferredDong = budget.preferredDong
+  }
+
   return payload
 }
 

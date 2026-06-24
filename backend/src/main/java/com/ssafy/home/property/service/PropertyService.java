@@ -97,9 +97,22 @@ public class PropertyService {
     private PropertySearchCondition normalizeCondition(PropertySearchCondition condition) {
         if (condition == null) {
             return new PropertySearchCondition(
-                    null, null, null, null, null,
-                    null, null, null, null, null,
-                    null, null, null, null, null, null
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null
             );
         }
 
