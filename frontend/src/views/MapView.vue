@@ -7,11 +7,14 @@ import KakaoMap from '@/components/KakaoMap.vue'
 import { getProperties } from '@/api/propertyApi'
 import { useFavorites } from '@/composables/useFavorites'
 import { useSearchStore } from '@/stores/search'
+import { useCompareStore } from '@/stores/compare'
 
 const router = useRouter()
 const { loadFavorites } = useFavorites()
 const searchStore = useSearchStore()
+const compareStore = useCompareStore()
 
+const kakaoMapRef = ref(null)
 const listProperties = ref([])
 const mapProperties = ref([])
 const selectedId = ref(null)
@@ -26,12 +29,23 @@ const activeFilters = ref({})
 const sortOrder = ref('createdAt,desc')
 const showInfoWindow = ref(false)
 const listScroll = ref(null)
+const currentBounds = ref(null)
 
 const hasMore = computed(() => currentPage.value < totalPages.value - 1)
 
 async function fetchMapMarkers(params) {
   const result = await getProperties({ ...params, page: 0, size: 200, sort: 'createdAt,desc' })
   mapProperties.value = result.content
+}
+
+async function handleBoundsChanged(bounds) {
+  currentBounds.value = bounds
+  const params = { ...activeFilters.value, ...bounds }
+  delete params.sido
+  delete params.gugun
+  delete params.dong
+  const result = await getProperties({ ...params, page: 0, size: 200, sort: 'createdAt,desc' })
+  kakaoMapRef.value?.updateMarkers(result.content)
 }
 
 async function fetchListPage(params, page) {
@@ -57,10 +71,21 @@ async function handleSearch(filters, locationText = '') {
   currentPage.value = 0
   selectedId.value = null
   showInfoWindow.value = false
-  await Promise.all([
-    fetchMapMarkers(filters),
-    fetchListPage(filters, 0),
-  ])
+
+  if (currentBounds.value) {
+    const mapParams = { ...filters, ...currentBounds.value }
+    delete mapParams.sido
+    delete mapParams.gugun
+    delete mapParams.dong
+    const result = await getProperties({ ...mapParams, page: 0, size: 200, sort: 'createdAt,desc' })
+    kakaoMapRef.value?.updateMarkers(result.content)
+    await fetchListPage(filters, 0)
+  } else {
+    await Promise.all([
+      fetchMapMarkers(filters),
+      fetchListPage(filters, 0),
+    ])
+  }
 }
 
 async function loadMore() {
@@ -146,14 +171,24 @@ onMounted(() => {
 
       <div class="map-panel">
         <KakaoMap
+          ref="kakaoMapRef"
           :properties="mapProperties"
           :selected-id="selectedId"
           @select="handleMarkerSelect"
+          @bounds-changed="handleBoundsChanged"
         />
 
         <Transition name="info-fade">
           <div v-if="showInfoWindow && selectedProperty" class="info-window">
             <button class="info-window__close" type="button" @click="handleMarkerSelect(null)">✕</button>
+            <button
+              class="info-window__compare"
+              :class="{ 'info-window__compare--active': compareStore.has(selectedProperty.propertyId) }"
+              :disabled="compareStore.isFull && !compareStore.has(selectedProperty.propertyId)"
+              type="button"
+              :title="compareStore.has(selectedProperty.propertyId) ? '비교 제거' : '비교 추가'"
+              @click="compareStore.toggle(selectedProperty)"
+            >{{ compareStore.has(selectedProperty.propertyId) ? '✓ 비교중' : '+ 비교' }}</button>
             <div class="info-window__img">
               <img
                 v-if="selectedProperty.images?.[0]?.imageUrl"
@@ -307,6 +342,33 @@ onMounted(() => {
   justify-content: center;
   z-index: 1;
   cursor: pointer;
+}
+
+.info-window__compare {
+  position: absolute;
+  top: 7px;
+  left: 8px;
+  height: 22px;
+  padding: 0 7px;
+  background: rgba(0, 0, 0, 0.45);
+  color: white;
+  border-radius: 11px;
+  font-size: 10px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  z-index: 1;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s;
+
+  &:hover:not(:disabled) { background: rgba(31, 52, 79, 0.85); }
+  &:disabled { opacity: 0.45; cursor: not-allowed; }
+}
+
+.info-window__compare--active {
+  background: rgba(37, 99, 235, 0.85);
+  &:hover:not(:disabled) { background: rgba(29, 78, 216, 0.9); }
 }
 
 .info-window__img {

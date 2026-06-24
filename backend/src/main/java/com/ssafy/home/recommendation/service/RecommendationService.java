@@ -66,18 +66,9 @@ public class RecommendationService {
     private PropertySearchCondition normalizeCondition(PropertySearchCondition condition) {
         if (condition == null) {
             return new PropertySearchCondition(
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null,
-                    null
+                    null, null, null, null, null,
+                    null, null, null, null, null,
+                    null, null, null, null, null, null
             );
         }
         return new PropertySearchCondition(
@@ -92,7 +83,7 @@ public class RecommendationService {
                 condition.maxMonthlyRent(),
                 condition.minArea(),
                 condition.maxArea(),
-                null
+                null, null, null, null, null
         );
     }
 
