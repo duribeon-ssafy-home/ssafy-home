@@ -1,10 +1,9 @@
 package com.ssafy.home.location.service;
 
 import com.ssafy.home.location.dto.response.LocationSearchResponse;
-import com.ssafy.home.location.repository.LegalDongRepository;
+import com.ssafy.home.location.repository.LegalDongMapper;
 import java.util.List;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,7 +15,7 @@ public class LocationService {
     private static final int MIN_KEYWORD_LENGTH = 2;
     private static final int MAX_RESULTS = 10;
 
-    private final LegalDongRepository legalDongRepository;
+    private final LegalDongMapper legalDongMapper;
 
     public List<LocationSearchResponse> search(String keyword) {
         String normalizedKeyword = normalizeKeyword(keyword);
@@ -24,11 +23,7 @@ public class LocationService {
             return List.of();
         }
 
-        return legalDongRepository
-                .searchActiveByKeyword(normalizedKeyword, PageRequest.of(0, MAX_RESULTS))
-                .stream()
-                .map(LocationSearchResponse::from)
-                .toList();
+        return legalDongMapper.searchActiveByKeyword(normalizedKeyword, MAX_RESULTS);
     }
 
     private String normalizeKeyword(String keyword) {

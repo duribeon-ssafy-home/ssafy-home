@@ -5,8 +5,6 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 import com.ssafy.home.auth.refresh.RefreshTokenRepository;
-import com.ssafy.home.location.entity.LegalDong;
-import com.ssafy.home.location.repository.LegalDongRepository;
 import com.ssafy.home.user.repository.UserRepository;
 import jakarta.persistence.EntityManager;
 import org.junit.jupiter.api.BeforeEach;
@@ -31,7 +29,6 @@ class LocationApiTests {
 
     @Autowired MockMvc mockMvc;
     @Autowired EntityManager entityManager;
-    @Autowired LegalDongRepository legalDongRepository;
     @Autowired RefreshTokenRepository refreshTokenRepository;
     @Autowired UserRepository userRepository;
 
@@ -39,7 +36,7 @@ class LocationApiTests {
     void setUp() {
         refreshTokenRepository.deleteAll();
         userRepository.deleteAll();
-        legalDongRepository.deleteAll();
+        entityManager.createNativeQuery("DELETE FROM legal_dongs").executeUpdate();
     }
 
     @Test
