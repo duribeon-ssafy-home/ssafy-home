@@ -8,7 +8,6 @@ import { getProperties } from '@/api/propertyApi'
 import { getRecommendations } from '@/api/recommendationApi'
 import {
   createLifestylePresetChips,
-  createLifestyleRecommendationFilters,
   lifestyleTypeMeta,
 } from '@/data/lifestyle'
 import { useFavorites } from '@/composables/useFavorites'
@@ -57,7 +56,7 @@ const recommendationNoticeDescription = computed(() => {
     return `${typeName} 기준으로 대표 방 타입과 최신 매물을 우선 반영 중입니다.`
   }
 
-  return `${typeName} 기준으로 ${conditionText} 조건을 우선 반영 중입니다.`
+  return `${typeName} 기준으로 ${conditionText} 성향을 추천 점수에 반영 중입니다.`
 })
 const activeFilters = ref({})
 const activeRentType = ref(null)
@@ -85,11 +84,32 @@ const SIDO_ALIASES = {
 function resolveLocationParam(input) {
   const v = input.trim()
   if (!v) return {}
-  if (SIDO_ALIASES[v]) return { sido: SIDO_ALIASES[v] }
-  if (/(특별시|광역시|특별자치시|특별자치도|도)$/.test(v)) return { sido: v }
-  if (/[구군시]$/.test(v)) return { gugun: v }
-  if (/[동읍면리]$/.test(v)) return { dong: v }
-  return { dong: v }
+
+  const parts = v.split(/\s+/)
+
+  if (parts.length === 1) {
+    const part = parts[0]
+    if (SIDO_ALIASES[part]) return { sido: SIDO_ALIASES[part] }
+    if (/(특별시|광역시|특별자치시|특별자치도|도)$/.test(part)) return { sido: part }
+    if (/[구군시]$/.test(part)) return { gugun: part }
+    return { dong: part }
+  }
+
+  const result = {}
+  let lastUnmatched = null
+  for (const part of parts) {
+    if (SIDO_ALIASES[part]) {
+      result.sido = SIDO_ALIASES[part]
+    } else if (/(특별시|광역시|특별자치시|특별자치도|도)$/.test(part)) {
+      result.sido = part
+    } else if (/[구군시]$/.test(part)) {
+      result.gugun = part
+    } else {
+      lastUnmatched = part
+    }
+  }
+  if (lastUnmatched) result.dong = lastUnmatched
+  return Object.keys(result).length ? result : { dong: v }
 }
 
 const visiblePages = computed(() => {
@@ -132,6 +152,11 @@ async function fetchProperties(params = {}) {
     totalPages.value = result.totalPages
     totalElements.value = result.totalElements
   } catch {
+    if (isRecommendationMode.value) {
+      await fetchFallbackProperties(params)
+      return
+    }
+
     properties.value = []
     totalPages.value = 0
     totalElements.value = 0
@@ -140,9 +165,30 @@ async function fetchProperties(params = {}) {
   }
 }
 
+async function fetchFallbackProperties(params = {}) {
+  const fallbackParams = {
+    ...(activeRentType.value ? { rentType: activeRentType.value } : {}),
+    ...params,
+    page: currentPage.value,
+    size: pageSize.value,
+    sort: 'createdAt,desc',
+  }
+  const result = await getProperties(fallbackParams)
+
+  properties.value = result.content
+  totalPages.value = result.totalPages
+  totalElements.value = result.totalElements
+}
+
 function buildSearchParams(filters) {
   const params = {}
-  Object.assign(params, resolveLocationParam(filters.location || ''))
+  if (filters.locationParts) {
+    if (filters.locationParts.sido) params.sido = filters.locationParts.sido
+    if (filters.locationParts.gugun) params.gugun = filters.locationParts.gugun
+    if (filters.locationParts.dong) params.dong = filters.locationParts.dong
+  } else {
+    Object.assign(params, resolveLocationParam(filters.location || ''))
+  }
   if (filters.roomType !== 'ALL') params.roomType = filters.roomType
   if (filters.deposit) params.maxDeposit = Number(filters.deposit)
   if (filters.monthlyRent) params.maxMonthlyRent = Number(filters.monthlyRent)
@@ -194,21 +240,24 @@ function scrollToProperties() {
 }
 
 async function loadInitialProperties() {
-  const defaultParams = { dong: '하단동' }
+  const defaultParams = {}
 
   if (authStore.isAuthenticated) {
     try {
       const result = await getMyLatestLifestyleResult()
       lifestyleResult.value = result
       sortOrder.value = 'recommendation'
-      initialFilters.value = createLifestyleRecommendationFilters(result)
+      initialFilters.value = {
+        location: '',
+        deposit: '',
+        monthlyRent: '',
+        roomType: 'ALL',
+      }
 
-      const lifestyleParams = buildSearchParams(initialFilters.value)
-      const params = { ...defaultParams, ...lifestyleParams }
-      activeFilters.value = params
-      searchStore.setSearch(params, '하단동')
+      activeFilters.value = defaultParams
+      searchStore.setSearch(defaultParams, '')
       currentPage.value = 0
-      await fetchProperties(params)
+      await fetchProperties(defaultParams)
       return
     } catch {
       lifestyleResult.value = null
@@ -217,7 +266,7 @@ async function loadInitialProperties() {
   }
 
   activeFilters.value = defaultParams
-  searchStore.setSearch(defaultParams, '하단동')
+  searchStore.setSearch(defaultParams, '')
   currentPage.value = 0
   await fetchProperties(defaultParams)
 }
@@ -238,9 +287,7 @@ onMounted(() => {
         <p>지역, 보증금, 월세, 방 타입부터 생활 패턴까지 고려해 더 잘 맞는 매물을 추천합니다.</p>
         <div class="hero__actions">
           <button class="primary-action" type="button" @click="scrollToProperties">매물 살펴보기</button>
-          <RouterLink class="secondary-action" :to="{ name: 'survey' }">
-            생활패턴으로 추천받기
-          </RouterLink>
+          <RouterLink class="secondary-action" :to="{ name: 'survey' }">자취TI 해보기</RouterLink>
         </div>
 
         <div class="hero__search-panel" aria-label="매물 검색 필터">
@@ -257,8 +304,8 @@ onMounted(() => {
             <span>지역·가격·방 타입으로 빠르게 좁히기</span>
           </article>
           <article>
-            <strong>생활 맞춤 추천</strong>
-            <span>설문 결과를 반영한 추천 매물 보기</span>
+            <strong>자취TI 추천</strong>
+            <span>자취 성향 결과를 반영한 추천 매물 보기</span>
           </article>
           <article>
             <strong>의심 매물 신고</strong>
@@ -286,7 +333,7 @@ onMounted(() => {
           data-testid="recommendation-notice"
         >
           <div class="recommendation-notice__content">
-            <strong>생활 성향 기준 우선 정렬</strong>
+            <strong>자취TI 기준 우선 정렬</strong>
             <span>{{ recommendationNoticeDescription }}</span>
           </div>
           <div v-if="recommendationChips.length" class="recommendation-notice__chips">
@@ -393,13 +440,13 @@ onMounted(() => {
     <section class="lifestyle-band">
       <div class="section-container lifestyle-band__inner">
         <div>
-          <p class="eyebrow">Lifestyle Match</p>
-          <h2>생활패턴에 맞는 매물을 추천받아보세요</h2>
+          <p class="eyebrow">자취TI</p>
+          <h2>자취TI로 나에게 맞는 매물을 추천받아보세요</h2>
           <p>
-            통근, 예산, 편의시설 선호를 반영해 나에게 맞는 조건을 찾아드립니다.
+            짧은 성향 테스트로 생활권, 예산, 집 컨디션 선호를 매물 조건에 반영합니다.
           </p>
         </div>
-        <RouterLink class="band-action" :to="{ name: 'survey' }">라이프스타일 설문 시작</RouterLink>
+        <RouterLink class="band-action" :to="{ name: 'survey' }">자취TI 시작</RouterLink>
       </div>
     </section>
   </main>
@@ -415,7 +462,7 @@ onMounted(() => {
   min-height: min(820px, calc(100vh - 72px));
   display: grid;
   align-items: end;
-  overflow: hidden;
+  overflow: visible;
   background:
     linear-gradient(90deg, rgba(10, 17, 28, 0.7) 0%, rgba(10, 17, 28, 0.38) 48%, rgba(10, 17, 28, 0.18) 100%),
     url('https://images.unsplash.com/photo-1493809842364-78817add7ffb?auto=format&fit=crop&w=2000&q=80')
@@ -505,6 +552,8 @@ onMounted(() => {
 }
 
 .hero__search-panel {
+  position: relative;
+  z-index: 30;
   width: min(100%, 1120px);
   margin-top: 32px;
   border-radius: 18px;

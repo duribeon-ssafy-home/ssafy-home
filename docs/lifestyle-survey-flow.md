@@ -10,7 +10,7 @@
 
 ## 설문 답변 요청 형식
 
-프론트엔드는 질문 목록과 선택 상태를 아래 형식으로 변환해 전송한다.
+프론트엔드는 질문 목록과 선택 상태를 아래 형식으로 변환해 전송한다. 사용자가 월세나 보증금 기준을 직접 입력한 경우 `monthlyRentMax`, `depositMax`를 만원 단위로 함께 보낸다.
 
 ```json
 {
@@ -21,7 +21,9 @@
     { "questionId": 4, "selectedOption": "B" },
     { "questionId": 5, "selectedOption": "A" },
     { "questionId": 6, "selectedOption": "B" }
-  ]
+  ],
+  "monthlyRentMax": 65,
+  "depositMax": 2000
 }
 ```
 
@@ -31,6 +33,7 @@
 - `questionId`는 기존 생활 성향 질문 ID여야 한다.
 - 같은 `questionId`가 중복되면 안 된다.
 - `selectedOption`은 `A` 또는 `B`만 허용한다.
+- `monthlyRentMax`, `depositMax`는 선택 값이며, 있으면 1 이상의 숫자여야 한다.
 
 ## API 흐름
 
@@ -90,18 +93,18 @@ homeQualityImportant = homeQualityScore > 0
 
 | 생활권 | 비용 | 집 품질 | lifestyleType | typeName |
 | --- | --- | --- | --- | --- |
-| true | true | true | `LIVING_COST_HOME_BALANCED` | 균형 잡힌 생활권 실속형 |
-| true | true | false | `LIVING_COST_COMPACT` | 생활권 중심 실속형 |
-| true | false | true | `LIVING_FLEXIBLE_HOME` | 편안한 공간 우선형 |
-| true | false | false | `LIVING_FLEXIBLE_COMPACT` | 생활권 중심 실용형 |
-| false | true | true | `LOCATION_FLEXIBLE_COST_HOME` | 조건 꼼꼼 공간형 |
-| false | true | false | `LOCATION_FLEXIBLE_COST_COMPACT` | 비용 절약 실속형 |
-| false | false | true | `LOCATION_FLEXIBLE_HOME` | 집 자체 만족형 |
-| false | false | false | `LOCATION_FLEXIBLE_COMPACT` | 조건 유연 탐색형 |
+| true | true | true | `LIVING_COST_HOME_BALANCED` | 균형이 |
+| true | true | false | `LIVING_COST_COMPACT` | 알뜰이 |
+| true | false | true | `LIVING_FLEXIBLE_HOME` | 포근이 |
+| true | false | false | `LIVING_FLEXIBLE_COMPACT` | 실용이 |
+| false | true | true | `LOCATION_FLEXIBLE_COST_HOME` | 꼼꼼이 |
+| false | true | false | `LOCATION_FLEXIBLE_COST_COMPACT` | 절약이 |
+| false | false | true | `LOCATION_FLEXIBLE_HOME` | 공간이 |
+| false | false | false | `LOCATION_FLEXIBLE_COMPACT` | 유연이 |
 
 ## 필터 프리셋 생성 규칙
 
-`A` 선택 여부에 따라 매물 필터 프리셋이 만들어진다.
+`A` 선택 여부와 사용자가 직접 입력한 예산에 따라 매물 필터 프리셋이 만들어진다.
 
 | 질문 | 조건 | 생성 필드 |
 | --- | --- | --- |
@@ -112,6 +115,8 @@ homeQualityImportant = homeQualityScore > 0
 | 5 | `A` 선택 | `areaMin = 25` |
 | 6 | `A` 선택 | `buildYearMin = 2016` |
 
+사용자가 `monthlyRentMax` 또는 `depositMax`를 직접 입력하면 질문 3, 4의 기본값보다 사용자 입력값을 우선한다. 예산을 잘 모르겠다고 선택한 경우에는 값을 보내지 않으며 기존 A/B 기반 기본값을 사용한다.
+
 값이 없는 필드는 응답 JSON에서 생략될 수 있다.
 
 ## 프론트 저장 상태
@@ -121,7 +126,7 @@ homeQualityImportant = homeQualityScore > 0
 ```json
 {
   "lifestyleType": "LIVING_COST_HOME_BALANCED",
-  "typeName": "균형 잡힌 생활권 실속형",
+  "typeName": "균형이",
   "filterPreset": {
     "facilityScoreMin": 70,
     "monthlyRentMax": 50,
@@ -130,6 +135,9 @@ homeQualityImportant = homeQualityScore > 0
   "answers": [
     { "questionId": 1, "selectedOption": "A" }
   ],
+  "budget": {
+    "monthlyRentMax": 65
+  },
   "saved": false,
   "savedAt": null
 }
@@ -139,11 +147,11 @@ homeQualityImportant = homeQualityScore > 0
 
 ## 화면 흐름
 
-1. 사용자가 `/survey`에서 설문을 완료한다.
+1. 사용자가 `/survey`에서 6개 선택 질문과 선택 예산 입력을 완료한다.
 2. 로그인 상태면 `POST /api/lifestyle/results`를 호출한다.
 3. 비로그인 상태면 `POST /api/lifestyle/results/preview`를 호출한다.
-4. 응답 결과와 답변 원본을 sessionStorage에 저장하고 `/result`로 이동한다.
+4. 응답 결과, 답변 원본, 직접 입력한 예산을 sessionStorage에 저장하고 `/result`로 이동한다.
 5. `/result`는 생활 성향 유형, 필터 프리셋, 저장 상태를 보여준다.
 6. 비로그인 사용자가 “로그인하고 결과 저장하기”를 누르면 `/login?redirect=/result?saveLifestyle=1`로 이동한다.
-7. 로그인 성공 후 `/result?saveLifestyle=1`로 돌아오면 sessionStorage의 답변을 `POST /api/lifestyle/results`로 저장한다.
+7. 로그인 성공 후 `/result?saveLifestyle=1`로 돌아오면 sessionStorage의 답변과 예산 입력값을 `POST /api/lifestyle/results`로 저장한다.
 8. `/my-page`는 `GET /api/users/me`와 `GET /api/lifestyle/results/me`를 조합해 내 정보와 저장된 선호 유형을 보여준다.

@@ -100,8 +100,8 @@ public class LifestyleService {
                 homeQualityScore,
                 createFacilityScoreMin(answers),
                 createFacilityCountMin(answers),
-                isSelectedA(answers, LifestyleQuestion.MONTHLY_RENT) ? MONTHLY_RENT_MAX : null,
-                isSelectedA(answers, LifestyleQuestion.DEPOSIT) ? DEPOSIT_MAX : null,
+                resolveMonthlyRentMax(request, answers),
+                resolveDepositMax(request, answers),
                 isSelectedA(answers, LifestyleQuestion.AREA) ? AREA_MIN : null,
                 isSelectedA(answers, LifestyleQuestion.BUILD_YEAR) ? BUILD_YEAR_MIN : null
         );
@@ -172,6 +172,20 @@ public class LifestyleService {
             return FACILITY_COUNT_MIN;
         }
         return null;
+    }
+
+    private Integer resolveMonthlyRentMax(LifestyleResultRequest request, Map<Integer, String> answers) {
+        if (request.monthlyRentMax() != null) {
+            return request.monthlyRentMax();
+        }
+        return isSelectedA(answers, LifestyleQuestion.MONTHLY_RENT) ? MONTHLY_RENT_MAX : null;
+    }
+
+    private Long resolveDepositMax(LifestyleResultRequest request, Map<Integer, String> answers) {
+        if (request.depositMax() != null) {
+            return request.depositMax();
+        }
+        return isSelectedA(answers, LifestyleQuestion.DEPOSIT) ? DEPOSIT_MAX : null;
     }
 
     private boolean isSelectedA(Map<Integer, String> answers, LifestyleQuestion question) {

@@ -82,8 +82,8 @@ public class RecommendationService {
         }
         return new PropertySearchCondition(
                 normalizeSido(condition.sido()),
-                condition.gugun(),
-                condition.dong(),
+                normalizeText(condition.gugun()),
+                normalizeText(condition.dong()),
                 condition.rentType(),
                 condition.roomType(),
                 condition.minDeposit(),
@@ -94,6 +94,13 @@ public class RecommendationService {
                 condition.maxArea(),
                 null
         );
+    }
+
+    private String normalizeText(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        return value.trim();
     }
 
     private Comparator<ScoredProperty> scoredPropertyComparator() {
@@ -140,8 +147,9 @@ public class RecommendationService {
     }
 
     private String normalizeSido(String sido) {
-        if (sido == null) return null;
-        return switch (sido.trim()) {
+        String value = normalizeText(sido);
+        if (value == null) return null;
+        return switch (value) {
             case "서울", "서울시" -> "서울특별시";
             case "부산", "부산시" -> "부산광역시";
             case "대구", "대구시" -> "대구광역시";
@@ -159,7 +167,7 @@ public class RecommendationService {
             case "경남" -> "경상남도";
             case "경북" -> "경상북도";
             case "제주", "제주도" -> "제주특별자치도";
-            default -> sido;
+            default -> value;
         };
     }
 

@@ -4,56 +4,56 @@ export const fallbackLifestyleQuestions = [
   {
     questionId: 1,
     category: 'LIVING_CONVENIENCE',
-    title: '집 주변에서 가장 중요하게 보는 생활 조건은 무엇인가요?',
-    optionA: '편의점, 병원, 카페처럼 매일 쓰는 시설이 가까웠으면 해요.',
-    optionB: '조금 걸어도 괜찮으니 집 자체의 조건이 더 중요해요.',
+    title: '집 앞 생활',
+    optionA: '편의점 정도는 슬리퍼 신고 다녀올 수 있어야 해요',
+    optionB: '슬리퍼 거리보단 집 컨디션이 더 중요해요',
     mapping: 'facilityScore',
   },
   {
     questionId: 2,
     category: 'LIVING_CONVENIENCE',
-    title: '동네 분위기는 어떤 쪽이 더 편하게 느껴지나요?',
-    optionA: '생활 편의시설이 모여 있고 이동 동선이 짧은 동네요.',
-    optionB: '편의시설보다 조용하고 차분한 주변 환경이 좋아요.',
+    title: '동네 분위기',
+    optionA: '생활 편의시설이 가까우면 괜히 든든해요',
+    optionB: '조용하고 덜 복잡한 동네가 더 편해요',
     mapping: 'facilityCount, facilityScore',
   },
   {
     questionId: 3,
     category: 'COST_SENSITIVITY',
-    title: '매달 나가는 월세는 어느 정도로 관리하고 싶나요?',
-    optionA: '월세 부담을 최대한 낮추는 게 가장 중요해요.',
-    optionB: '조건이 마음에 들면 월세는 조금 더 감수할 수 있어요.',
+    title: '월세',
+    optionA: '월세는 낮을수록 마음이 편해요',
+    optionB: '마음에 들면 월세는 어느 정도 타협 가능해요',
     mapping: 'monthlyRentMax',
   },
   {
     questionId: 4,
     category: 'COST_SENSITIVITY',
-    title: '초기 보증금은 어떤 쪽이 더 편한가요?',
-    optionA: '처음 들어갈 때 보증금이 낮을수록 좋아요.',
-    optionB: '보증금이 조금 높아도 전체 조건이 좋으면 괜찮아요.',
+    title: '보증금',
+    optionA: '보증금에 목돈이 많이 묶이는 건 피하고 싶어요',
+    optionB: '조건만 좋다면 보증금은 조금 높아도 괜찮아요',
     mapping: 'depositMax',
   },
   {
     questionId: 5,
     category: 'HOME_QUALITY',
-    title: '집 안에서 가장 크게 체감하는 만족 요소는 무엇인가요?',
-    optionA: '공간이 넉넉해서 생활 동선이 편한 게 중요해요.',
-    optionB: '공간은 작아도 필요한 조건만 잘 맞으면 충분해요.',
+    title: '집 크기',
+    optionA: '집에서는 누울 자리 말고 숨 쉴 자리도 필요해요',
+    optionB: '작아도 깔끔하고 실용적이면 충분해요',
     mapping: 'areaMin',
   },
   {
     questionId: 6,
     category: 'HOME_QUALITY',
-    title: '건물 상태는 어느 쪽을 선호하나요?',
-    optionA: '오래되어 보이지 않는 깔끔한 집이 좋아요.',
-    optionB: '연식이 조금 있어도 가격과 위치가 맞으면 괜찮아요.',
+    title: '집 상태',
+    optionA: '오래 손 안 봐도 되는 깔끔한 집이 좋아요',
+    optionB: '조금 낡아도 가성비가 좋으면 괜찮아요',
     mapping: 'buildYearMin',
   },
 ]
 
 export const lifestyleTypeMeta = {
   LIVING_COST_HOME_BALANCED: {
-    typeName: '균형 잡힌 생활권 실속형',
+    typeName: '균형이',
     headline: '생활 편의, 비용, 집의 컨디션을 모두 꼼꼼히 보는 타입입니다.',
     summary:
       '매일의 이동과 생활비를 안정적으로 관리하면서도 집 안에서 보내는 시간의 만족도를 놓치지 않는 편이에요.',
@@ -61,7 +61,7 @@ export const lifestyleTypeMeta = {
     recommendedRoomTypes: ['ONE_ROOM', 'OFFICETEL', 'TWO_ROOM'],
   },
   LIVING_COST_COMPACT: {
-    typeName: '생활권 중심 실속형',
+    typeName: '알뜰이',
     headline: '편리한 동네와 합리적인 비용을 우선하는 타입입니다.',
     summary:
       '집의 크기보다 교통, 편의시설, 매달 나가는 비용을 더 현실적으로 비교하는 성향이에요.',
@@ -69,7 +69,7 @@ export const lifestyleTypeMeta = {
     recommendedRoomTypes: ['ONE_ROOM', 'OFFICETEL'],
   },
   LIVING_FLEXIBLE_HOME: {
-    typeName: '편안한 공간 우선형',
+    typeName: '포근이',
     headline: '생활권은 챙기되, 집 안의 쾌적함에 더 크게 반응하는 타입입니다.',
     summary:
       '퇴근 후 머무는 시간이 중요해서 채광, 면적, 연식처럼 체감 품질이 좋은 매물과 잘 맞아요.',
@@ -77,7 +77,7 @@ export const lifestyleTypeMeta = {
     recommendedRoomTypes: ['TWO_ROOM', 'OFFICETEL', 'APARTMENT'],
   },
   LIVING_FLEXIBLE_COMPACT: {
-    typeName: '생활권 중심 실용형',
+    typeName: '실용이',
     headline: '주변 편의와 빠른 이동을 중시하는 실용적인 타입입니다.',
     summary:
       '집은 필요한 만큼이면 충분하고, 대신 매일 쓰는 동선이 짧고 편한 환경을 선호해요.',
@@ -85,7 +85,7 @@ export const lifestyleTypeMeta = {
     recommendedRoomTypes: ['ONE_ROOM', 'OFFICETEL'],
   },
   LOCATION_FLEXIBLE_COST_HOME: {
-    typeName: '조건 꼼꼼 공간형',
+    typeName: '꼼꼼이',
     headline: '지역보다 예산과 집 자체의 만족도를 더 꼼꼼히 보는 타입입니다.',
     summary:
       '선호 지역을 조금 넓히더라도 넓이, 연식, 비용의 균형이 좋은 매물을 찾는 쪽이 잘 맞아요.',
@@ -93,7 +93,7 @@ export const lifestyleTypeMeta = {
     recommendedRoomTypes: ['TWO_ROOM', 'APARTMENT', 'OFFICETEL'],
   },
   LOCATION_FLEXIBLE_COST_COMPACT: {
-    typeName: '비용 절약 실속형',
+    typeName: '절약이',
     headline: '가장 중요한 기준은 무리 없는 주거비인 타입입니다.',
     summary:
       '입지나 크기를 유연하게 보면서 월세와 보증금을 안정적으로 관리할 수 있는 매물이 잘 맞아요.',
@@ -101,7 +101,7 @@ export const lifestyleTypeMeta = {
     recommendedRoomTypes: ['ONE_ROOM'],
   },
   LOCATION_FLEXIBLE_HOME: {
-    typeName: '집 자체 만족형',
+    typeName: '공간이',
     headline: '동네보다 집 안에서 느끼는 쾌적함을 더 중요하게 보는 타입입니다.',
     summary:
       '채광, 면적, 건물 상태처럼 매일 머무는 공간의 품질이 만족도를 크게 좌우해요.',
@@ -109,7 +109,7 @@ export const lifestyleTypeMeta = {
     recommendedRoomTypes: ['TWO_ROOM', 'APARTMENT', 'OFFICETEL'],
   },
   LOCATION_FLEXIBLE_COMPACT: {
-    typeName: '조건 유연 탐색형',
+    typeName: '유연이',
     headline: '입지, 비용, 크기를 유연하게 비교하며 현실적인 선택을 하는 타입입니다.',
     summary:
       '하나의 조건에 고정되기보다 전체 균형을 보고, 부담 없이 시작하기 좋은 매물을 선호해요.',
@@ -169,42 +169,30 @@ export function createLifestylePresetChips(filterPreset = {}, fallbackChips = []
   const chips = []
 
   if (filterPreset.facilityScoreMin) {
-    chips.push(`생활 편의 점수 ${filterPreset.facilityScoreMin}+`)
+    chips.push(`생활 편의 점수 ${filterPreset.facilityScoreMin}+ 선호`)
   }
 
   if (filterPreset.facilityCountMin) {
-    chips.push(`편의시설 ${filterPreset.facilityCountMin}개 이상`)
+    chips.push(`편의시설 ${filterPreset.facilityCountMin}개 이상 선호`)
   }
 
   if (filterPreset.monthlyRentMax) {
-    chips.push(`월세 ${filterPreset.monthlyRentMax}만 이하`)
+    chips.push(`월세 ${filterPreset.monthlyRentMax}만 이하 선호`)
   }
 
   if (filterPreset.depositMax) {
-    chips.push(`보증금 ${Number(filterPreset.depositMax).toLocaleString('ko-KR')}만 이하`)
+    chips.push(`보증금 ${Number(filterPreset.depositMax).toLocaleString('ko-KR')}만 이하 선호`)
   }
 
   if (filterPreset.areaMin) {
-    chips.push(`${filterPreset.areaMin}m2 이상`)
+    chips.push(`${filterPreset.areaMin}m2 이상 선호`)
   }
 
   if (filterPreset.buildYearMin) {
-    chips.push(`${filterPreset.buildYearMin}년 이후`)
+    chips.push(`${filterPreset.buildYearMin}년 이후 선호`)
   }
 
   return chips.length ? chips : fallbackChips
-}
-
-export function createLifestyleRecommendationFilters(result = {}) {
-  const filterPreset = result?.filterPreset || {}
-  const meta = result?.lifestyleType ? lifestyleTypeMeta[result.lifestyleType] : null
-
-  return {
-    location: '',
-    deposit: filterPreset.depositMax != null ? String(filterPreset.depositMax) : '',
-    monthlyRent: filterPreset.monthlyRentMax != null ? String(filterPreset.monthlyRentMax) : '',
-    roomType: meta?.recommendedRoomTypes?.[0] || 'ALL',
-  }
 }
 
 function resolveLifestyleType(livingConvenienceImportant, costSensitive, homeQualityImportant) {

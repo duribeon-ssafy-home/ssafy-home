@@ -68,6 +68,16 @@ class PropertySearchApiTests {
     }
 
     @Test
+    void 빈_문자열_검색조건은_전체조회처럼_동작한다() throws Exception {
+        saveProperty(b -> b.status(PropertyStatus.APPROVED));
+        saveProperty(b -> b.status(PropertyStatus.APPROVED));
+
+        mockMvc.perform(get("/api/properties?sido=&gugun=&dong="))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.totalElements").value(2));
+    }
+
+    @Test
     void 토큰없이_매물등록시_401() throws Exception {
         mockMvc.perform(post("/api/properties")
                         .contentType(MediaType.APPLICATION_JSON)

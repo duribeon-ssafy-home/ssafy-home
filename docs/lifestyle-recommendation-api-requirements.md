@@ -6,14 +6,14 @@
 
 | lifestyleType | typeName |
 | --- | --- |
-| `LIVING_COST_HOME_BALANCED` | 균형 잡힌 생활권 실속형 |
-| `LIVING_COST_COMPACT` | 생활권 중심 실속형 |
-| `LIVING_FLEXIBLE_HOME` | 편안한 공간 우선형 |
-| `LIVING_FLEXIBLE_COMPACT` | 생활권 중심 실용형 |
-| `LOCATION_FLEXIBLE_COST_HOME` | 조건 꼼꼼 공간형 |
-| `LOCATION_FLEXIBLE_COST_COMPACT` | 비용 절약 실속형 |
-| `LOCATION_FLEXIBLE_HOME` | 집 자체 만족형 |
-| `LOCATION_FLEXIBLE_COMPACT` | 조건 유연 탐색형 |
+| `LIVING_COST_HOME_BALANCED` | 균형이 |
+| `LIVING_COST_COMPACT` | 알뜰이 |
+| `LIVING_FLEXIBLE_HOME` | 포근이 |
+| `LIVING_FLEXIBLE_COMPACT` | 실용이 |
+| `LOCATION_FLEXIBLE_COST_HOME` | 꼼꼼이 |
+| `LOCATION_FLEXIBLE_COST_COMPACT` | 절약이 |
+| `LOCATION_FLEXIBLE_HOME` | 공간이 |
+| `LOCATION_FLEXIBLE_COMPACT` | 유연이 |
 
 새 화면이나 문서를 추가할 때는 위 이름을 기준으로 맞춘다. 백엔드 `LifestyleType.typeName`, 프론트 `lifestyleTypeMeta.typeName`, 문서 예시는 서로 다른 이름을 쓰면 안 된다.
 

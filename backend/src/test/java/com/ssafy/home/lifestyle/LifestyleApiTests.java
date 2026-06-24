@@ -77,7 +77,7 @@ class LifestyleApiTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.lifestyleType").value("LIVING_COST_HOME_BALANCED"))
-                .andExpect(jsonPath("$.data.typeName").value("균형 잡힌 생활권 실속형"))
+                .andExpect(jsonPath("$.data.typeName").value("균형이"))
                 .andExpect(jsonPath("$.data.filterPreset.facilityScoreMin").value(70))
                 .andExpect(jsonPath("$.data.filterPreset.monthlyRentMax").value(50))
                 .andExpect(jsonPath("$.data.filterPreset.areaMin").value(25))
@@ -111,7 +111,7 @@ class LifestyleApiTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.success").value(true))
                 .andExpect(jsonPath("$.data.lifestyleType").value("LIVING_COST_HOME_BALANCED"))
-                .andExpect(jsonPath("$.data.typeName").value("균형 잡힌 생활권 실속형"))
+                .andExpect(jsonPath("$.data.typeName").value("균형이"))
                 .andExpect(jsonPath("$.data.filterPreset.facilityScoreMin").value(70))
                 .andExpect(jsonPath("$.data.filterPreset.facilityCountMin").value(20))
                 .andExpect(jsonPath("$.data.filterPreset.monthlyRentMax").value(50))
@@ -125,6 +125,25 @@ class LifestyleApiTests {
         assertThat(result.getLivingConvenienceScore()).isEqualTo(2);
         assertThat(result.getCostSensitivityScore()).isEqualTo(2);
         assertThat(result.getHomeQualityScore()).isEqualTo(2);
+    }
+
+    @Test
+    void userBudgetInputOverridesDefaultRentAndDepositPreset() throws Exception {
+        User user = saveUser("budget@example.com");
+        String token = tokenFor(user);
+
+        mockMvc.perform(post("/api/lifestyle/results")
+                        .header("Authorization", "Bearer " + token)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(answersJsonWithBudget("A", "A", "A", "A", "A", "A", 72, 2500L)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.success").value(true))
+                .andExpect(jsonPath("$.data.filterPreset.monthlyRentMax").value(72))
+                .andExpect(jsonPath("$.data.filterPreset.depositMax").value(2500));
+
+        LifestyleResult result = lifestyleResultRepository.findAll().get(0);
+        assertThat(result.getMonthlyRentMax()).isEqualTo(72);
+        assertThat(result.getDepositMax()).isEqualTo(2500L);
     }
 
     @Test
@@ -223,5 +242,40 @@ class LifestyleApiTests {
                   ]
                 }
                 """.formatted(answer1, answer2, answer3, answer4, answer5, answer6);
+    }
+
+    private String answersJsonWithBudget(
+            String answer1,
+            String answer2,
+            String answer3,
+            String answer4,
+            String answer5,
+            String answer6,
+            int monthlyRentMax,
+            long depositMax
+    ) {
+        return """
+                {
+                  "answers": [
+                    { "questionId": 1, "selectedOption": "%s" },
+                    { "questionId": 2, "selectedOption": "%s" },
+                    { "questionId": 3, "selectedOption": "%s" },
+                    { "questionId": 4, "selectedOption": "%s" },
+                    { "questionId": 5, "selectedOption": "%s" },
+                    { "questionId": 6, "selectedOption": "%s" }
+                  ],
+                  "monthlyRentMax": %d,
+                  "depositMax": %d
+                }
+                """.formatted(
+                answer1,
+                answer2,
+                answer3,
+                answer4,
+                answer5,
+                answer6,
+                monthlyRentMax,
+                depositMax
+        );
     }
 }

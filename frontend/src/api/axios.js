@@ -4,7 +4,7 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080
 const ACCESS_TOKEN_KEY = 'accessToken'
 const REFRESH_TOKEN_KEY = 'refreshToken'
 const AUTH_RECOVERY_SKIP_PATHS = ['/auth/login', '/auth/signup', '/auth/refresh', '/auth/logout']
-const PUBLIC_GET_PATHS = ['/lifestyle/questions', '/properties']
+const PUBLIC_GET_PATHS = ['/lifestyle/questions', '/locations', '/properties']
 const PUBLIC_POST_PATHS = ['/lifestyle/results/preview']
 
 const api = axios.create({

@@ -55,6 +55,7 @@ public class SecurityConfig {
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/lifestyle/questions").permitAll()
                         .requestMatchers(HttpMethod.POST, "/api/lifestyle/results/preview").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/locations").permitAll()
                         .requestMatchers("/images/**").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/properties/me", "/api/properties/me/*").hasRole("AGENT")
                         .requestMatchers(HttpMethod.GET,
