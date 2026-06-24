@@ -61,6 +61,24 @@ describe('lifestyleResultSession', () => {
     })
   })
 
+  it('선호 지역 입력값이 있으면 payload에 함께 담는다', () => {
+    const questions = [{ questionId: 1 }]
+    const answerMap = { 1: 'A' }
+
+    expect(
+      createLifestyleAnswerPayload(questions, answerMap, {
+        preferredSido: '부산광역시',
+        preferredGugun: '사하구',
+        preferredDong: '하단동',
+      }),
+    ).toEqual({
+      answers: [{ questionId: 1, selectedOption: 'A' }],
+      preferredSido: '부산광역시',
+      preferredGugun: '사하구',
+      preferredDong: '하단동',
+    })
+  })
+
   it('결과와 답변을 저장 상태가 포함된 스냅샷으로 만든다', () => {
     const result = {
       lifestyleType: 'LIVING_COST_HOME_BALANCED',
