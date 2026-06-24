@@ -34,7 +34,7 @@ const currentBounds = ref(null)
 const hasMore = computed(() => currentPage.value < totalPages.value - 1)
 
 async function fetchMapMarkers(params) {
-  const result = await getProperties({ ...params, page: 0, size: 200, sort: 'createdAt,desc' })
+  const result = await getProperties({ ...params, page: 0, size: 2000, sort: 'createdAt,desc' })
   mapProperties.value = result.content
 }
 
@@ -44,7 +44,7 @@ async function handleBoundsChanged(bounds) {
   delete params.sido
   delete params.gugun
   delete params.dong
-  const result = await getProperties({ ...params, page: 0, size: 200, sort: 'createdAt,desc' })
+  const result = await getProperties({ ...params, page: 0, size: 2000, sort: 'createdAt,desc' })
   kakaoMapRef.value?.updateMarkers(result.content)
 }
 
@@ -77,7 +77,7 @@ async function handleSearch(filters, locationText = '') {
     delete mapParams.sido
     delete mapParams.gugun
     delete mapParams.dong
-    const result = await getProperties({ ...mapParams, page: 0, size: 200, sort: 'createdAt,desc' })
+    const result = await getProperties({ ...mapParams, page: 0, size: 2000, sort: 'createdAt,desc' })
     kakaoMapRef.value?.updateMarkers(result.content)
     await fetchListPage(filters, 0)
   } else {
