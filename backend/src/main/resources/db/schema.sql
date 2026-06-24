@@ -62,10 +62,12 @@ CREATE TABLE IF NOT EXISTS properties (
     PRIMARY KEY (property_id),
     CONSTRAINT fk_properties_owner
         FOREIGN KEY (owner_id) REFERENCES users (user_id) ON DELETE SET NULL,
-    INDEX idx_properties_region (sido, gugun, dong),
-    INDEX idx_properties_type   (rent_type, room_type),
-    INDEX idx_properties_status (status),
-    INDEX idx_properties_price  (deposit, monthly_rent)
+    INDEX idx_properties_region        (sido, gugun, dong),
+    INDEX idx_properties_type          (rent_type, room_type),
+    INDEX idx_properties_status        (status),
+    INDEX idx_properties_price         (deposit, monthly_rent),
+    INDEX idx_properties_status_region (status, sido, gugun, dong),
+    INDEX idx_properties_status_dong   (status, dong)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- =============================================
