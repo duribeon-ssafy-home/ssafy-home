@@ -279,3 +279,18 @@ CREATE TABLE IF NOT EXISTS blacklists (
     INDEX idx_blacklists_user   (user_id),
     INDEX idx_blacklists_status (status)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =============================================
+-- 13. REFRESH_TOKENS
+-- =============================================
+CREATE TABLE IF NOT EXISTS refresh_tokens (
+    id         BIGINT       NOT NULL AUTO_INCREMENT,
+    user_id    BIGINT       NOT NULL,
+    token      VARCHAR(255) NOT NULL,
+    expires_at DATETIME     NOT NULL,
+    revoked_at DATETIME     NULL,
+    PRIMARY KEY (id),
+    UNIQUE KEY uq_refresh_tokens_token (token),
+    CONSTRAINT fk_refresh_tokens_user
+        FOREIGN KEY (user_id) REFERENCES users (user_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
