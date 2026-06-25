@@ -1,0 +1,155 @@
+<svg width="1440" height="1180" viewBox="0 0 1440 1180" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <style>
+      .bg { fill: #f6f7f9; }
+      .surface { fill: #ffffff; }
+      .soft { fill: #eef2f6; }
+      .muted-soft { fill: #f9fafb; }
+      .primary { fill: #365f91; }
+      .primary-soft { fill: #eef4ff; }
+      .accent-soft { fill: #f2ece2; }
+      .safe-soft { fill: #ecfdf3; }
+      .danger-soft { fill: #fff1f0; }
+      .border { stroke: #e5e7eb; stroke-width: 1; }
+      .strong-border { stroke: #d0d5dd; stroke-width: 1; }
+      .primary-border { stroke: #365f91; stroke-width: 1.4; }
+      .shadow { filter: drop-shadow(0 12px 30px rgba(15, 23, 42, 0.09)); }
+      .brand { font: 900 18px Pretendard, "Segoe UI", Arial, sans-serif; fill: #0f172a; }
+      .nav { font: 800 13px Pretendard, "Segoe UI", Arial, sans-serif; fill: #667085; }
+      .title { font: 900 32px Pretendard, "Segoe UI", Arial, sans-serif; fill: #0f172a; }
+      .h2 { font: 900 22px Pretendard, "Segoe UI", Arial, sans-serif; fill: #0f172a; }
+      .h3 { font: 900 16px Pretendard, "Segoe UI", Arial, sans-serif; fill: #0f172a; }
+      .body { font: 700 14px Pretendard, "Segoe UI", Arial, sans-serif; fill: #344054; }
+      .muted { font: 700 13px Pretendard, "Segoe UI", Arial, sans-serif; fill: #667085; }
+      .small { font: 800 12px Pretendard, "Segoe UI", Arial, sans-serif; fill: #667085; }
+      .tiny { font: 800 11px Pretendard, "Segoe UI", Arial, sans-serif; fill: #667085; }
+      .white { fill: #ffffff; }
+      .blue { fill: #243f63; }
+      .safe { fill: #027a48; }
+      .danger { fill: #b42318; }
+      .chip { font: 800 12px Pretendard, "Segoe UI", Arial, sans-serif; fill: #243f63; }
+      .button { font: 900 13px Pretendard, "Segoe UI", Arial, sans-serif; fill: #ffffff; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1440" height="1180"/>
+
+  <rect x="0" y="0" width="1440" height="72" fill="#ffffff" opacity="0.94"/>
+  <line x1="0" y1="72" x2="1440" y2="72" stroke="#e5e7eb"/>
+  <text x="72" y="44" class="brand">SSAFY</text>
+  <text x="136" y="44" class="brand" fill="#365f91">HOME</text>
+
+  <text x="306" y="42" class="nav">매물 찾기</text>
+  <text x="410" y="42" class="nav">지도로 보기</text>
+  <text x="522" y="42" class="nav">라이프스타일 추천</text>
+  <rect x="660" y="19" width="104" height="34" rx="8" class="primary-soft"/>
+  <text x="686" y="42" class="nav blue">AI 상담</text>
+  <text x="790" y="42" class="nav">찜 목록</text>
+  <text x="870" y="42" class="nav">마이페이지</text>
+  <rect x="1140" y="18" width="104" height="36" rx="8" class="surface border"/>
+  <text x="1168" y="41" class="small">로그인</text>
+  <rect x="1252" y="18" width="104" height="36" rx="8" class="primary"/>
+  <text x="1276" y="41" class="button">회원가입</text>
+
+  <text x="72" y="126" class="title">AI 매물 상담 Chat UI</text>
+  <text x="72" y="155" class="muted">RAG, DB Tool, Multi-Agent 분석 경로를 사용자가 이해하기 쉬운 채팅 화면으로 감싼 와이어프레임입니다.</text>
+
+  <rect x="72" y="190" width="1296" height="856" rx="8" class="surface border shadow"/>
+
+  <rect x="72" y="190" width="300" height="856" rx="8" fill="#f9fafb"/>
+  <line x1="372" y1="190" x2="372" y2="1046" stroke="#e5e7eb"/>
+
+  <text x="96" y="232" class="h2">상담 주제</text>
+  <text x="96" y="258" class="muted">질문 유형에 따라 처리 경로가 달라집니다.</text>
+
+  <rect x="96" y="292" width="252" height="62" rx="8" class="primary-soft"/>
+  <text x="118" y="318" class="h3 blue">매물 비교 상담</text>
+  <text x="118" y="340" class="tiny">선택 매물 + 위험도 + 생활유형</text>
+
+  <rect x="96" y="368" width="252" height="62" rx="8" class="surface border"/>
+  <text x="118" y="394" class="h3">계약 체크 상담</text>
+  <text x="118" y="416" class="tiny">RAG 문서 기반 체크리스트</text>
+
+  <rect x="96" y="444" width="252" height="62" rx="8" class="surface border"/>
+  <text x="118" y="470" class="h3">단일 매물 분석</text>
+  <text x="118" y="492" class="tiny">매물 상세 + 리스크 해석</text>
+
+  <rect x="96" y="520" width="252" height="62" rx="8" class="surface border"/>
+  <text x="118" y="546" class="h3">일반 부동산 질문</text>
+  <text x="118" y="568" class="tiny">LLM 또는 RAG로 답변</text>
+
+  <text x="96" y="628" class="h2">현재 컨텍스트</text>
+  <rect x="96" y="650" width="252" height="154" rx="8" class="surface border"/>
+  <text x="118" y="678" class="small">비교 매물 3개 선택됨</text>
+  <rect x="118" y="696" width="208" height="28" rx="6" class="muted-soft"/>
+  <text x="132" y="715" class="tiny">역삼동 원룸 A · SAFE</text>
+  <rect x="118" y="732" width="208" height="28" rx="6" class="muted-soft"/>
+  <text x="132" y="751" class="tiny">서초동 오피스텔 B · CAUTION</text>
+  <rect x="118" y="768" width="208" height="28" rx="6" class="danger-soft"/>
+  <text x="132" y="787" class="tiny danger">논현동 투룸 C · DANGER</text>
+
+  <text x="96" y="848" class="h2">처리 경로 표시</text>
+  <rect x="96" y="870" width="68" height="28" rx="8" class="primary-soft"/>
+  <text x="115" y="889" class="tiny blue">Router</text>
+  <rect x="172" y="870" width="62" height="28" rx="8" class="accent-soft"/>
+  <text x="190" y="889" class="tiny">RAG</text>
+  <rect x="242" y="870" width="86" height="28" rx="8" class="primary-soft"/>
+  <text x="258" y="889" class="tiny blue">DB Tool</text>
+  <rect x="96" y="908" width="112" height="28" rx="8" class="safe-soft"/>
+  <text x="114" y="927" class="tiny safe">Multi-Agent</text>
+  <rect x="216" y="908" width="82" height="28" rx="8" class="muted-soft"/>
+  <text x="234" y="927" class="tiny">Verifier</text>
+
+  <rect x="372" y="190" width="996" height="74" rx="8" fill="#ffffff"/>
+  <text x="404" y="232" class="h2">AI 매물 상담</text>
+  <text x="404" y="255" class="muted">현재 질문은 매물 비교 상담으로 분류될 가능성이 높습니다.</text>
+  <rect x="1156" y="212" width="166" height="34" rx="8" class="primary-soft"/>
+  <text x="1182" y="234" class="chip">비교 매물 3개 연결</text>
+  <line x1="372" y1="264" x2="1368" y2="264" stroke="#e5e7eb"/>
+
+  <rect x="404" y="292" width="384" height="60" rx="8" class="primary-soft"/>
+  <text x="428" y="318" class="body blue">내 생활패턴 기준으로 제일 괜찮은 매물 골라줘.</text>
+  <text x="428" y="338" class="tiny">사용자 · 방금 전</text>
+
+  <rect x="404" y="382" width="642" height="196" rx="8" class="muted-soft border"/>
+  <text x="428" y="412" class="h3">AI 분석 결과</text>
+  <text x="428" y="440" class="body">현재 조건에서는 역삼동 원룸 A가 가장 안정적인 선택으로 보입니다.</text>
+  <text x="428" y="468" class="body">위험도 점수가 낮고, 신고 이력이 없으며, 보증금이 주변 시세와 크게 벗어나지 않습니다.</text>
+  <text x="428" y="496" class="body">다만 최종 계약 전에는 등기부등본, 관리비 포함 항목, 임대인 신원 확인이 필요합니다.</text>
+  <rect x="428" y="526" width="86" height="28" rx="8" class="primary-soft"/>
+  <text x="444" y="545" class="tiny blue">DB Tool</text>
+  <rect x="522" y="526" width="72" height="28" rx="8" class="accent-soft"/>
+  <text x="546" y="545" class="tiny">RAG</text>
+  <rect x="602" y="526" width="112" height="28" rx="8" class="safe-soft"/>
+  <text x="620" y="545" class="tiny safe">Multi-Agent</text>
+  <rect x="722" y="526" width="82" height="28" rx="8" class="muted-soft"/>
+  <text x="740" y="545" class="tiny">Verifier</text>
+
+  <rect x="404" y="610" width="820" height="92" rx="8" class="surface border"/>
+  <text x="428" y="638" class="h3">추천 질문</text>
+  <rect x="428" y="656" width="158" height="30" rx="8" class="primary-soft"/>
+  <text x="450" y="676" class="chip">가장 안전한 매물은?</text>
+  <rect x="598" y="656" width="164" height="30" rx="8" class="primary-soft"/>
+  <text x="620" y="676" class="chip">보증금 위험 비교</text>
+  <rect x="774" y="656" width="178" height="30" rx="8" class="primary-soft"/>
+  <text x="796" y="676" class="chip">계약 전 확인할 것</text>
+  <rect x="964" y="656" width="188" height="30" rx="8" class="primary-soft"/>
+  <text x="986" y="676" class="chip">내 기준 추천 이유</text>
+
+  <rect x="820" y="735" width="500" height="60" rx="8" class="primary-soft"/>
+  <text x="844" y="761" class="body blue">그럼 B 매물은 왜 주의로 나와?</text>
+  <text x="844" y="781" class="tiny">사용자 · 이어 질문</text>
+
+  <rect x="404" y="826" width="690" height="92" rx="8" class="muted-soft border"/>
+  <text x="428" y="854" class="body">B 매물은 신고 이력이 1건 있고, 같은 동/유사 면적 매물 대비 보증금 조건을 추가 확인할 필요가 있습니다.</text>
+  <text x="428" y="882" class="body">위험하다고 단정하기보다 계약 전 확인 우선순위가 높은 매물로 보는 것이 적절합니다.</text>
+  <rect x="428" y="898" width="86" height="0" rx="0"/>
+
+  <rect x="404" y="954" width="840" height="58" rx="8" class="surface strong-border"/>
+  <text x="428" y="989" class="muted">이 매물들 중에서 출퇴근까지 고려하면 어디가 좋아?</text>
+  <rect x="1260" y="954" width="76" height="58" rx="8" class="primary"/>
+  <text x="1282" y="989" class="button">전송</text>
+
+  <rect x="72" y="1080" width="1296" height="62" rx="8" class="surface border"/>
+  <text x="96" y="1118" class="body">큰 틀: 왼쪽은 상담 모드/컨텍스트, 가운데는 채팅, 하단은 입력창입니다. 사용자는 챗봇처럼 쓰지만 내부적으로는 Router가 RAG, DB Tool, Multi-Agent 경로를 선택합니다.</text>
+</svg>
